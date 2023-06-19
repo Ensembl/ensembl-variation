@@ -1377,8 +1377,16 @@ sub hgvs_transcript {
   }
   ## this may be different to the input one for insertions/deletions
     print "vfs: $variation_feature_sequence &  $self->{_slice_start} -> $self->{_slice_end}\n" if $DEBUG ==1;
-  if($variation_feature_sequence && $vf->strand() != $refseq_strand) {    
-    reverse_comp(\$variation_feature_sequence) ;
+  if($variation_feature_sequence && $vf->strand != $refseq_strand) {
+    if($vf->strand == 1){
+      reverse_comp(\$variation_feature_sequence);
+    }
+    else{
+      # if variation feature is in + strand and transcript in - strand only complementing is 
+      # enough as variation feature sequence will be from reverse strand but in 3'-5' direction
+      $variation_feature_sequence =~
+        tr/acgtrymkswhbvdnxACGTRYMKSWHBVDNX/tgcayrkmswdvbhnxTGCAYRKMSWDVBHNX/;
+    }
   };
   ## delete consequences if we have an offset. This is only in here for when we want HGVS to shift but not consequences.
   ## TODO add no_shift flag test
@@ -1406,7 +1414,6 @@ sub hgvs_transcript {
     return undef;
   } 
 
-  
   ## check for the same bases in ref and alt strings before or after the variant
   $hgvs_notation = _clip_alleles($hgvs_notation) unless $hgvs_notation->{'type'} eq 'dup';
 
@@ -1418,7 +1425,6 @@ sub hgvs_transcript {
   $stable_id .= "." . $tr->version() 
      unless (!defined $tr->version() || $stable_id =~ /\.\d+$/ || $stable_id =~ /LRG/); ## no version required for LRG's
   $hgvs_notation->{'ref_name'} = $stable_id;
-
 
   ### get position relative to transcript features [use HGVS coords not variation feature coords due to dups]
   # avoid doing this twice if start and end are the same
@@ -1469,6 +1475,7 @@ sub hgvs_transcript {
 
   ### generic formatting 
   print "pre-format $hgvs_notation->{alt}\n" if $DEBUG ==1;
+
   $self->{hgvs_transcript} = format_hgvs_string( $hgvs_notation);
   if($DEBUG ==1){ print "HGVS notation: " . $self->{hgvs_transcript} . " \n"; }
 
@@ -1570,7 +1577,8 @@ sub hgvs_transcript_reference {
 
 sub hgvs_protein {
   my $self     = shift;
-  my $notation = shift;  
+  my $notation = shift;
+  my $prediction_format = shift; 
   my $hgvs_notation;
 
   if($DEBUG == 1){
@@ -1728,7 +1736,7 @@ sub hgvs_protein {
   }
 
   ##### String formatting
-  return $self->_get_hgvs_protein_format($hgvs_notation);
+  return $self->_get_hgvs_protein_format($hgvs_notation, $prediction_format);
 }
 
 
@@ -1808,18 +1816,21 @@ sub hgvs_intron_end_offset {
 sub _get_hgvs_protein_format {
   my $self          = shift;
   my $hgvs_notation = shift;
+  my $prediction_format = shift;
 
   ### all start with refseq name & numbering type
-  $hgvs_notation->{'hgvs'} = $hgvs_notation->{'ref_name'} . ":" . $hgvs_notation->{'numbering'} . ".";    
+  $hgvs_notation->{'hgvs'} = $hgvs_notation->{'ref_name'} . ":" . $hgvs_notation->{'numbering'} . ".";
+
+  ### add paranthesis if asked to report in predicted format
+  $hgvs_notation->{'hgvs'} .= "(" if $prediction_format;
 
   ### New (v 15.11) way to describe synonymous changes
-  if( $hgvs_notation->{ref} eq $hgvs_notation->{alt} 
-       && $hgvs_notation->{type} ne "fs" && $hgvs_notation->{type} ne "ins"){
-    return $hgvs_notation->{'hgvs'} . $hgvs_notation->{ref} . $hgvs_notation->{start} . "=";
+  if( $hgvs_notation->{ref} eq $hgvs_notation->{alt} && $hgvs_notation->{type} ne "fs" && $hgvs_notation->{type} ne "ins"){
+    $hgvs_notation->{'hgvs'} .= $hgvs_notation->{ref} . $hgvs_notation->{start} . "=";
   }
 
   ### handle stop_lost seperately regardless of cause by del/delins => p.TerposAA1extnum_AA_to_stop
-  if(stop_lost($self) && ($hgvs_notation->{type} eq "del" || $hgvs_notation->{type} eq ">" )) {
+  elsif(stop_lost($self) && ($hgvs_notation->{type} eq "del" || $hgvs_notation->{type} eq ">" )) {
     ### if deletion of stop add extTer and number of new aa to alt
 
     $hgvs_notation->{alt} = substr($hgvs_notation->{alt}, 0, 3);
@@ -1938,6 +1949,9 @@ sub _get_hgvs_protein_format {
     $hgvs_notation->{'hgvs'}  .=   $hgvs_notation->{ref}. $hgvs_notation->{start} .  $hgvs_notation->{alt};
   }
 
+  ### add paranthesis if asked to report in predicted format
+  $hgvs_notation->{'hgvs'} .= ")" if $prediction_format;
+  
   if($DEBUG==1){ print "Returning protein format: $hgvs_notation->{'hgvs'}\n";}
   return $hgvs_notation->{'hgvs'};
 }
@@ -2083,6 +2097,7 @@ sub _get_hgvs_peptides {
   if(defined $hgvs_notation->{ref}){ $hgvs_notation->{ref} =~ s/Xaa/Ter/g; }
   if(defined $hgvs_notation->{alt}){ $hgvs_notation->{alt} =~ s/Xaa/Ter/g; }
 
+
   return ($hgvs_notation);           
 }
 
@@ -2152,15 +2167,34 @@ sub _clip_alleles {
   ### check if clipping suggests a type change 
 
   ## no protein change - use transcript level annotation 
-  $hgvs_notation->{type} = "="   if( defined $hgvs_notation->{'numbering'} && 
-                                     $hgvs_notation->{'numbering'} eq 'p' &&
-                                     $hgvs_notation->{alt} eq $hgvs_notation->{ref});      
-
-  ### re-set as ins not delins    
-  $hgvs_notation->{type} ="ins"  if(length ($check_ref) == 0 && length ($check_alt) >= 1);
-
+  if( $check_ref eq $check_alt) {
+      $hgvs_notation->{type} = "=";
+  }   
+  
+  ## re-set as > not delins
+  elsif( length ($check_ref) == 1 && length ($check_alt) == 1 && $hgvs_notation->{alt} ne $hgvs_notation->{ref}) {
+      $hgvs_notation->{type} = ">";
+  }
+  
+  ### re-set as ins/dup not delins 
+  elsif(length ($check_ref) == 0 && length ($check_alt) >= 1){
+      ### re-set as dup not delins
+      my $prev_str = substr($preseq, length($preseq) - length($check_alt));
+      if($check_alt eq $prev_str) {
+        $hgvs_notation->{type} = "dup";
+        $hgvs_notation->{start} -= length($check_alt);
+      }
+    
+      ### re-set as ins not delins
+      else {
+        $hgvs_notation->{type} ="ins";
+      }
+  }
+  
   ### re-set as del not delins  
-  $hgvs_notation->{type}  ="del" if(length ($check_ref) >=1 && length ($check_alt) == 0);      
+  elsif(length ($check_ref) >=1 && length ($check_alt) == 0){
+    $hgvs_notation->{type}  = "del" ;      
+  }
 
   print "clipped :  $check_ref &  $check_alt\n" if $DEBUG ==1;
 
