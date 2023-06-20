@@ -92,7 +92,7 @@ sub test {
   system("sort -k 2,2 -k3,3 -k4,4 -o ${TMP_DIR}${sorted_new_vf} ${TMP_DIR}${new_var_feat}");
 
   debug($config, "Inserting into phenotype_feature but first sort, test mode so no insertion");
-  system("sort -k7,7 -k8,8 -k9,9 -o ${TMP_DIR}${$sorted_new_pf} ${TMP_DIR}${new_pf_file}");
+  system("sort -k7,7 -k8,8 -k9,9 -o ${TMP_DIR}${sorted_new_pf} ${TMP_DIR}${new_pf_file}");
 }
 
 sub main { 
@@ -128,7 +128,7 @@ sub main {
   load_all_variation_sets($dbh, $new_var);
 
   debug($config, "Inserting into phenotype_feature but first sort");
-  system("sort -k7,7 -k8,8 -k9,9 -o ${TMP_DIR}${$sorted_new_pf} ${TMP_DIR}${new_pf_file}");
+  system("sort -k7,7 -k8,8 -k9,9 -o ${TMP_DIR}${sorted_new_pf} ${TMP_DIR}${new_pf_file}");
   insert_pheno_feature($dbh, $sorted_new_pf);
 
   debug($config, "Inserting into phenotype_feature attrib");
@@ -234,7 +234,7 @@ sub manipulate_pheno_ids {
   $select_max_feat->finish();
 
   open(my $old_pf, '<', "$TMP_DIR/$sorted_old_pheno_feat") or die "Cannot open file: $!";
-  open(my $new_pf, '>', "$TMP_DIR/$new_pf_file ") or die "Cannot open file: $!";
+  open(my $new_pf, '>', "$TMP_DIR/$new_pf_file") or die "Cannot open file: $!";
 
   while ( my $pf = <$old_pf> ) {
     chomp $pf;
