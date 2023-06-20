@@ -209,10 +209,10 @@ process run_variant_synonyms {
 process run_variation_set {
   input:
   val wait
+  val my_species_set
   val var_set_script
   val files_path
   val filenames
-  val set_names
   val species
   val registry
 
@@ -220,14 +220,9 @@ process run_variation_set {
 
   exec:
 
-  // variable my_set has to be before any if statement
-  // related to this issue: https://github.com/nextflow-io/nextflow/issues/804
-  def my_set = set_names.get(species)
-  for (String name : my_set) {
-    def input_file = filenames.get(name)
-    def command = "perl ${var_set_script} -load_file ${files_path}${input_file} -registry ${registry} -species ${species} -variation_set ${name}"
-    command.execute()
-  }
+  def input_file = filenames.get(my_species_set)
+  def command = "perl ${var_set_script} -load_file ${files_path}${input_file} -registry ${registry} -species ${species} -variation_set ${my_species_set}"
+  command.execute()
 }
 
 // Post-process variation feature sets
@@ -291,8 +286,10 @@ workflow {
   run_variant_synonyms(run_eva.out, file(var_syn_script), params.source, params.species, params.var_syn_file, params.registry, params.old_host, params.old_port, params.old_dbname)
 
   if(set_names[params.species]) {
-    run_variation_set(run_variant_synonyms.out, var_set_script, files_path, filenames, set_names, params.species, params.registry)
-    run_variation_set_2(run_variation_set.out, var_set_script_2, params.species, params.registry)
+    my_species_set = Channel.fromList(set_names.get(params.species))
+    run_variation_set(run_variant_synonyms.out, my_species_set, var_set_script, files_path, filenames, params.species, params.registry)
+
+    run_variation_set_2(run_variation_set.out.collect(), var_set_script_2, params.species, params.registry)
   }
 
   if(params.citations_file) {
