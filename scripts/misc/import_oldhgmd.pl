@@ -35,6 +35,7 @@ my $sorted_new_vf = "sorted_new_variation_feature.txt";
 my $old_pheno_feat_file = "old_pheno_feature.txt";
 my $old_pheno_feat_attrib_file = "old_pheno_feature_attrib.txt";
 my $sorted_old_pheno_feat = "sorted_old_pheno.txt";
+my $new_pf_file = "new_pf.txt";
 my $sorted_new_pf = "sorted_new_pf.txt";
 my $sorted_old_pfa = "sorted_old_pfa.txt";
 my $sorted_new_pfa = "sorted_new_pfa.txt";
@@ -57,34 +58,88 @@ if ($old_reg_file) {
 }
 
 my $TMP_DIR = $config->{tmp};
+if $config->{test} {
+  test();
+} else {
+  main();
+}
+sub test {
+  debug($config, "Running in test mode"); 
 
-debug($config, "Dumping old variation tables with HGMD as source from old database");
-dump_vdata_into_file($old_dbh);
+  debug($config, "Dumping old variation tables with HGMD as source from old database");
+  dump_vdata_into_file($old_dbh);
 
-debug($config, "Dumping old phenotype with HGMD as source from old database");
-dump_pheno($old_dbh);
+  debug($config, "Dumping old phenotype with HGMD as source from old database");
+  dump_pheno($old_dbh);
 
-debug($config, "Sorting files based on the variation_id column");
-$TMP_DIR = $TMP_DIR . "/";
-system("sort -k 1 -o ${TMP_DIR}${sorted_old_var} ${TMP_DIR}${old_var_file}");
-system("sort -k 6 -o ${TMP_DIR}${sorted_old_var_feat} ${TMP_DIR}${old_var_far_file}");
+  debug($config, "Sorting files based on the variation_id column");
+  $TMP_DIR = $TMP_DIR . "/";
+  system("sort -k 1 -o ${TMP_DIR}${sorted_old_var} ${TMP_DIR}${old_var_file}");
+  system("sort -k 6 -o ${TMP_DIR}${sorted_old_var_feat} ${TMP_DIR}${old_var_far_file}");
 
-debug($config, "Sorting files based on the phenotype_feature_id column");
-system("sort -k 1 -o ${TMP_DIR}${sorted_old_pheno_feat} ${TMP_DIR}${$old_pheno_feat_file}");
-system("sort -k 1 -o ${TMP_DIR}${sorted_old_pfa} ${TMP_DIR}${old_pheno_feat_attrib_file}");
+  debug($config, "Sorting files based on the phenotype_feature_id column");
+  system("sort -k 1 -o ${TMP_DIR}${sorted_old_pheno_feat} ${TMP_DIR}${$old_pheno_feat_file}");
+  system("sort -k 1 -o ${TMP_DIR}${sorted_old_pfa} ${TMP_DIR}${old_pheno_feat_attrib_file}");
+  
+  debug($config, "Manipulating variation ids in each file");
+  manipulate_var_ids($dbh);
 
-debug($config, "Manipulating variation ids in each file");
-manipulate_var_ids($dbh);
+  debug($config, "Manipulating Phenotype ids in each file");
+  manipulate_pheno_ids($dbh);
 
-debug($config, "Inserting into variation table");
-insert_into_variation_table($dbh, $new_var);
+  debug($config, "Inserting into variation_feature table but first sort, this is test mode so no insertion");
+  system("sort -k 2,2 -k3,3 -k4,4 -o ${TMP_DIR}${sorted_new_vf} ${TMP_DIR}${new_var_feat}");
 
-debug($config, "Inserting into variation_feature table but first sort");
-system("sort -k 2,2 -k3,3 -k4,4 -o ${TMP_DIR}${sorted_new_vf} ${TMP_DIR}${new_var_feat}");
-insert_variation_feature($dbh, $sorted_new_vf);
+  debug($config, "Inserting into phenotype_feature but first sort, test mode so no insertion");
+  system("sort -k7,7 -k8,8 -k9,9 -o ${TMP_DIR}${$sorted_new_pf} ${TMP_DIR}${$new_pf_file}");
 
-debug($config, "Inserting into variation_set_variation table");
-load_all_variation_sets($dbh, $new_var);
+}
+
+sub main { 
+  debug($config, "Dumping old variation tables with HGMD as source from old database");
+  dump_vdata_into_file($old_dbh);
+
+  debug($config, "Dumping old phenotype with HGMD as source from old database");
+  dump_pheno($old_dbh);
+
+  debug($config, "Sorting files based on the variation_id column");
+  $TMP_DIR = $TMP_DIR . "/";
+  system("sort -k 1 -o ${TMP_DIR}${sorted_old_var} ${TMP_DIR}${old_var_file}");
+  system("sort -k 6 -o ${TMP_DIR}${sorted_old_var_feat} ${TMP_DIR}${old_var_far_file}");
+
+  debug($config, "Sorting files based on the phenotype_feature_id column");
+  system("sort -k 1 -o ${TMP_DIR}${sorted_old_pheno_feat} ${TMP_DIR}${$old_pheno_feat_file}");
+  system("sort -k 1 -o ${TMP_DIR}${sorted_old_pfa} ${TMP_DIR}${old_pheno_feat_attrib_file}");
+
+  debug($config, "Manipulating variation ids in each file");
+  manipulate_var_ids($dbh);
+
+  debug($config, "Manipulating Phenotype ids in each file");
+  manipulate_pheno_ids($dbh);
+
+  debug($config, "Inserting into variation table");
+  insert_into_variation_table($dbh, $new_var);
+
+  debug($config, "Inserting into variation_feature table but first sort");
+  system("sort -k 2,2 -k3,3 -k4,4 -o ${TMP_DIR}${sorted_new_vf} ${TMP_DIR}${new_var_feat}");
+  insert_variation_feature($dbh, $sorted_new_vf);
+
+  debug($config, "Inserting into variation_set_variation table");
+  load_all_variation_sets($dbh, $new_var);
+
+  debug($config, "Inserting into phenotype_feature but first sort");
+  system("sort -k7,7 -k8,8 -k9,9 -o ${TMP_DIR}${$sorted_new_pf} ${TMP_DIR}${$new_pf_file}");
+  insert_pheno_feature($dbh, $sorted_new_pf);
+
+  debug($config, "Inserting into phenotype_feature attrib");
+  insert_pheno_feature_attrib($dbh, $sorted_old_pfa);
+
+  debug($config, "Removing files");
+  system("rm *.txt");
+
+}
+
+
 
 
 sub dump_vdata_into_file {
@@ -178,7 +233,7 @@ sub manipulate_pheno_ids {
   $select_max_feat->finish();
 
   open(my $old_pf, '<', "$TMP_DIR/$sorted_old_pheno_feat") or die "Cannot open file: $!";
-  open(my $new_pf, '>', "$TMP_DIR/$sorted_new_pf ") or die "Cannot open file: $!";
+  open(my $new_pf, '>', "$TMP_DIR/$new_pf_file ") or die "Cannot open file: $!";
 
   while ( my $pf = <$old_pf> ) {
     chomp $pf;
@@ -285,6 +340,51 @@ sub load_all_variation_sets {
 
 }
 
+sub insert_pheno_feature {
+  my $dbhvar = shift; 
+  my $load_file = shift;
+
+  my $insert_pheno = $dbhvar->prepare(qq[INSERT INTO phenotype_feature (phenotype_feature_id, phenotype_id, source_id, type, object_id, is_significant, seq_region_id, seq_region_start, seq_region_end, seq_region_strand) VALUES (?,?,?,?,?,?,?,?,?,?)]);
+
+  local *FH;
+  open FH, ">$load_file" or die "Can not open $load_file $!";
+  while (<FH>) {
+    chomp;
+    #my $phenotype_feature_id = (split)[0];
+    #my $phenotype_id = (split)[1];
+    #my $source_id = (split)[2];
+    #my $type = (split)[3];
+    #my $object_id = (split)[4];
+    #my $is_significant = (split)[5];
+    #my $seq_region_id = (split)[6];
+    #my $seq_region_start = (split)[7];
+    #my $seq_region_end = (split)[8];
+    #my $seq_region_strand = (split)[9];
+
+    $insert_pheno->execute((split)[0], (split)[1], (split)[2], (split)[3], (split)[4], (split)[5], (split)[6], (split)[7], (split)[8], (split)[9]);
+  }
+  close FH;
+  $insert_pheno->finish();
+
+}
+
+sub insert_pheno_feature_attrib {
+  my $dbhvar = shift;
+  my $load_file = shift;
+
+  my $insert_pfa = $dbhvar->prepare(qq{INSERT INTO phenotype_feature_attrib (phenotype_feature_id, attrib_type_id, value) VALUES (?,?,?)});
+
+  local *FH;
+  open FH, ">$load_file" or die "Can not open $load_file $!";
+  while (<FH>) {
+    chomp;
+    $insert_pfa->execute((split)[0], (split)[1], (split)[2]);
+  }
+  close FH;
+  $insert_pfa->finish();
+  
+}
+
 sub dump_pheno {
   my $old_dbhvar = shift;
 
@@ -318,8 +418,10 @@ sub dump_pheno {
 sub usage {
 
   die "\n\tUsage: import_oldhgmd.pl -registry [registry file] -release [release number] \tOptional:  -tmp [temp folder] or gets set based on current directory 
+  -test to use in test mode, does not insert into database, only dumps files and sorts them
   -old_registry [old database registry file] use only if release is not defined
-  --release or --old_registry needs to be defined \n";
+  --release or --old_registry needs to be defined
+  NB - if using release, old database needs to be on the same server. \n";
 }
 
 sub configure {
