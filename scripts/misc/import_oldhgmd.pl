@@ -63,6 +63,7 @@ if ($config->{test}) {
 } else {
   main();
 }
+
 sub test {
   debug($config, "Running in test mode"); 
 
@@ -75,10 +76,10 @@ sub test {
   debug($config, "Sorting files based on the variation_id column");
   $TMP_DIR = $TMP_DIR . "/";
   system("sort -k 1 -o ${TMP_DIR}${sorted_old_var} ${TMP_DIR}${old_var_file}");
-  system("sort -k 6 -o ${TMP_DIR}${sorted_old_var_feat} ${TMP_DIR}${$old_vf_file}");
+  system("sort -k 6 -o ${TMP_DIR}${sorted_old_var_feat} ${TMP_DIR}${old_vf_file}");
 
   debug($config, "Sorting files based on the phenotype_feature_id column");
-  system("sort -k 1 -o ${TMP_DIR}${sorted_old_pheno_feat} ${TMP_DIR}${$old_pheno_feat_file}");
+  system("sort -k 1 -o ${TMP_DIR}${sorted_old_pheno_feat} ${TMP_DIR}${old_pheno_feat_file}");
   system("sort -k 1 -o ${TMP_DIR}${sorted_old_pfa} ${TMP_DIR}${old_pheno_feat_attrib_file}");
   
   debug($config, "Manipulating variation ids in each file");
@@ -91,7 +92,7 @@ sub test {
   system("sort -k 2,2 -k3,3 -k4,4 -o ${TMP_DIR}${sorted_new_vf} ${TMP_DIR}${new_var_feat}");
 
   debug($config, "Inserting into phenotype_feature but first sort, test mode so no insertion");
-  system("sort -k7,7 -k8,8 -k9,9 -o ${TMP_DIR}${$sorted_new_pf} ${TMP_DIR}${$new_pf_file}");
+  system("sort -k7,7 -k8,8 -k9,9 -o ${TMP_DIR}${$sorted_new_pf} ${TMP_DIR}${new_pf_file}");
 }
 
 sub main { 
@@ -104,10 +105,10 @@ sub main {
   debug($config, "Sorting files based on the variation_id column");
   $TMP_DIR = $TMP_DIR . "/";
   system("sort -k 1 -o ${TMP_DIR}${sorted_old_var} ${TMP_DIR}${old_var_file}");
-  system("sort -k 6 -o ${TMP_DIR}${sorted_old_var_feat} ${TMP_DIR}${$old_vf_file}");
+  system("sort -k 6 -o ${TMP_DIR}${sorted_old_var_feat} ${TMP_DIR}${old_vf_file}");
 
   debug($config, "Sorting files based on the phenotype_feature_id column");
-  system("sort -k 1 -o ${TMP_DIR}${sorted_old_pheno_feat} ${TMP_DIR}${$old_pheno_feat_file}");
+  system("sort -k 1 -o ${TMP_DIR}${sorted_old_pheno_feat} ${TMP_DIR}${old_pheno_feat_file}");
   system("sort -k 1 -o ${TMP_DIR}${sorted_old_pfa} ${TMP_DIR}${old_pheno_feat_attrib_file}");
 
   debug($config, "Manipulating variation ids in each file");
@@ -127,7 +128,7 @@ sub main {
   load_all_variation_sets($dbh, $new_var);
 
   debug($config, "Inserting into phenotype_feature but first sort");
-  system("sort -k7,7 -k8,8 -k9,9 -o ${TMP_DIR}${$sorted_new_pf} ${TMP_DIR}${$new_pf_file}");
+  system("sort -k7,7 -k8,8 -k9,9 -o ${TMP_DIR}${$sorted_new_pf} ${TMP_DIR}${new_pf_file}");
   insert_pheno_feature($dbh, $sorted_new_pf);
 
   debug($config, "Inserting into phenotype_feature attrib");
@@ -165,6 +166,10 @@ sub dump_vdata_into_file {
 
   close $var;
   close $var_fea;
+
+  if ($config->{transcript}) {
+    my $dump_tv = $old_dbhvar->prepare(qq[ SELECT transcript_variation_id, variation_feature_id, feature_stable_id, allele_string, somatic, consequence_types, cds_start, cds ])
+  }
 }
 
 sub manipulate_var_ids {
@@ -220,7 +225,7 @@ sub manipulate_var_ids {
 sub manipulate_pheno_ids {
   my $dbhvar = shift;
 
-  my $select_max_feat = $dbhvar->prepare(qq[SELECT MAX(variation_feature_id) from phenotype_feature]);
+  my $select_max_feat = $dbhvar->prepare(qq[SELECT MAX(phenotype_feature_id) from phenotype_feature]);
   $select_max_feat->execute();
   my $pf = $select_max_feat->fetchall_arrayref();
   my $max_pf = $pf->[0]->[0];
@@ -415,6 +420,7 @@ sub usage {
 
   die "\n\tUsage: import_oldhgmd.pl -registry [registry file] -release [release number] \tOptional:  -tmp [temp folder] or gets set based on current directory 
    -test to use in test mode, does not insert into database, only dumps files and sorts them
+   -transcript to use only if to load into transcript and MTMP_transcript_variation
   -old_registry [old database registry file] use only if release is not defined
   --release or --old_registry needs to be defined
   NB - if using release, old database needs to be on the same server as new release. \n";
@@ -431,6 +437,7 @@ sub configure {
     "release=s",
     "tmp=s",
     "test|t",
+    "transcript|tr",
     "help|h",
   ) or die "ERROR: Failed to parse command line arguments - check the documentation \n";
 
