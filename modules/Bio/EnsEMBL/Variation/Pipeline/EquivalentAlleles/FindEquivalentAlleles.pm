@@ -50,6 +50,8 @@ sub run {
   my $self = shift;
 
   my $core_dba = $self->get_species_adaptor('core');
+  $core_dba->dbc->reconnect_when_lost(1);
+
   my $var_dba  = $self->get_species_adaptor('variation');
   $var_dba->include_failed_variations(1);
 
