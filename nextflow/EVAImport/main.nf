@@ -218,11 +218,12 @@ process run_variation_set {
 
   output: val 'ok'
 
-  exec:
+  script:
 
   def input_file = filenames.get(my_species_set)
-  def command = "perl ${var_set_script} -load_file ${files_path}${input_file} -registry ${registry} -species ${species} -variation_set ${my_species_set}"
-  command.execute()
+  """
+  perl ${var_set_script} -load_file ${files_path}${input_file} -registry ${registry} -species ${species} -variation_set ${my_species_set}
+  """
 }
 
 // Post-process variation feature sets
