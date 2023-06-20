@@ -75,15 +75,15 @@ sub default_options {
     # EBI farm users should either change these here, or override them on the
     # command line to suit the EBI farm.
         
-    default_lsf_options => '-qproduction -R"select[mem>2000] rusage[mem=2000]" -M2000',
-    medium_lsf_options  => '-qproduction -R"select[mem>4000] rusage[mem=4000]" -M4000',
+    default_lsf_options => '-qproduction -R"select[mem>32000] rusage[mem=32000]" -M32000',
+    medium_lsf_options  => '-qproduction -R"select[mem>16000] rusage[mem=16000]" -M16000',
 
 
     # size of region to be checked in a single job
-    region_size =>  100000000,
+    region_size =>  10000000,
 
     # size of bin to be checked for equivalent alleles
-    bin_size  =>  5000000,
+    bin_size  =>  1000000,
 
     ## overlap between checking bins
     overlap   => 1000,
