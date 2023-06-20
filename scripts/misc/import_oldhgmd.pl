@@ -414,10 +414,10 @@ sub dump_pheno {
 sub usage {
 
   die "\n\tUsage: import_oldhgmd.pl -registry [registry file] -release [release number] \tOptional:  -tmp [temp folder] or gets set based on current directory 
-  -test to use in test mode, does not insert into database, only dumps files and sorts them
+   -test to use in test mode, does not insert into database, only dumps files and sorts them
   -old_registry [old database registry file] use only if release is not defined
   --release or --old_registry needs to be defined
-  NB - if using release, old database needs to be on the same server. \n";
+  NB - if using release, old database needs to be on the same server as new release. \n";
 }
 
 sub configure {
@@ -430,6 +430,7 @@ sub configure {
     "old_registry=s",
     "release=s",
     "tmp=s",
+    "test|t",
     "help|h",
   ) or die "ERROR: Failed to parse command line arguments - check the documentation \n";
 
