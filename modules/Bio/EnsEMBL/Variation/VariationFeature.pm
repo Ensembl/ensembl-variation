@@ -2030,7 +2030,11 @@ sub _clip_alleles {
       $hgvs_notation->{type} = "=";
   }   
   
-  elsif( length ($hgvs_notation->{ref}) == 1 && length ($hgvs_notation->{alt}) == 1 && $hgvs_notation->{alt} ne $hgvs_notation->{ref}) {
+  elsif( $hgvs_notation->{ref} ne "-" &&
+          length ($hgvs_notation->{ref}) == 1 && 
+          length ($hgvs_notation->{alt}) == 1 && 
+          $hgvs_notation->{alt} ne $hgvs_notation->{ref}) {
+      
       $hgvs_notation->{type} = ">";
   }
   
