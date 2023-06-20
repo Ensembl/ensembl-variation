@@ -2165,16 +2165,21 @@ sub _clip_alleles {
   $hgvs_notation->{preseq} =   $preseq ;
 
   ### check if clipping suggests a type change 
-
+  
   ## no protein change - use transcript level annotation 
   if( $check_ref eq $check_alt) {
       $hgvs_notation->{type} = "=";
   }   
   
   ## re-set as > not delins
-  elsif( length ($check_ref) == 1 && length ($check_alt) == 1 && $hgvs_notation->{alt} ne $hgvs_notation->{ref}) {
+  elsif( $check_ref ne "-" && 
+        length ($check_ref) == 1 && 
+        length ($check_alt) == 1 && 
+        $hgvs_notation->{alt} ne $hgvs_notation->{ref}) {
+      
       $hgvs_notation->{type} = ">";
   }
+  
   
   ### re-set as ins/dup not delins 
   elsif(length ($check_ref) == 0 && length ($check_alt) >= 1){
