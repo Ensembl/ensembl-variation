@@ -58,7 +58,7 @@ if ($old_reg_file) {
 }
 
 my $TMP_DIR = $config->{tmp};
-if $config->{test} {
+if ($config->{test}) {
   test();
 } else {
   main();
@@ -75,7 +75,7 @@ sub test {
   debug($config, "Sorting files based on the variation_id column");
   $TMP_DIR = $TMP_DIR . "/";
   system("sort -k 1 -o ${TMP_DIR}${sorted_old_var} ${TMP_DIR}${old_var_file}");
-  system("sort -k 6 -o ${TMP_DIR}${sorted_old_var_feat} ${TMP_DIR}${old_var_far_file}");
+  system("sort -k 6 -o ${TMP_DIR}${sorted_old_var_feat} ${TMP_DIR}${$old_vf_file}");
 
   debug($config, "Sorting files based on the phenotype_feature_id column");
   system("sort -k 1 -o ${TMP_DIR}${sorted_old_pheno_feat} ${TMP_DIR}${$old_pheno_feat_file}");
@@ -92,7 +92,6 @@ sub test {
 
   debug($config, "Inserting into phenotype_feature but first sort, test mode so no insertion");
   system("sort -k7,7 -k8,8 -k9,9 -o ${TMP_DIR}${$sorted_new_pf} ${TMP_DIR}${$new_pf_file}");
-
 }
 
 sub main { 
@@ -105,7 +104,7 @@ sub main {
   debug($config, "Sorting files based on the variation_id column");
   $TMP_DIR = $TMP_DIR . "/";
   system("sort -k 1 -o ${TMP_DIR}${sorted_old_var} ${TMP_DIR}${old_var_file}");
-  system("sort -k 6 -o ${TMP_DIR}${sorted_old_var_feat} ${TMP_DIR}${old_var_far_file}");
+  system("sort -k 6 -o ${TMP_DIR}${sorted_old_var_feat} ${TMP_DIR}${$old_vf_file}");
 
   debug($config, "Sorting files based on the phenotype_feature_id column");
   system("sort -k 1 -o ${TMP_DIR}${sorted_old_pheno_feat} ${TMP_DIR}${$old_pheno_feat_file}");
@@ -138,9 +137,6 @@ sub main {
   system("rm *.txt");
 
 }
-
-
-
 
 sub dump_vdata_into_file {
   my $old_dbhvar = shift;
