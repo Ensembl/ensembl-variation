@@ -132,7 +132,7 @@ sub main {
   insert_pheno_feature($dbh, $sorted_new_pf);
 
   debug($config, "Inserting into phenotype_feature attrib");
-  insert_pheno_feature_attrib($dbh, $sorted_old_pfa);
+  insert_pheno_feature_attrib($dbh, $sorted_new_pfa);
 
   debug($config, "Removing files");
   system("rm *.txt");
@@ -345,24 +345,24 @@ sub insert_pheno_feature {
   my $dbhvar = shift; 
   my $load_file = shift;
 
-  my $insert_pheno = $dbhvar->prepare(qq[INSERT INTO phenotype_feature (phenotype_feature_id, phenotype_id, source_id, type, object_id, is_significant, seq_region_id, seq_region_start, seq_region_end, seq_region_strand) VALUES (?,?,?,?,?,?,?,?,?,?)]);
+  my $insert_pheno = $dbhvar->prepare(qq[ INSERT INTO phenotype_feature (phenotype_feature_id, phenotype_id, source_id, type, object_id, is_significant, seq_region_id, seq_region_start, seq_region_end, seq_region_strand) VALUES (?,?,?,?,?,?,?,?,?,?) ] );
 
   local *FH;
-  open FH, ">$load_file" or die "Can not open $load_file $!";
+  open FH, "<$load_file" or die "Can not open $load_file $!";
   while (<FH>) {
     chomp;
-    #my $phenotype_feature_id = (split)[0];
-    #my $phenotype_id = (split)[1];
-    #my $source_id = (split)[2];
-    #my $type = (split)[3];
-    #my $object_id = (split)[4];
-    #my $is_significant = (split)[5];
-    #my $seq_region_id = (split)[6];
-    #my $seq_region_start = (split)[7];
-    #my $seq_region_end = (split)[8];
-    #my $seq_region_strand = (split)[9];
+    my $phenotype_feature_id = (split)[0];
+    my $phenotype_id = (split)[1];
+    my $source_id = (split)[2];
+    my $type = (split)[3];
+    my $object_id = (split)[4];
+    my $is_significant = (split)[5];
+    my $seq_region_id = (split)[6];
+    my $seq_region_start = (split)[7];
+    my $seq_region_end = (split)[8];
+    my $seq_region_strand = (split)[9];
 
-    $insert_pheno->execute((split)[0], (split)[1], (split)[2], (split)[3], (split)[4], (split)[5], (split)[6], (split)[7], (split)[8], (split)[9]);
+    $insert_pheno->execute($phenotype_feature_id, $phenotype_id, $source_id, $type, $object_id, $is_significant, $seq_region_id, $seq_region_start, $seq_region_end, $seq_region_strand);
   }
   close FH;
   $insert_pheno->finish();
@@ -376,10 +376,14 @@ sub insert_pheno_feature_attrib {
   my $insert_pfa = $dbhvar->prepare(qq{INSERT INTO phenotype_feature_attrib (phenotype_feature_id, attrib_type_id, value) VALUES (?,?,?)});
 
   local *FH;
-  open FH, ">$load_file" or die "Can not open $load_file $!";
+  open FH, "<$load_file" or die "Can not open $load_file $!";
   while (<FH>) {
     chomp;
-    $insert_pfa->execute((split)[0], (split)[1], (split)[2]);
+    my $phenotype_feature_id = (split)[0];
+    my $attrib_type_id = (split)[1];
+    my $value = (split)[2];
+
+    $insert_pfa->execute($phenotype_feature_id, $attrib_type_id, $value);
   }
   close FH;
   $insert_pfa->finish();
