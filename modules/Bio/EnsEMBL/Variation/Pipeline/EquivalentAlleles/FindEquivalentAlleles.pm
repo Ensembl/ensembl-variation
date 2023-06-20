@@ -54,10 +54,13 @@ sub run {
 
   my $var_dba  = $self->get_species_adaptor('variation');
   $var_dba->include_failed_variations(1);
+  $var_dba->dbc->reconnect_when_lost(1);
 
-  my $sa       = $core_dba->get_SliceAdaptor();
-  my $vfa      = $var_dba->get_VariationFeatureAdaptor();
+  my $sa  = $core_dba->get_SliceAdaptor();
+  $sa->dbc->reconnect_when_lost(1);
 
+  my $vfa = $var_dba->get_VariationFeatureAdaptor();
+  $vfa->dbc->reconnect_when_lost(1);
 
   my $location = $self->required_param('location');
   $self->warning( 'starting location '. $location);
