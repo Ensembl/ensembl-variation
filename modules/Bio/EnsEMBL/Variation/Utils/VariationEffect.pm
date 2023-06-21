@@ -154,6 +154,17 @@ sub complete_overlap_feature {
     );
 }
 
+sub _supporting_cnv_terms {
+  # if variant is CNV, return class SO terms for its supporting variants
+  my $bvf = shift;
+
+  return if $bvf->class_SO_term(undef, 1) ne "copy_number_variation";
+
+  my $support_vars  = $bvf->structural_variation->get_all_SupportingStructuralVariants;
+  my @support_terms = map { $_->class_SO_term } @{$support_vars};
+  return @support_terms;
+}
+
 sub deletion {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
     $bvf ||= $bvfoa->base_variation_feature;
@@ -169,21 +180,11 @@ sub deletion {
     
     # structural variant depends on class
     if($bvf->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature')) {
-      my $class_SO_term = $bvf->class_SO_term(undef, 1);
-
-      # check if the CNV harbours any deletion or copy number loss
-      my $is_CNV_deletion = 0;
-      if ($class_SO_term eq "copy_number_variation") {
-        my $support_vars  = $bvf->structural_variation->get_all_SupportingStructuralVariants;
-        my @support_terms = map { $_->class_SO_term } @{$support_vars};
-        $is_CNV_deletion = grep(/deletion|loss/i, @support_terms);
-      }
-
       return (
-          ($class_SO_term eq 'deletion') or
-          ($class_SO_term =~ /deletion/i) or
-          ($class_SO_term =~ /loss/i) or
-          $is_CNV_deletion
+          copy_number_loss(@_) or
+          ($bvf->class_SO_term(undef, 1) eq 'deletion') or
+          ($bvf->class_SO_term(undef, 1) =~ /deletion/i) or
+          grep(/deletion/i, _supporting_cnv_terms($bvf))
       );
     }
     
@@ -207,22 +208,11 @@ sub insertion {
     if($bvf->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature')) {
       my $class_SO_term = $bvf->class_SO_term(undef, 1);
 
-      # check if the CNV harbours any insertion or copy number gain
-      my $is_CNV_insertion = 0;
-      if ( $class_SO_term eq "copy_number_variation" ) {
-        my $support_vars  = $bvf->structural_variation->get_all_SupportingStructuralVariants;
-        my @support_terms = map { $_->class_SO_term } @{$support_vars};
-        $is_CNV_insertion = grep(/insertion|duplication|gain/i, @support_terms);
-      }
-
       return (
-          duplication(@_) or
-          tandem_duplication(@_) or
+          copy_number_gain(@_) or
           ($bvf->class_SO_term(undef, 1) eq 'insertion') or
           ($bvf->class_SO_term(undef, 1) =~ /insertion/i) or
-          ($bvf->class_SO_term(undef, 1) =~ /gain/i) or
-          ($bvf->class_SO_term(undef, 1) =~ /duplication/i) or
-          $is_CNV_insertion
+          grep(/insertion/i, _supporting_cnv_terms($bvf))
       );
     }
     
@@ -232,15 +222,23 @@ sub insertion {
 sub copy_number_gain {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
     $bvf ||= $bvfoa->base_variation_feature;
-    
-    return (duplication(@_) or tandem_duplication(@_) or $bvf->class_SO_term(undef, 1) =~ /gain/i);
+
+    return (
+        duplication(@_) or
+        tandem_duplication(@_) or
+        $bvf->class_SO_term(undef, 1) =~ /gain/i or
+        grep(/gain/i, _supporting_cnv_terms($bvf))
+    );
 }
 
 sub copy_number_loss {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
     $bvf ||= $bvfoa->base_variation_feature;
     
-    return $bvf->class_SO_term(undef, 1) =~ /loss/i;
+    return (
+      $bvf->class_SO_term(undef, 1) =~ /loss/i or
+      grep(/loss/i, _supporting_cnv_terms($bvf))
+    );
 }
 
 sub duplication {
@@ -250,7 +248,8 @@ sub duplication {
     return (
         (
             ($bvf->class_SO_term(undef, 1) eq 'duplication') or
-            ($bvf->class_SO_term(undef, 1) =~ /duplication/i)
+            ($bvf->class_SO_term(undef, 1) =~ /duplication/i) or
+            grep(/duplication/i, _supporting_cnv_terms($bvf))
         ) and
         (not tandem_duplication(@_))
     );
@@ -278,7 +277,8 @@ sub tandem_duplication {
     if($bvf->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature')) {
         return (
             ($bvf->class_SO_term(undef, 1) eq 'tandem_duplication') or
-            ($bvf->class_SO_term(undef, 1) =~ /tandem_duplication/i) 
+            ($bvf->class_SO_term(undef, 1) =~ /tandem_duplication/i) or
+            grep(/tandem_duplication/i, _supporting_cnv_terms($bvf))
         );
     }
 }
@@ -1470,4 +1470,3 @@ sub contains_entire_feature {
 }
 
 1;
-
