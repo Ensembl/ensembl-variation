@@ -291,14 +291,14 @@ sub tandem_duplication {
     }
 }
 
-sub breakend {
+sub chromosome_breakpoint {
   my ($bvfoa, $feat, $bvfo, $bvf) = @_;
   $bvf ||= $bvfoa->base_variation_feature;
 
   if ($bvf->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature')) {
     return (
-      ($bvf->class_SO_term(undef, 1) eq 'breakend') or
-      ($bvf->class_SO_term(undef, 1) =~ /breakend/i)
+      ($bvf->class_SO_term(undef, 1) eq 'chromosome_breakpoint') or
+      ($bvf->class_SO_term(undef, 1) =~ /chromosome_breakpoint/i)
     );
   }
 }
@@ -336,10 +336,10 @@ sub feature_truncation {
     
     return 0 if $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele');
     
-    if(breakend(@_)) {
+    if(chromosome_breakpoint(@_)) {
         my $chr;
         for my $alt (@{$bvf->{_parsed_allele}}) {
-            # iterate over breakends to check if feature is located within
+            # iterate over breakends to check if within_feature
             return 1 if within_feature($bvfoa, $feat, $bvfo, $alt, 1);
         }
         return 1 if within_feature($bvfoa, $feat, $bvfo, $bvf, 1);
