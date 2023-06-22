@@ -306,6 +306,13 @@ sub add_variation_feature {
           $update_vf_sth->execute($data_tv->[0]->[1], $data_tv->[0]->[0]) or die "Error updating consequence_types in table variation_feature, variation_feature_id: ", $data_tv->[0]->[0],"\n";
         }
     }
+    
+    # Update variation_set in variation_feature table
+    my $vf_set_upd_sth = $vdb->dbc()->prepare(qq[ UPDATE variation_feature
+                                                  SET variation_set_id = concat($pheno_set_id,',', $hgmd_set_id)
+                                                  WHERE source_id = $source_id
+                                                ]);
+    $vf_set_upd_sth->execute() or die "Error updating variation_set_id in variation_feature\n";
   }
 }
 
