@@ -75,7 +75,7 @@ sub default_options {
     # EBI farm users should either change these here, or override them on the
     # command line to suit the EBI farm.
         
-    default_lsf_options => '-qproduction -R"select[mem>32000] rusage[mem=32000]" -M32000',
+    default_lsf_options => '-qproduction -R"select[mem>8000] rusage[mem=8000]" -M8000',
     medium_lsf_options  => '-qproduction -R"select[mem>16000] rusage[mem=16000]" -M16000',
 
 
