@@ -48,7 +48,7 @@ sub default_options {
     hive_auto_rebalance_semaphores => 0, 
     hive_no_init => 0,
     hive_debug_init => 1,
-    hive_default_max_retry_count => 0,
+    hive_default_max_retry_count => 3,
 
     # the location of your checkout of the ensembl API (the hive looks for SQL files here)
         
@@ -80,16 +80,16 @@ sub default_options {
 
 
     # size of region to be checked in a single job
-    region_size =>  10000000,
+    region_size =>  1000000,
 
     # size of bin to be checked for equivalent alleles
-    bin_size  =>  1000000,
+    bin_size  =>  100000,
 
     ## overlap between checking bins
     overlap   => 1000,
 
     # number of workers used for the parallelisable analysis
-    capacity  => 30,
+    capacity  => 300,
 
 
     # connection parameters for the hive database, you should supply the hive_db_password
