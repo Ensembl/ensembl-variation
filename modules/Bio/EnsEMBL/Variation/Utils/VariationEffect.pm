@@ -159,6 +159,7 @@ sub _supporting_cnv_terms {
   my $bvf = shift;
 
   return if $bvf->class_SO_term(undef, 1) ne "copy_number_variation";
+  return unless defined $bvf->structural_variation;
 
   my $support_vars  = $bvf->structural_variation->get_all_SupportingStructuralVariants;
   my @support_terms = map { $_->class_SO_term } @{$support_vars};

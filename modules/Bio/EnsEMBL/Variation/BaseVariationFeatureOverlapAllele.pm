@@ -418,7 +418,7 @@ sub _bvf_preds {
     my $is_CNV = $class_SO_term eq "copy_number_variation";
     my $is_CNV_deletion  = 0;
     my $is_CNV_insertion = 0;
-    if ($is_CNV) {
+    if ($is_CNV and defined $bvf->structural_variation) {
       my $support_vars  = $bvf->structural_variation->get_all_SupportingStructuralVariants;
       my @support_terms = map { $_->class_SO_term } @{$support_vars};
 
