@@ -91,7 +91,8 @@ sub test {
   debug($config, "Running in test mode"); 
   
   my $old_dbname = $old_dbh->dbname;
-  debug($config, "Dumping old phenotype data with HGMD as source from $old_dbname");
+
+  debug($config, "Dumping HGMD data from tables variation and variation_feature from the $old_dbname");
   dump_vdata_into_file($old_dbh);
 
   debug($config, "Dumping old phenotype data with HGMD as source from $old_dbname");
@@ -221,7 +222,7 @@ sub dump_vdata_into_file {
 
     $dump_tv->finish();
 
-    my $dump_mtmp = $old_dbhvar->prepare(qq[ SELECT transcript_variation_id, variation_feature_id, feature_stable_id, allele_string, somatic, consequence_types, cds_start, cds_end, cdna_start, cdna_end, translation_start, translation_end, distance_to_transcript from MTMP_transcript_variation where variation_feature_id in  (SELECT variation_feature_id from variation_feature where source_id = 8) ]);
+    my $dump_mtmp = $old_dbhvar->prepare(qq[ SELECT  variation_feature_id, feature_stable_id, allele_string, somatic, consequence_types, cds_start, cds_end, cdna_start, cdna_end, translation_start, translation_end, distance_to_transcript from MTMP_transcript_variation where variation_feature_id in  (SELECT variation_feature_id from variation_feature where source_id = 8) ]);
     open (my $mtmp, ">>$TMP_DIR/$old_mtmp_file") or die ("Cannot open $TMP_DIR/$old_mtmp_file: $!");
     $dump_mtmp->execute();
 
@@ -340,10 +341,9 @@ sub manipulate_var_ids {
       chomp $mtmp_data;
       my @columns = split ("\t", $mtmp_data);
       
-      my $mtmp_id = $columns[1];
+      my $mtmp_id = $columns[0];
       if (exists $v_feat{$mtmp_id}) {
-        $columns[0] = $max_mtmp++;
-        $columns[1] = $v_feat{$mtmp_id};
+        $columns[0] = $v_feat{$mtmp_id};
         print $new_mtmp_feat join ("\t", @columns), "\n";
       } 
     }
