@@ -103,10 +103,11 @@ sub test {
   system("sort -k 1 -o ${TMP_DIR}${sorted_old_var} ${TMP_DIR}${old_var_file}");
   system("sort -k 6 -o ${TMP_DIR}${sorted_old_var_feat} ${TMP_DIR}${old_vf_file}");
 
+
   if ($config->{transcript}) {
     debug($config, "Sorting files based on the variation_feature_id column");
-    system("sort -k 2 -o ${TMP_DIR}${$sorted_old_tv_file} ${TMP_DIR}${old_tv_file}");
-    system("sort -k 2 -o ${TMP_DIR}${$sorted_old_mtmp_file} ${TMP_DIR}${old_mtmp_file}");
+    system("sort -k 2 -o ${TMP_DIR}${sorted_old_tv_file} ${TMP_DIR}${old_tv_file}");
+    system("sort -k 2 -o ${TMP_DIR}${sorted_old_mtmp_file} ${TMP_DIR}${old_mtmp_file}");
   }
 
   debug($config, "Sorting files based on the phenotype_feature_id column");
@@ -144,8 +145,8 @@ sub main {
   
   if ($config->{transcript}) {
     debug($config, "Sorting files based on the variation_feature_id column");
-    system("sort -k 2 -o ${TMP_DIR}${$sorted_old_tv_file} ${TMP_DIR}${old_tv_file}");
-    system("sort -k 2 -o ${TMP_DIR}${$sorted_old_mtmp_file} ${TMP_DIR}${old_mtmp_file}");
+    system("sort -k 2 -o ${TMP_DIR}${sorted_old_tv_file} ${TMP_DIR}${old_tv_file}");
+    system("sort -k 2 -o ${TMP_DIR}${sorted_old_mtmp_file} ${TMP_DIR}${old_mtmp_file}");
   }
 
   debug($config, "Sorting files based on the phenotype_feature_id column");
@@ -222,7 +223,7 @@ sub dump_vdata_into_file {
 
     $dump_tv->finish();
 
-    my $dump_mtmp = $old_dbhvar->prepare(qq[ SELECT  variation_feature_id, feature_stable_id, allele_string, somatic, consequence_types, cds_start, cds_end, cdna_start, cdna_end, translation_start, translation_end, distance_to_transcript from MTMP_transcript_variation where variation_feature_id in  (SELECT variation_feature_id from variation_feature where source_id = 8) ]);
+    my $dump_mtmp = $old_dbhvar->prepare(qq[ SELECT  variation_feature_id, feature_stable_id, allele_string, consequence_types, cds_start, cds_end, cdna_start, cdna_end, translation_start, translation_end, distance_to_transcript from MTMP_transcript_variation where variation_feature_id in  (SELECT variation_feature_id from variation_feature where source_id = 8) ]);
     open (my $mtmp, ">>$TMP_DIR/$old_mtmp_file") or die ("Cannot open $TMP_DIR/$old_mtmp_file: $!");
     $dump_mtmp->execute();
 
@@ -270,7 +271,7 @@ sub manipulate_var_ids {
   $max_var = $max_var + 1;
 
   open(my $old_var, '<', "$TMP_DIR/$sorted_old_var_feat") or die "Cannot open file: $!";
-  open(my $new_var_feat, '>', "$TMP_DIR/$new_var_feat") or die "Cannot open file: $!";
+  open(my $new_vf, '>', "$TMP_DIR/$new_var_feat") or die "Cannot open file: $!";
 
   while (my $var_feat = <$old_var> ) {
     chomp $var_feat;
@@ -278,11 +279,11 @@ sub manipulate_var_ids {
     
     $columns[0] = $max_var_feat++;
     $columns[5] = $max_var++;
-    print $new_var_feat join ("\t", @columns), "\n";
+    print $new_vf join ("\t", @columns), "\n";
   }
 
   close $old_var;
-  close $new_var_feat;
+  close $new_vf;
   
   if ($config->{transcript}) {
 
@@ -292,14 +293,8 @@ sub manipulate_var_ids {
     my $max_tv = $tv->[0]->[0];
     $max_tv = $max_tv + 1;
 
-    my $select_max_mtmp = $dbhvar->prepare(qq[SELECT MAX(transcript_variation_id) from MTMP_transcript_variation]);
-    $select_max_mtmp->execute();
-    my $mtmp = $select_max_mtmp->fetchall_arrayref();
-    my $max_mtmp = $mtmp->[0]->[0];
-    $max_mtmp = $max_mtmp + 1;
-
     open($old_var, '<', "$TMP_DIR/$sorted_old_var_feat") or die "Cannot open file: $!";
-    open($new_var_feat, '<', "$TMP_DIR/$new_var_feat") or die "Cannot open file: $!";
+    open($new_vf, '<', "$TMP_DIR/$new_var_feat") or die "Cannot open file: $!";
     
     my @old_vid;
     my @new_vid;
@@ -308,13 +303,13 @@ sub manipulate_var_ids {
       my $key = (split)[0];
       push @old_vid, $key;
     }
-    while (<$new_var_feat>) {
+    while (<$new_vf>) {
       chomp;
       my $new_vid = (split)[0];
       push @new_vid, $new_vid;
     }
     close $old_var;
-    close $new_var_feat;
+    close $new_vf;
 
     my %v_feat = map { $old_vid[$_] => $new_vid[$_] } 0..$#old_vid;
     
