@@ -434,6 +434,10 @@ sub _bvf_preds {
       $self->_update_preds($bvf_preds, 'insertion', 1, \$pred_digest);
       $self->_update_preds($bvf_preds, 'increase_length', 1, \$pred_digest);
     }
+    elsif($class_SO_term =~ /chromosome_breakpoint/) {
+      $self->_update_preds($bvf_preds, 'chromosome_breakpoint', 1, \$pred_digest);
+      $self->_update_preds($bvf_preds, 'decrease_length', 1, \$pred_digest);
+    }
   }
   
   # otherwise for sequence variants, log the reference length here
