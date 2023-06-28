@@ -105,7 +105,7 @@ sub test {
 
 
   if ($config->{transcript}) {
-    debug($config, "Sorting files based on the variation_feature_id column");
+    debug($config, "Sorting transcript variation files based on the variation_feature_id column");
     system("sort -k 2 -o ${TMP_DIR}${sorted_old_tv_file} ${TMP_DIR}${old_tv_file}");
     system("sort -k 2 -o ${TMP_DIR}${sorted_old_mtmp_file} ${TMP_DIR}${old_mtmp_file}");
   }
@@ -144,7 +144,7 @@ sub main {
   system("sort -k 6 -o ${TMP_DIR}${sorted_old_var_feat} ${TMP_DIR}${old_vf_file}");
   
   if ($config->{transcript}) {
-    debug($config, "Sorting files based on the variation_feature_id column");
+    debug($config, "Sorting transcript variation files based on the variation_feature_id column");
     system("sort -k 2 -o ${TMP_DIR}${sorted_old_tv_file} ${TMP_DIR}${old_tv_file}");
     system("sort -k 2 -o ${TMP_DIR}${sorted_old_mtmp_file} ${TMP_DIR}${old_mtmp_file}");
   }
