@@ -27,8 +27,8 @@ my $script_opts = [{args => ['host', 'dbhost', 'h'], type => '=s'},
         {args => ['pass', 'dbpass', 'p'], type => ':s'},
         {args => ['dbname',  'D'],         type => ':s'},
         {args => ['version'],    type => ':i'},
-        {args => ['dry_run'], type=>'!'}, ],
-        {args => ['truncate'], type=>'!'}, ],;
+        {args => ['dry_run'], type=>'!'},
+        {args => ['truncate'], type=>'!'}, ];
 
 if (scalar(@ARGV) == 0) {
   usage();
