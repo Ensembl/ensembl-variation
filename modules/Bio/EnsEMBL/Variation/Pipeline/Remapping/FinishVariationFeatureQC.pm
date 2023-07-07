@@ -276,7 +276,7 @@ sub flip_population_genotypes {
     my $rev_comp_genotype_string = reverse_comp_allele_string($genotype_string);
     if (contained_in_allele_string($allele_string, $rev_comp_genotype_string)) {
       my $genotype_code_id = $sgta->_genotype_code([split('/', $rev_comp_genotype_string)]);
-      print $fh_out "UPDATE population_genotype SET genotype_code_id = $genotype_code_id WHERE population_genotype_id = $population_genotype_id;\n ";
+      print $fh_out "UPDATE population_genotype SET genotype_code_id = $genotype_code_id WHERE population_genotype_id = $population_genotype_id;\n";
     }
   }
   $fh->close();
