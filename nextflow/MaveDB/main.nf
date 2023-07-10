@@ -41,10 +41,10 @@ if (params.help) {
 }
 
 // Module imports
-include { get_files_by_licence;
-          split_by_mapping_type } from './nf_modules/licences.nf'
-include { get_hgvsp;
-          run_variant_recoder } from './nf_modules/variant_recoder.nf'
+include { filter_by_licence } from './subworkflows/filter.nf'
+include { split_by_mapping_type } from './subworkflows/split.nf'
+include { run_variant_recoder } from './nf_modules/variant_recoder.nf'
+include { get_hgvsp } from './nf_modules/utils.nf'
 include { map_scores_to_HGVSp_variants;
           map_scores_to_HGVSg_variants } from './nf_modules/mapping.nf'
 include { download_chain_files;
@@ -65,9 +65,9 @@ log.info """
 
 workflow {
   // prepare data based on licence
-  files = Channel.fromPath( params.mappings + "/*.json" )
+  files = Channel.fromPath( params.mappings + "/*.json", checkIfExists: true )
   licences = params.licences.tokenize(",")
-  filtered = get_files_by_licence(files, licences)
+  filtered = filter_by_licence(files, licences)
   mapping_files = split_by_mapping_type( filtered )
 
   // use MaveDB-prepared HGVSg mappings
