@@ -556,7 +556,7 @@ my %test_output_no_shift = (
            "ENST00000396515.3:c.716G>A",
            "A", 
            "ENSP00000379772.3:p.Ter239=",
-           "insertion, stop retained"
+           "substitution, stop retained"
           ],
      5 => ["NC_000001.10:g.154140413_154140415del",
            "-", 
