@@ -40,6 +40,7 @@ use warnings;
 use Getopt::Long;
 use DBI;
 use ImportUtils qw(update_table load);
+use File::Spec;
 
 use Bio::EnsEMBL::Registry;
 
@@ -63,7 +64,7 @@ GetOptions(\%options,@option_defs);
 
 my $species = $options{'species'};
 my $group = $options{'group'} || q{variation};
-my $registry_file = $options{'registry_file'};
+my $registry_file = $options{'registry_file'} || 'ensembl.registry';
 my $clean = $options{'clean'};
 my $quiet = $options{'quiet'};
 my $help = $options{'help'};
@@ -83,18 +84,21 @@ our $VARIATION_FEATURE_TABLE = $sv_prefix.'variation_feature';
 our $VAR_COL       = $sv_prefix.'variation_id';
 our $VAR_SET_TABLE = 'variation_set_'.$sv_prefix.'variation';
 
-#ÊCheck that required parameters were passed
+# Check parameters
 die ("Required argument '-species' was not specified") unless (defined($species));
-die ("Required argument '-registry_file' was not specified") unless (defined($registry_file));
+die ("Registry file $registry_file not found") unless -e $registry_file;
+
+# Allow relative paths to ensembl.registry
+$registry_file = File::Spec->rel2abs($registry_file);
 
 # Load the registry from the supplied file
 my $registry = 'Bio::EnsEMBL::Registry';
 $registry->load_all($registry_file);
 
-#ÊGet a dbadaptor to the variation database
+# Get a dbadaptor to the variation database
 my $dbVar = $registry->get_DBAdaptor($species,$group) or die ("Could not get variation DBAdaptor for $species and $group");
 
-#ÊCall the post-processing subroutine
+# Call the post-processing subroutine
 post_process($dbVar,$clean,$quiet);
 
 sub post_process {
@@ -104,7 +108,7 @@ sub post_process {
     
     my $stmt; 
     
-    #ÊFirst of all, make sure that no primary key for variation_sets is too large to fit inside the set
+    # First of all, make sure that no primary key for variation_sets is too large to fit inside the set
     $stmt = qq{
         SELECT
             MAX(variation_set_id)
@@ -114,7 +118,7 @@ sub post_process {
     my $max_id = $dbVar->dbc->db_handle->selectall_arrayref($stmt)->[0][0];
     die ("There are variation_sets with primary keys greater than $MAX_VARIATION_SETS. This will not be possible to represent with the MySQL SET data type in the $VARIATION_FEATURE_TABLE!") if ($max_id > $MAX_VARIATION_SETS);
 
-    ###Ê
+    ###
     ## Define the statements we will be using
     my $tmp_table = ($sv_prefix ne '') ? q{tmp_vs_svf_upd} : q{tmp_vs_vf_upd};    
     
@@ -304,12 +308,12 @@ Description:
 
 Command line switches:
 
-  -registry_file f  (Required)
-                    An Ensembl registry configuration file with connection details to the
-                    relevant database.
-
   -species s        (Required)
                     The species of the database for which to do the post-processing.
+
+  -registry_file f  (Optional)
+                    An Ensembl registry configuration file with connection details to the
+                    relevant database. Defaults to 'ensembl.registry'.
 
   -group g          (Optional)
                     The group identifier for the database to post-process as it is specified
@@ -327,7 +331,7 @@ Command line switches:
   -help             Displays this message.
 
   -no_mtmp          (Optional)
-                    Don't create the MTMP_variation_set_variation table
+                    Don't create the MTMP_variation_set_variation table.
         
 };
     
