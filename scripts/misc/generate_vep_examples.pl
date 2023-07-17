@@ -64,7 +64,7 @@ my $reg = 'Bio::EnsEMBL::Registry';
 
 if (defined($registry)) {
   # Support relative paths to registry file
-  $registry_file = File::Spec->rel2abs($registry_file);
+  $registry = File::Spec->rel2abs($registry);
   $reg->load_all($registry);
 } else {
   if(defined($host) && $host =~ /staging|variation|livemirror/) {
