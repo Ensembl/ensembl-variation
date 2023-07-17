@@ -88,7 +88,7 @@ our $VAR_SET_TABLE = 'variation_set_'.$sv_prefix.'variation';
 die ("Required argument '-species' was not specified") unless (defined($species));
 die ("Registry file $registry_file not found") unless -e $registry_file;
 
-# Allow relative paths to ensembl.registry
+# Support relative paths to registry file
 $registry_file = File::Spec->rel2abs($registry_file);
 
 # Load the registry from the supplied file
@@ -159,7 +159,7 @@ sub post_process {
     };
     my $ins_expl_sth = $dbVar->dbc->prepare($stmt);
     
-    #ÊAdd the implicit parent sets to the list of variation_sets
+    #ï¿½Add the implicit parent sets to the list of variation_sets
     $stmt = qq{
         UPDATE
             $tmp_table t,
@@ -185,7 +185,7 @@ sub post_process {
     ####
     ## Post-process
     
-    #ÊFirst, create the temporary table (drop it if it already exists)
+    #ï¿½First, create the temporary table (drop it if it already exists)
     $stmt = qq{
         DROP TABLE IF EXISTS
             $tmp_table
