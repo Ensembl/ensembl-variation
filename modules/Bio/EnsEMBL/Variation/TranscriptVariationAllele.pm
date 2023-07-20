@@ -845,7 +845,7 @@ sub codon {
       ## Bioperl Seq object
       my $cds_obj = $self->_get_alternate_cds();
       return undef unless defined($cds_obj);
-      $cds = $cds_obj->seq();
+      $cds = ( $self->{is_reference} ? $tv->_translateable_seq() : $cds_obj->seq() );
     }
 
     else {
@@ -856,8 +856,7 @@ sub codon {
     }
 
     # and extract the codon sequence
-    my $codon = substr($cds, $codon_cds_start-1, $codon_len + ($allele_len - $vf_nt_len));
-    
+    my $codon = ( $self->{is_reference} ? substr($cds, $codon_cds_start-1, $codon_len ) : substr($cds, $codon_cds_start-1, $codon_len + ($allele_len - $vf_nt_len)));
     if (length($codon) < 1) {
       $self->{codon}   = '-';
       $self->{peptide} = '-';
