@@ -35,6 +35,7 @@ use Bio::EnsEMBL::Variation::VariationFeature;
 
 use Getopt::Long;
 use FileHandle;
+use File::Spec;
 
 # Print instructions if run without parameters
 usage() unless (scalar(@ARGV));
@@ -62,6 +63,8 @@ die "Error: provide the Ensembl version with option '-v'\n" if !$version;
 my $reg = 'Bio::EnsEMBL::Registry';
 
 if (defined($registry)) {
+  # Support relative paths to registry file
+  $registry = File::Spec->rel2abs($registry);
   $reg->load_all($registry);
 } else {
   if(defined($host) && $host =~ /staging|variation|livemirror/) {
