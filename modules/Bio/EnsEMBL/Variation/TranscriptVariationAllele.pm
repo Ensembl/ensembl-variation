@@ -2115,7 +2115,7 @@ sub _clip_alleles {
   $hgvs_notation->{original_ref} = $hgvs_notation->{ref};
 
   ## store identical trimmed seq 
-  my $preseq;
+  my $preseq = "";
   print "can we clip :  $check_ref &  $check_alt\n" if $DEBUG ==1;
   ### strip same bases from start of string
   for (my $p =0; $p <length ($hgvs_notation->{ref}); $p++){
