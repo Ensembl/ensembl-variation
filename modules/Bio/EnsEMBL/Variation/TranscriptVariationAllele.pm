@@ -79,8 +79,6 @@ use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap within_cds within
 
 use base qw(Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele Bio::EnsEMBL::Variation::BaseTranscriptVariationAllele);
 
-use Data::Dumper;
-
 our $DEBUG = 0;
 our $NO_TRANSFER = 0;
 
