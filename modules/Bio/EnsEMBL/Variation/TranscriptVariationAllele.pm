@@ -1459,18 +1459,18 @@ sub hgvs_transcript {
       $used_ref =~ s/\d+\s\d+\s//;
 
       # Compare ref/alt with ref from refseq
-      if($used_ref ne $hgvs_notation->{'ref'}) {
+      if($used_ref && $used_ref ne $hgvs_notation->{ref}) {
         my $used_ref_comp = $used_ref;
         reverse_comp(\$used_ref_comp);
 
-        if($used_ref eq $hgvs_notation->{'alt'}) {
-          my $hgvs_ref = $hgvs_notation->{'ref'};
-          $hgvs_notation->{'ref'} = $used_ref_comp;
-          $hgvs_notation->{'alt'} = $ref->{given_ref};
+        if($used_ref eq $hgvs_notation->{alt}) {
+          my $hgvs_ref = $hgvs_notation->{ref};
+          $hgvs_notation->{ref} = $used_ref_comp;
+          $hgvs_notation->{alt} = $ref->{given_ref} if($ref->{given_ref});
         }
         else {
-          $hgvs_notation->{'ref'} = $ref->variation_feature_seq;
-          $hgvs_notation->{'alt'} = $self->variation_feature_seq;
+          $hgvs_notation->{ref} = $ref->variation_feature_seq;
+          $hgvs_notation->{alt} = $self->variation_feature_seq;
         }
       }
   }
@@ -1697,7 +1697,7 @@ sub hgvs_protein {
     delete($self->{shift_hash}) unless $hash_already_defined;
     return undef;
   }
-       
+
   print "proceeding with hgvs prot\n" if $DEBUG == 1;
   print "Checking translation start: " . $tv->translation_start() ."\n" if $DEBUG == 1;
 
