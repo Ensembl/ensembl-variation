@@ -79,6 +79,7 @@ use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap within_cds within
 
 use base qw(Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele Bio::EnsEMBL::Variation::BaseTranscriptVariationAllele);
 
+use Data::Dumper;
 
 our $DEBUG = 0;
 our $NO_TRANSFER = 0;
@@ -799,7 +800,7 @@ sub codon {
     
     my $shifting_offset = 0;
     my $tr = $tv->transcript;
-  
+
     $shifting_offset = (defined($self->{shift_hash}) && defined($self->{shift_hash}->{shift_length})) ? $self->{shift_hash}->{shift_length} : 0;
 
     my ($tv_tr_start, $tv_tr_end) = ($tv->translation_start, $tv->translation_end);
@@ -811,6 +812,25 @@ sub codon {
     # try to calculate the codon sequence
     $self->shift_feature_seqs unless $shifting_offset == 0;
     my $seq = $self->feature_seq;
+    
+    my $ref = $tv->get_reference_TranscriptVariationAllele;
+    my @attribs = @{$tr->get_all_Attributes()};
+    my @edit_attrs = grep {$_->code =~ /^_rna_edit/} @attribs;
+    
+    if(!$self->{is_reference} && scalar @edit_attrs > 0) {
+      my $x = $seq;
+      reverse_comp(\$x);
+      my $given_ref = $ref->{given_ref};
+      
+      if($seq eq $ref->{variation_feature_seq}) {
+        $seq = $given_ref;
+      }
+      elsif($x eq $ref->{variation_feature_seq}) {
+        reverse_comp(\$given_ref);
+        $seq = $given_ref;
+      }
+    }
+
     $seq = '' if $seq eq '-';
     
     # calculate necessary coords and lengths
@@ -857,7 +877,7 @@ sub codon {
 
     # and extract the codon sequence
     my $codon = substr($cds, $codon_cds_start-1, $codon_len + ($allele_len - $vf_nt_len));
-    
+
     if (length($codon) < 1) {
       $self->{codon}   = '-';
       $self->{peptide} = '-';
@@ -1433,6 +1453,29 @@ sub hgvs_transcript {
   ## Mismatches between refseq transcripts and the reference genome are tracked in transcript attributes
   my @attribs = @{$tr->get_all_Attributes()};
   my @edit_attrs = grep {$_->code =~ /^_rna_edit/} @attribs;
+
+  my $ref = $tv->get_reference_TranscriptVariationAllele;
+
+  if(scalar @edit_attrs > 0) {
+      my $used_ref = $edit_attrs[0]->value;
+      $used_ref =~ s/\d+\s\d+\s//;
+
+      # Compare ref/alt with ref from refseq
+      if($used_ref ne $hgvs_notation->{'ref'}) {
+        my $used_ref_comp = $used_ref;
+        reverse_comp(\$used_ref_comp);
+
+        if($used_ref eq $hgvs_notation->{'alt'}) {
+          my $hgvs_ref = $hgvs_notation->{'ref'};
+          $hgvs_notation->{'ref'} = $used_ref_comp;
+          $hgvs_notation->{'alt'} = $ref->{given_ref};
+        }
+        else {
+          $hgvs_notation->{'ref'} = $ref->variation_feature_seq;
+          $hgvs_notation->{'alt'} = $self->variation_feature_seq;
+        }
+      }
+  }
 
   my $misalignment_offset = 0;
   $misalignment_offset = $self->get_misalignment_offset(\@edit_attrs) if (scalar(@edit_attrs) && (substr($tr->stable_id, 0,3) eq 'NM_' || substr($tr->stable_id, 0,3) eq 'XM_'));
