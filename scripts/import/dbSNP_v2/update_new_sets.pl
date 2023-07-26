@@ -3,6 +3,7 @@ use strict;
 use DBI;
 use Socket;
 use Bio::EnsEMBL::Registry;
+use Data::Dumper;
 use Getopt::Long;
 use POSIX qw(strftime);
 use Cwd qw(cwd);
@@ -62,15 +63,16 @@ my $min_id = $vf->[0]->[0];
 my $chunk = 1000000;
 my $max_id = $vf->[0]->[1];
 
-debug($config, "Dumping the variation sets and the new variation feature into files");
-for my $tmp_num (map { $_ } $min_id/$chunk .. $max_id/$chunk) {
-  dump_old_sql_variation_sets($old_dbh, $tmp_num, $chunk, $max_id);
-}
+#debug($config, "Dumping the variation sets and the new variation feature into files");
+#for my $tmp_num (map { $_ } $min_id/$chunk .. $max_id/$chunk) {
+#  dump_old_sql_variation_sets($old_dbh, $tmp_num, $chunk, $max_id);
+#}
 
-for my $tmp_num (map { $_ } $min_id/$chunk .. $max_id/$chunk) {
-  dump_new_variation_feature($dbh, $tmp_num, $chunk, $max_id);
-}
+#for my $tmp_num (map { $_ } $min_id/$chunk .. $max_id/$chunk) {
+#  dump_new_variation_feature($dbh, $tmp_num, $chunk, $max_id);
+#}
 
+=head
 debug($config, "Sorting the files");
 system(sort -u $new_vf_file);
 system(sort -u $tmp_vset);
@@ -89,11 +91,16 @@ for my $tmp_num (map { $_ } $min_id/$chunk .. $max_id/$chunk) {
   dump_new_variation_sets($dbh, $tmp_num, $chunk, $max_id);
 }
 
+=cut 
+
+debug($config, "Recalculating the variation sets");
+recalculate($tmp_merged, $tmp_vs_file);
+
 debug($config, "Updating the variation feature table");
 update_variation_feature_table($dbh, $tmp_vs_file);
 
 
-
+=head
 debug($config, "Adding failed variation to variation set");
 $dbh->do( qq{ 
   INSERT IGNORE INTO variation_set_variation (variation_id, variation_set_id)
@@ -105,6 +112,7 @@ $dbh->do(qq{
   ALTER TABLE variation_set_variation ENABLE keys;
 }) or die "Failed to alter variation_set_variation keys";
 
+=cut 
 
 sub temp_table { 
   my $dbhvar = shift; 
@@ -124,9 +132,9 @@ sub create_merged_file {
   my $new_vf_file = shift; 
   my $tmp_merged = shift;
 
-  open FILE1, "<", "$file" or die "Cannot open $file: $!";
-  open FILE2, "<", "$second_file" or die "Cannot open $second_file: $!";
-  open OUTPUT, ">", "$third_file" or die "Cannot open $third_file: $!";
+  open FILE1, "<", "$tmp_vset" or die "Cannot open $tmp_vset: $!";
+  open FILE2, "<", "$new_vf_file" or die "Cannot open $new_vf_file: $!";
+  open OUTPUT, ">", "$tmp_merged" or die "Cannot open $tmp_merged: $!";
   my %data;
 
   while (<FILE1>) {
@@ -194,8 +202,6 @@ sub update_variation_feature_table {
     chomp;
     my $var_id = (split)[0];
     my $var_set_id = (split)[1];
-    use Data::Dumper;
-    print Dumper($var_set_id, $var_id);
 
     $update_temp_vf->execute($var_set_id, $var_id); # creating a hash which has the var_id has the key and the set var_set_id has the values 
   }
@@ -293,6 +299,53 @@ sub dump_new_variation_feature {
   close FH;
 
   
+}
+
+sub get_structure {
+  my $dbhvar = shift;
+
+  my $get_struc_sth = $dbhvar->prepare(qq[ select variation_set_sub, variation_set_super from variation_set_structure]);
+
+  my %parent;
+  $get_struc_sth->execute() ||die;
+  my $dat = $get_struc_sth->fetchall_arrayref();
+  foreach my $l(@{$dat}){
+    $parent{$l->[0]} = $l->[1] ;
+  }
+  return \%parent;
+
+}
+
+sub recalculate {
+  my $input_file = shift;
+  my $output_file = shift;
+  
+  my $parent = get_structure($dbh);
+  my @sets;
+  my %concat_sets;
+  
+  open FH, "<", "$input_file" or die "Can not open $input_file: $!";
+  
+  while (<FH>) {
+    chomp;
+    my $var_id = split(0);
+    my $var_set_id = (split)[1];
+    push @sets, $var_set_id;
+    if (exists $parent->{$var_set_id}){
+      push @sets, $parent->{$var_set_id};
+      push @sets, $parent->{$parent->{$var_set_id}} if exists $parent->{$parent->{$var_set_id}};
+    }
+    push $concat_sets{$var_id} = [\@sets];
+  }
+
+  open(my $fh, '>', $output_file) or die "Could not open file '$output_file': $!";
+
+  # Serialize the hash and write to the file
+  print $fh Dumper(\%concat_sets);
+
+  # Close the file
+  close $fh;
+  close FH;
 }
 
 sub usage {
