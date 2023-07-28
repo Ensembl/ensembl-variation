@@ -819,11 +819,11 @@ sub codon {
       my $x = $seq;
       reverse_comp(\$x);
       my $given_ref = $ref->{given_ref};
-      
+
       if($seq eq $ref->{variation_feature_seq}) {
         $seq = $given_ref;
       }
-      elsif($x eq $ref->{variation_feature_seq}) {
+      elsif($tr->strand == -1 && $x eq $ref->{variation_feature_seq}) {
         reverse_comp(\$given_ref);
         $seq = $given_ref;
       }
