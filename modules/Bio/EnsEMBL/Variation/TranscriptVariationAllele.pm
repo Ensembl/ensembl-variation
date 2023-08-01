@@ -835,6 +835,7 @@ sub codon {
     }
     my $cds;
     if ($allele_len != $vf_nt_len) {
+      # sequence does not involve a non-CDS (eg: intron) sequence
       if (abs($allele_len - $vf_nt_len) % 3) {
         # this is a frameshift variation, we don't attempt to 
         # calculate the resulting codon or peptide change as this 
