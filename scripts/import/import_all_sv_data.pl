@@ -161,7 +161,7 @@ my $int_dba = Bio::EnsEMBL::Registry->get_DBAdaptor('multi', 'intvar');
 
 # count number of rows before import
 my @count_tables = qw(structural_variation structural_variation_feature structural_variation_sample structural_variation_association);
-report_counts($dba, "before", \@count_tables);
+report_counts($vdb, "before", \@count_tables);
 
 # set the target assembly
 $target_assembly ||= $default_cs->version;
@@ -286,7 +286,7 @@ verifications(); # URLs
 cleanup() if (!defined($debug));
 
 # count number of rows after import
-report_counts($dba, "after", \@count_tables);
+report_counts($vdb, "after", \@count_tables);
 
 debug(localtime()." All done!");
 
