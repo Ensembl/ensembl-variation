@@ -274,7 +274,7 @@ foreach my $in_file (@files) {
 # Post processing for mouse annotation (delete duplicated entries in structural_variation_sample)
 post_processing_annotation() if ($species =~ /mouse|mus/i);
 post_processing_feature();
-post_processing_sample();
+post_processing_sample() if ($source_name eq 'DGVa');
 post_processing_phenotype();
 post_processing_clinical_significance();
 post_processing_failed_variants();
