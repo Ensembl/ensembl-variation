@@ -1259,7 +1259,7 @@ sub remove_outdated_citations {
     my @outdated_attribs;
     my @current_attribs;
     foreach my $attrib (@split_attrib_id) {
-      my $is_selected_attrib_id = $attrib ~~ @attrib_ids;
+      my $is_selected_attrib_id = grep(/^$attrib$/, @attrib_ids) ? 1 : 0;
 
       my $value = $attrib . '_' . $publication_pmid;
       my $is_cited_in_pheno = $citations_pheno_feature->{$value} || $citations_pheno_feature_attrib->{$value};
