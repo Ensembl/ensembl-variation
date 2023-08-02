@@ -63,16 +63,15 @@ my $min_id = $vf->[0]->[0];
 my $chunk = 1000000;
 my $max_id = $vf->[0]->[1];
 
-#debug($config, "Dumping the variation sets and the new variation feature into files");
-#for my $tmp_num (map { $_ } $min_id/$chunk .. $max_id/$chunk) {
-#  dump_old_sql_variation_sets($old_dbh, $tmp_num, $chunk, $max_id);
-#}
+debug($config, "Dumping the variation sets and the new variation feature into files");
+for my $tmp_num (map { $_ } $min_id/$chunk .. $max_id/$chunk) {
+  dump_old_sql_variation_sets($old_dbh, $tmp_num, $chunk, $max_id);
+}
 
-#for my $tmp_num (map { $_ } $min_id/$chunk .. $max_id/$chunk) {
-#  dump_new_variation_feature($dbh, $tmp_num, $chunk, $max_id);
-#}
+for my $tmp_num (map { $_ } $min_id/$chunk .. $max_id/$chunk) {
+  dump_new_variation_feature($dbh, $tmp_num, $chunk, $max_id);
+}
 
-=head
 debug($config, "Sorting the files");
 system(sort -u $new_vf_file);
 system(sort -u $tmp_vset);
@@ -91,7 +90,6 @@ for my $tmp_num (map { $_ } $min_id/$chunk .. $max_id/$chunk) {
   dump_new_variation_sets($dbh, $tmp_num, $chunk, $max_id);
 }
 
-=cut 
 
 debug($config, "Recalculating the variation sets");
 recalculate($tmp_merged, $tmp_vs_file);
@@ -100,7 +98,7 @@ debug($config, "Updating the variation feature table");
 update_variation_feature_table($dbh, $tmp_vs_file);
 
 
-=head
+
 debug($config, "Adding failed variation to variation set");
 $dbh->do( qq{ 
   INSERT IGNORE INTO variation_set_variation (variation_id, variation_set_id)
@@ -112,7 +110,7 @@ $dbh->do(qq{
   ALTER TABLE variation_set_variation ENABLE keys;
 }) or die "Failed to alter variation_set_variation keys";
 
-=cut 
+ 
 
 sub temp_table { 
   my $dbhvar = shift; 
@@ -187,23 +185,36 @@ sub load_all_variation_sets {
 }
 
 sub update_variation_feature_table {
-  # this function after populating the variation_feature_backup table created by inserting from the original table would then update the variation_set_id column uaing the file from the 
-  # dump_new_variation_sets
+  # this function after populating the variation_feature_backup table created by inserting from the original table would then update the variation_set_id column uaing the file from the recalculate
+  # using the parents and parents set id to update the variation feature table 
   my $dbhvar = shift; 
   my $load_file = shift;
 
 
   my $update_temp_vf = $dbhvar->prepare(q{ UPDATE variation_feature SET variation_set_id = ? 
-                                          WHERE variation_id = ? AND variation_set_id = ''});
+                                          WHERE variation_id = ? });
   
   #my %var_data;
   open FH, "<", "$load_file" or die "Can not open $load_file: $!";
   while (<FH>) {
     chomp;
-    my $var_id = (split)[0];
-    my $var_set_id = (split)[1];
+    my @fields = split("\t");
+    my $var_id = $fields[0];
+    my $var_set_id = $fields[1];
+    
 
-    $update_temp_vf->execute($var_set_id, $var_id); # creating a hash which has the var_id has the key and the set var_set_id has the values 
+    my @sets_array; 
+    # to make sure only unique numbers are in the array 
+    foreach my $x (split(',', $var_set_id)){
+      push @sets_array, $x if !grep{$_ eq $x}@sets_array;
+    }
+    
+    my @sorted_array = sort { $a<=>$b } @sets_array;
+    my $values = join(',', @sorted_array);
+    $values =~ s/\s*,\s*/,/g; # to eliminate spaces and stuff 
+    $values =~ s/^\s+//;  #to eliminate spaces and stuff 
+
+    $update_temp_vf->execute($values, $var_id); # creating a hash which has the var_id has the key and the set var_set_id has the values 
   }
   
   close FH;
@@ -321,28 +332,36 @@ sub recalculate {
   my $output_file = shift;
   
   my $parent = get_structure($dbh);
-  my @sets;
   my %concat_sets;
   
   open FH, "<", "$input_file" or die "Can not open $input_file: $!";
   
+
   while (<FH>) {
     chomp;
-    my $var_id = split(0);
-    my $var_set_id = (split)[1];
-    push @sets, $var_set_id;
-    if (exists $parent->{$var_set_id}){
-      push @sets, $parent->{$var_set_id};
-      push @sets, $parent->{$parent->{$var_set_id}} if exists $parent->{$parent->{$var_set_id}};
+    my @fields = split("\t");
+    my $var_id = $fields[0];
+    my $var_set_id = $fields[1];
+    my @sets;
+    if (exists $concat_sets{$var_id}) {
+      $concat_sets{$var_id} = [] unless ref $concat_sets{$var_id} eq 'ARRAY';
+
+      push @{$concat_sets{$var_id}}, $var_set_id;
+      push @{$concat_sets{$var_id}}, $parent->{$var_set_id} if exists  $parent->{$var_set_id}; #pushing parents and var_set_id 
+      push @{$concat_sets{$var_id}}, $parent->{$parent->{$var_set_id}} if exists $parent->{$parent->{$var_set_id}}; 
+    } else { # if it does  not exist, it just creates a new key and an array
+      $concat_sets{$var_id} = $var_set_id;
     }
-    push $concat_sets{$var_id} = [\@sets];
+  
   }
 
+
   open(my $fh, '>', $output_file) or die "Could not open file '$output_file': $!";
-
-  # Serialize the hash and write to the file
-  print $fh Dumper(\%concat_sets);
-
+  foreach my $var_id (keys %concat_sets) {  
+    my $values_str = join(", ", @{$concat_sets{$var_id}});
+    print $fh "$var_id\t$values_str\n"; # adding the values str to it 
+  }
+  
   # Close the file
   close $fh;
   close FH;
