@@ -91,7 +91,7 @@ for my $tmp_num (map { $_ } $min_id/$chunk .. $max_id/$chunk) {
 }
 
 
-debug($config, "Recalculating the variation sets");
+debug($config, "Recalculating the variation sets"); # takes from the merged file and recalculates and creates the concatenate file that will be used to update variation feature
 recalculate($tmp_merged, $tmp_vs_file);
 
 debug($config, "Updating the variation feature table");
