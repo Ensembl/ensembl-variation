@@ -428,7 +428,7 @@ sub study_table{
     $study_ftp = "https://www.ncbi.nlm.nih.gov/dbvar/studies/$study_ftp";
   }
 
-  my $assembly_desc = " [remapped from build $assembly]" if ($mapping and $assembly ne $target_assembly);
+  my $assembly_desc = $mapping and ($assembly ne $target_assembly) ? " [remapped from build $assembly]" : "";
 
   $stmt = qq{ SELECT st.study_id, st.description, st.external_reference FROM study st, source s
               WHERE s.source_id=st.source_id AND s.name='$source_name' and st.name='$study'};
@@ -1246,7 +1246,7 @@ sub get_header_info {
     ($label, $info) = split(' ', $line);
   } 
   elsif ($line =~ /\:/) {
-    $line =~ /^(.+)\:\s+(.+)$/;
+    $line =~ /^(.+?)\:\s+(.+)$/;
     $label = $1;
     $info  = $2;
   }
