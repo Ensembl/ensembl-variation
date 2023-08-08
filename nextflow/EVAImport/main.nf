@@ -10,7 +10,7 @@ eva_script         = "${ENSEMBL_ROOT_DIR}/ensembl-variation/scripts/import/impor
 var_syn_script     = "${ENSEMBL_ROOT_DIR}/ensembl-variation/scripts/import/import_variant_synonyms"
 var_set_script     = "${ENSEMBL_ROOT_DIR}/ensembl-variation/scripts/import/import_set_from_file.pl"
 var_set_script_2   = "${ENSEMBL_ROOT_DIR}/ensembl-variation/scripts/import/post_process_variation_feature_variation_set.pl"
-copy_tables_script = "${ENSEMBL_ROOT_DIR}/ensembl-internal-variation/scripts/copy_tables_after_eva.sh"
+copy_tables_script = "${ENSEMBL_ROOT_DIR}/ensembl-internal-variation/scripts/copy_tables_eva.sh"
 citations_script   = "${ENSEMBL_ROOT_DIR}/ensembl-internal-variation/scripts/import_citation_EVA.pl"
 
 // Common params
@@ -38,8 +38,11 @@ params.old_host        = ""
 params.old_port        = ""
 params.old_dbname      = ""
 
-// Params to copy tables after import
+// Params to prepare tables before import
 params.host            = ""
+params.port            = ""
+params.pass            = ""
+params.user            = ""
 params.dbname          = ""
 
 // Params for citations
@@ -248,16 +251,16 @@ process prepare_tables {
   input:
   val copy_script
   val host
+  val port
+  val pass
+  val user
   val dbname
   val old_dbname
 
   output: val 'ok'
 
-  script:
-  def new_host = "${host}-ensadmin"
-
   """
-  sh ${copy_script} -h ${new_host} -o ${old_dbname} -n ${dbname}
+  sh ${copy_script} -h ${host} -p ${port} -w ${pass} -u ${user} -o ${old_dbname} -n ${dbname}
   """
 }
 
@@ -280,7 +283,7 @@ process run_citations {
 
 
 workflow {
-  prepare_tables(copy_tables_script, params.host, params.dbname, params.old_dbname)
+  prepare_tables(copy_tables_script, params.host, params.port, params.pass, params.user, params.dbname, params.old_dbname)
 
   run_eva(prepare_tables.out, file(eva_script), command_to_run, params.merge_all_types, params.fork, params.sort_vf, params.chr_synonyms, params.remove_prefix, params.output_file)
 
