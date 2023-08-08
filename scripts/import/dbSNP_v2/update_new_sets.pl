@@ -3,7 +3,6 @@ use strict;
 use DBI;
 use Socket;
 use Bio::EnsEMBL::Registry;
-use Data::Dumper;
 use Getopt::Long;
 use POSIX qw(strftime);
 use Cwd qw(cwd);
@@ -227,7 +226,7 @@ sub dump_old_sql_variation_sets {
 
 
   my $sql = qq{SELECT v.name, vs.variation_set_id from variation_set_variation vs LEFT JOIN variation v
-               ON v.variation_id = vs.variation_id where variation_set_id != 1 AND v.variation_id > $start AND v.variation_id <= $end  };
+               ON v.variation_id = vs.variation_id where vs.variation_set_id != 1 AND v.source_id = 1 AND v.variation_id > $start AND v.variation_id <= $end  };
   my $sth = $dbhvar->prepare($sql);
 
   open (my $dump_fh, ">>$TMP_DIR/$tmp_vset" )
