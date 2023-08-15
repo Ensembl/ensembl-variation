@@ -1224,7 +1224,6 @@ sub stop_retained {
         $bvf  ||= $bvfo->base_variation_feature;
         # structural variants don't have an allele string
         return 0 if ($bvf->allele_string && ($bvf->allele_string eq 'COSMIC_MUTATION' || $bvf->allele_string eq 'HGMD_MUTATION'));
-        
         $cache->{stop_retained} = 0;
         $bvfo ||= $bvfoa->base_variation_feature_overlap;
 
@@ -1252,11 +1251,9 @@ sub stop_retained {
         }
            
     }
-     
       
     $cache->{stop_retained} = 1 if defined(check_ref_alt_peptide($bvfo, $alt_pep));
-
-
+    
     return $cache->{stop_retained};
 }
 
