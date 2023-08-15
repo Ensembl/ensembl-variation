@@ -1253,7 +1253,7 @@ sub stop_retained {
     }
       
     $cache->{stop_retained} = 1 if defined(check_ref_alt_peptide($bvfo, $alt_pep));
-    
+
     return $cache->{stop_retained};
 }
 
@@ -1354,7 +1354,6 @@ sub frameshift {
         # if the allele length is undefined then we can't call a frameshift
     
         return 0 unless defined $allele_len;
-        
         return abs( $allele_len - $var_len ) % 3;
     }
     
