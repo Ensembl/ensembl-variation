@@ -92,6 +92,8 @@ use Bio::EnsEMBL::Variation::DBSQL::StructuralVariationFeatureAdaptor;
 use Bio::EnsEMBL::Variation::TranscriptStructuralVariation;
 use Bio::EnsEMBL::Variation::Source;
 
+use Bio::EnsEMBL::VEP::Parser qw(detect_line_format);
+
 # we need to manually include all these modules for caching to work
 use Bio::EnsEMBL::CoordSystem;
 use Bio::EnsEMBL::Transcript;
@@ -384,55 +386,7 @@ sub parse_line {
 
 # sub-routine to detect format of input
 sub detect_format {
-    my $line = shift;
-    my @data = split /\s+/, $line;
-
-    # SPDI: NC_000016.10:68684738:G:A
-    if (
-      scalar @data == 1 &&
-      $data[0] =~ /^(.*?\:){2}([^\:]+|)$/i
-    ) {
-      return 'spdi';
-    }
-
-    # HGVS: ENST00000285667.3:c.1047_1048insC
-    elsif (
-        scalar @data == 1 &&
-        $data[0] =~ /^([^\:]+)\:.*?([cgmrp]?)\.?([\*\-0-9]+.*)$/i
-    ) {
-        return 'hgvs';
-    }
-
-    # variant identifier: rs123456
-    elsif (
-        scalar @data == 1
-    ) {
-        return 'id';
-    }
-
-    # VCF: 20  14370  rs6054257  G  A  29  0  NS=58;DP=258;AF=0.786;DB;H2  GT:GQ:DP:HQ
-    elsif (
-        $data[0] =~ /(chr)?\w+/ &&
-        $data[1] =~ /^\d+$/ &&
-        $data[3] =~ /^[ACGTN\-\.]+$/i &&
-        $data[4] && $data[4] =~ /^([\.ACGTN\-\*]+\,?)+$|^(\<[\w]+\>)$/i
-    ) {
-        return 'vcf';
-    }
-
-    # ensembl: 20  14370  14370  A/G  +
-    elsif (
-        $data[0] =~ /\w+/ &&
-        $data[1] =~ /^\d+$/ &&
-        $data[2] =~ /^\d+$/ &&
-        $data[3] =~ /(ins|dup|del)|([ACGTN-]+\/[ACGTN-]+)/i
-    ) {
-        return 'ensembl';
-    }
-
-    else {
-        die("ERROR: Could not detect input file format\n");
-    }
+    detect_line_format(@_);
 }
 
 # parse a line of Ensembl format input into a variation feature object
