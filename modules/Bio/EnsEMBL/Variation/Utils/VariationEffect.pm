@@ -162,7 +162,7 @@ sub complete_overlap_feature {
 }
 
 sub _supporting_cnv_terms {
-  # if variant is CNV, return class SO terms for its supporting variants
+  # if variant is CNV, return class SO terms for its supporting variants
   my $bvf = shift;
 
   return if $bvf->class_SO_term(undef, 1) ne "copy_number_variation";
@@ -1140,16 +1140,24 @@ sub stop_gained {
     # use cache for this method as it gets called a lot
     my $cache = $bvfoa->{_predicate_cache} ||= {};
 
+
     unless(exists($cache->{stop_gained})) {
         $cache->{stop_gained} = 0;
         
         ## check for inframe insertion before stop 
         return 0 if stop_retained(@_);
+        
 
         my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
-        
+    
+
         return 0 unless defined $ref_pep;
 
+        my $check_stop = check_ref_alt_peptide($bvfo, $alt_pep);
+
+        return 0 if $check_stop;
+
+        # the last check, checks if the ref_pep and alt_pep do not have the first letter, if it does then we know that the stop was not gained 
         $cache->{stop_gained} = ( ($alt_pep =~ /\*/) and ($ref_pep !~ /\*/) );
     }
 
@@ -1216,20 +1224,21 @@ sub stop_retained {
 
     # use cache for this method as it gets called a lot
     my $cache = $bvfoa->{_predicate_cache} ||= {};
-
+    
+    my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
     unless(exists($cache->{stop_retained})) {
         $bvfo ||= $bvfoa->base_variation_feature_overlap;
         $bvf  ||= $bvfo->base_variation_feature;
         # structural variants don't have an allele string
         return 0 if ($bvf->allele_string && ($bvf->allele_string eq 'COSMIC_MUTATION' || $bvf->allele_string eq 'HGMD_MUTATION'));
-
+        
+        
         $cache->{stop_retained} = 0;
 
         $bvfo ||= $bvfoa->base_variation_feature_overlap;
 
         my $pre = $bvfoa->_pre_consequence_predicates;
 
-        my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
 
         if(defined($alt_pep) && $alt_pep ne '') {
             return 0 unless $alt_pep =~/^\*/; 
@@ -1251,7 +1260,12 @@ sub stop_retained {
         else {
             $cache->{stop_retained} = ($pre->{increase_length} || $pre->{decrease_length}) && _overlaps_stop_codon(@_) && !_ins_del_stop_altered(@_);
         }
+           
     }
+     
+      
+    $cache->{stop_retained} = 1 if defined(check_ref_alt_peptide($bvfo, $alt_pep));
+
 
     return $cache->{stop_retained};
 }
@@ -1342,7 +1356,8 @@ sub frameshift {
     if($bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele')) {
 
         return 0 if partial_codon(@_);
-    
+        
+        return 0 if stop_retained(@_);
         return 0 unless defined $bvfo->cds_start && defined $bvfo->cds_end;
         
         my $var_len = $bvfo->cds_end - $bvfo->cds_start + 1;
@@ -1352,7 +1367,7 @@ sub frameshift {
         # if the allele length is undefined then we can't call a frameshift
     
         return 0 unless defined $allele_len;
-    
+        
         return abs( $allele_len - $var_len ) % 3;
     }
     
@@ -1496,6 +1511,22 @@ sub contains_entire_feature {
     my $feat = $vfo->feature;
 
     return ( ($bvf->{start} <= $feat->{start}) && ($bvf->{end} >= $feat->{end}) ); 
+}
+
+sub check_ref_alt_peptide {
+    my $bvfo = shift;
+    my $alt_pep = shift;
+
+    my $ref_seq = $bvfo->_peptide;
+    
+    my $mut_seq = $ref_seq;
+    my $start = $bvfo->translation_start;
+    my $end = $bvfo->translation_end;
+    substr($mut_seq, $start-1, $end - $start + 1) = $alt_pep;
+    
+    return 1 if substr($mut_seq, length($ref_seq), 1) eq "*" || length($mut_seq) == length($ref_seq) + 1;
+
+    return 0
 }
 
 1;
