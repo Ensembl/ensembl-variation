@@ -162,7 +162,7 @@ sub complete_overlap_feature {
 }
 
 sub _supporting_cnv_terms {
-  # if variant is CNV, return class SO terms for its supporting variants
+  #if variant is CNV, return class SO terms for its supporting variants
   my $bvf = shift;
 
   return if $bvf->class_SO_term(undef, 1) ne "copy_number_variation";
@@ -1140,22 +1140,15 @@ sub stop_gained {
     # use cache for this method as it gets called a lot
     my $cache = $bvfoa->{_predicate_cache} ||= {};
 
-
     unless(exists($cache->{stop_gained})) {
         $cache->{stop_gained} = 0;
         
         ## check for inframe insertion before stop 
         return 0 if stop_retained(@_);
         
-
         my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
-    
 
         return 0 unless defined $ref_pep;
-
-        my $check_stop = check_ref_alt_peptide($bvfo, $alt_pep);
-
-        return 0 if $check_stop;
 
         # the last check, checks if the ref_pep and alt_pep do not have the first letter, if it does then we know that the stop was not gained 
         $cache->{stop_gained} = ( ($alt_pep =~ /\*/) and ($ref_pep !~ /\*/) );
@@ -1232,13 +1225,10 @@ sub stop_retained {
         # structural variants don't have an allele string
         return 0 if ($bvf->allele_string && ($bvf->allele_string eq 'COSMIC_MUTATION' || $bvf->allele_string eq 'HGMD_MUTATION'));
         
-        
         $cache->{stop_retained} = 0;
-
         $bvfo ||= $bvfoa->base_variation_feature_overlap;
 
         my $pre = $bvfoa->_pre_consequence_predicates;
-
 
         if(defined($alt_pep) && $alt_pep ne '') {
             return 0 unless $alt_pep =~/^\*/; 
