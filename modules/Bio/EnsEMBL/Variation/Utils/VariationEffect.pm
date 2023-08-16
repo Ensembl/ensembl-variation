@@ -1252,7 +1252,7 @@ sub stop_retained {
            
     }
       
-    $cache->{stop_retained} = 1 if defined(check_ref_alt_peptide($bvfo, $alt_pep));
+    $cache->{stop_retained} = 1 if defined(check_ref_alt_peptide($bvfo, $alt_pep, $ref_pep));
 
     return $cache->{stop_retained};
 }
@@ -1502,6 +1502,7 @@ sub contains_entire_feature {
 sub check_ref_alt_peptide {
     my $bvfo = shift;
     my $alt_pep = shift;
+    my $ref_pep = shift;
 
     my $ref_seq = $bvfo->_peptide;
     
@@ -1509,7 +1510,7 @@ sub check_ref_alt_peptide {
     my $start = $bvfo->translation_start;
     my $end = $bvfo->translation_end;
 
-    return 0 unless $alt_pep;
+    return 0 unless $alt_pep and $ref_pep;
     substr($mut_seq, $start-1, $end - $start + 1) = $alt_pep;
     
     return 1 if substr($mut_seq, length($ref_seq), 1) eq "*" || length($mut_seq) == length($ref_seq) + 1;
