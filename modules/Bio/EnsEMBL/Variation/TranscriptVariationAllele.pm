@@ -1578,7 +1578,8 @@ sub hgvs_transcript_reference {
 sub hgvs_protein {
   my $self     = shift;
   my $notation = shift;
-  my $prediction_format = shift; 
+  my $prediction_format = shift;
+  my $convert_to_three_letter = shift;
   my $hgvs_notation;
 
   if($DEBUG == 1){
@@ -1729,7 +1730,7 @@ sub hgvs_protein {
   return undef unless defined $hgvs_notation->{type}; 
 
   ##### Convert ref & alt peptides taking into account HGVS rules
-  $hgvs_notation = $self->_get_hgvs_peptides($hgvs_notation);
+  $hgvs_notation = $self->_get_hgvs_peptides($hgvs_notation, $convert_to_three_letter);
   unless($hgvs_notation) {
     $self->{hgvs_protein} = undef;
     return undef;
@@ -2027,6 +2028,7 @@ sub _get_hgvs_protein_type {
 sub _get_hgvs_peptides {
   my $self          = shift;
   my $hgvs_notation = shift;
+  my $convert_to_three_letter = shift;
 
   if($hgvs_notation->{type} eq "fs"){
     ### ensembl alt/ref peptides not the same as HGVS alt/ref - look up seperately
@@ -2063,15 +2065,12 @@ sub _get_hgvs_peptides {
   }
 
   ### Convert peptide to 3 letter code as used in HGVS
-  unless( $hgvs_notation->{ref} eq "-"){
-    $hgvs_notation->{ref}  = Bio::SeqUtils->seq3(Bio::PrimarySeq->new(-seq => $hgvs_notation->{ref}, -id => 'ref',  -alphabet => 'protein')) || "";
+  $convert_to_three_letter = 1 unless defined $convert_to_three_letter;
+  if ( $convert_to_three_letter ){
+      $hgvs_notation->{ref}  = Bio::SeqUtils->seq3(Bio::PrimarySeq->new(-seq => $hgvs_notation->{ref}, -id => 'ref',  -alphabet => 'protein')) || "" unless ($hgvs_notation->{ref} eq "-");
+      $hgvs_notation->{alt}  = Bio::SeqUtils->seq3(Bio::PrimarySeq->new(-seq => $hgvs_notation->{alt}, -id => 'ref',  -alphabet => 'protein')) || "" unless ($hgvs_notation->{alt} eq "-");
   }
-  if( $hgvs_notation->{alt} eq "-"){
-    $hgvs_notation->{alt} = "del";
-  }
-  else{
-    $hgvs_notation->{alt}  = Bio::SeqUtils->seq3(Bio::PrimarySeq->new(-seq => $hgvs_notation->{alt}, -id => 'ref',  -alphabet => 'protein')) || "";
-  }
+  $hgvs_notation->{alt} = "del" if $hgvs_notation->{alt} eq "-"; 
 
   ### handle special cases
   if( start_lost($self) ){
