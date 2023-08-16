@@ -1508,6 +1508,8 @@ sub check_ref_alt_peptide {
     my $mut_seq = $ref_seq;
     my $start = $bvfo->translation_start;
     my $end = $bvfo->translation_end;
+
+    return 0 unless $alt_pep;
     substr($mut_seq, $start-1, $end - $start + 1) = $alt_pep;
     
     return 1 if substr($mut_seq, length($ref_seq), 1) eq "*" || length($mut_seq) == length($ref_seq) + 1;
