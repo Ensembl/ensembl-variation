@@ -934,7 +934,12 @@ sub start_retained_variant {
 
     my $pre = $bvfoa->_pre_consequence_predicates;
 
-    return ($pre->{increase_length} || $pre->{decrease_length}) && _overlaps_start_codon(@_) && !_ins_del_start_altered(@_);
+    return 0 unless _overlaps_start_codon(@_);
+    if ($pre->{snp}) {
+        return !_snp_start_altered(@_);
+    } else { 
+        return !_ins_del_start_altered(@_);
+    }
 }
 
 sub _overlaps_start_codon {
@@ -962,6 +967,42 @@ sub _overlaps_start_codon {
     }
 
     return $cache->{overlaps_start_codon};
+}
+
+sub _snp_start_altered {
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+
+    my $cache = $bvfoa->{_predicate_cache} ||= {};
+
+    unless(exists($cache->{snp_start_altered})) {
+        $cache->{snp_start_altered} = 1;
+
+        return 0 if $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptStructuralVariationAllele');
+        return 0 unless $bvfoa->seq_is_unambiguous_dna();
+
+        $bvfo ||= $bvfoa->base_variation_feature_overlap;
+
+        # get cDNA coords
+        my ($cdna_start, $cdna_end) = ($bvfo->cdna_start, $bvfo->cdna_end);
+        return 0 unless $cdna_start && $cdna_end;
+
+        # make and edit UTR + translateable seq
+        my $translateable = $bvfo->_translateable_seq();
+        my $utr = $bvfo->_five_prime_utr();
+        my $utr_and_translateable = ($utr ? $utr->seq : '').$translateable;
+
+        my $vf_feature_seq = $bvfoa->feature_seq;
+        $vf_feature_seq = '' if $vf_feature_seq eq '-';
+
+        substr($utr_and_translateable, $cdna_start - 1, ($cdna_end - $cdna_start) + 1) = $vf_feature_seq;
+        
+        # get the aa now in place of prevoius start codon and see it is ATG
+        # it can happen for non-ATG variant (e.g - gene WT1, transcript ENST00000332351)
+        my $aa_replacing_start_codon = substr($utr_and_translateable, 0 - length($translateable), 3);
+        $cache->{snp_start_altered} = 0 if $aa_replacing_start_codon eq "ATG";
+    }
+
+    return $cache->{snp_start_altered};
 }
 
 sub _ins_del_start_altered {
