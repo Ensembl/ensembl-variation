@@ -1442,7 +1442,7 @@ $transcript_tests->{$sc_se_t->stable_id}->{tests} = [
     }, 
 ];
 
-# a transcript with a misc amino acid edit
+# a transcript with a misc amino acid edit altered to start codon
 my $aa_se_t = $ta->fetch_by_stable_id('ENST00000295641');
 
 $transcript_tests->{$aa_se_t->stable_id}->{transcript} = $aa_se_t;
@@ -1453,7 +1453,7 @@ $transcript_tests->{$aa_se_t->stable_id}->{tests} = [
         alleles => 'T',
         start   => 220462640,
         end     => 220462640,
-        effects => [qw(synonymous_variant)],
+        effects => [qw(start_retained_variant)],
     }, 
 ];
 
@@ -1489,7 +1489,7 @@ my $tv = Bio::EnsEMBL::Variation::TranscriptVariation->new(
 my $tva = $tv->get_all_alternate_BaseVariationFeatureOverlapAlleles();
 
 my $start_retained = Bio::EnsEMBL::Variation::Utils::VariationEffect::start_retained_variant($tva->[0]);
-is($start_retained, undef, 'start_retained works with no $bvfo & $bvf');
+is($start_retained, 0, 'start_retained works with no $bvfo & $bvf');
 
 my $stop_retained = Bio::EnsEMBL::Variation::Utils::VariationEffect::stop_retained($tva->[0]);
 is($stop_retained, undef, 'stop_retained works with no $bvfo & $bvf');
