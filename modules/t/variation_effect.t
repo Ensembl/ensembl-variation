@@ -1442,7 +1442,7 @@ $transcript_tests->{$sc_se_t->stable_id}->{tests} = [
     }, 
 ];
 
-# a transcript with a misc amino acid edit altered to start codon
+# a transcript with a misc amino acid edit altered to start
 my $aa_se_t = $ta->fetch_by_stable_id('ENST00000295641');
 
 $transcript_tests->{$aa_se_t->stable_id}->{transcript} = $aa_se_t;
@@ -1453,7 +1453,7 @@ $transcript_tests->{$aa_se_t->stable_id}->{tests} = [
         alleles => 'T',
         start   => 220462640,
         end     => 220462640,
-        effects => [qw(start_retained_variant)],
+        effects => [qw(synonymous_variant start_retained_variant)],
     }, 
 ];
 
