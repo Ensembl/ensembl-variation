@@ -1051,7 +1051,7 @@ sub synonymous_variant {
     
     return 0 unless $ref_pep;
 
-    return ( ($alt_pep eq $ref_pep) and (not stop_retained(@_) and ($alt_pep !~ /X/) and ($ref_pep !~ /X/)) );
+    return ( ($alt_pep eq $ref_pep) and (not stop_retained(@_) and not start_retained_variant(@_) and ($alt_pep !~ /X/) and ($ref_pep !~ /X/)) );
 }
 
 sub missense_variant {

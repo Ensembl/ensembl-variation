@@ -1453,7 +1453,7 @@ $transcript_tests->{$aa_se_t->stable_id}->{tests} = [
         alleles => 'T',
         start   => 220462640,
         end     => 220462640,
-        effects => [qw(synonymous_variant start_retained_variant)],
+        effects => [qw(start_retained_variant)],
     }, 
 ];
 
