@@ -1251,7 +1251,8 @@ sub stop_retained {
         }
            
     }
-      
+    
+    return 0 if $ref_pep eq $alt_pep && $ref_pep ne "*"
     $cache->{stop_retained} = 1 if defined(check_ref_alt_peptide($bvfo, $alt_pep, $ref_pep));
 
     return $cache->{stop_retained};

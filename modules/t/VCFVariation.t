@@ -266,7 +266,7 @@ is_deeply($vf->$_, [], 'consequence - bypass - '.$_) for map {'get_all_'.$_.'Var
 
 # get for real
 ($vf) = grep {$_->variation_name eq 'rs547901734'} @{$coll->get_all_VariationFeatures_by_Slice($slice)};
-is_deeply([sort @{$vf->consequence_type}], ['3_prime_UTR_variant', 'NMD_transcript_variant', 'stop_retained_variant'], 'consequence - consequence_type');
+is_deeply([sort @{$vf->consequence_type}], ['3_prime_UTR_variant', 'NMD_transcript_variant', 'synonymous_variant'], 'consequence - consequence_type');
 
 # do a multi fetch for thorough-ness
 $slice = $sa->fetch_by_region('chromosome', 11, 66318811, 66318825);
@@ -277,7 +277,7 @@ is_deeply(
     @{$coll->get_all_VariationFeatures_by_Slice($slice)}
   ],
   [
-    '66318811 stop_retained_variant',
+    '66318811 synonymous_variant',
     '66318814 missense_variant',
     '66318814 stop_retained_variant',
     '66318815 missense_variant',
@@ -305,7 +305,7 @@ is_deeply(
   [
     '11:32438039:C_T:ExAC missense_variant',
     '11:32438042:T_C:ExAC missense_variant',
-    '11:32438056:T_C:ExAC stop_retained_variant',
+    '11:32438056:T_C:ExAC synonymous_variant',
     '11:32438063:G_A:ExAC missense_variant'
   ],
   'VCFVF - fetch from reverse strand'
