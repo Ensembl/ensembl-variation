@@ -89,6 +89,8 @@ load_all_variation_sets($dbh, $tmp_merged);
 debug($config, "Recalculating the variation sets"); # takes from the merged file and recalculates and creates the concatenate file that will be used to update variation feature
 recalculate($tmp_merged, $tmp_vs_file);
 
+=cut
+
 debug($config, "Updating the variation feature table");
 for my $tmp_num (map { $_ } $min_id/$chunk .. $max_id/$chunk) {
   update_variation_feature_table($dbh, $tmp_num, $chunk, $max_id);
@@ -192,9 +194,10 @@ sub update_variation_feature_table {
   $end = $end < $size ? $end : $size;
 
 
-  my $update_temp_vf = $dbhvar->prepare(q{ UPDATE variation_feature SET variation_set_id = ? 
-                                          WHERE variation_id = ? AND variation_id > $start AND variation_id <= $end });
+  my $update_sql = qq{ UPDATE variation_feature SET variation_set_id = ? 
+                                          WHERE variation_id = ? AND variation_id > $start AND variation_id <= $end};
   
+  my $update_temp_vf = $dbh->prepare($update_sql);
   #my %var_data;
   
   open my $load_fh, "<", "$TMP_DIR/$tmp_vs_file" or die "Can not open $TMP_DIR/$tmp_vs_file`: $!";
