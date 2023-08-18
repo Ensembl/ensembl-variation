@@ -1492,7 +1492,7 @@ my $start_retained = Bio::EnsEMBL::Variation::Utils::VariationEffect::start_reta
 is($start_retained, undef, 'start_retained works with no $bvfo & $bvf');
 
 my $stop_retained = Bio::EnsEMBL::Variation::Utils::VariationEffect::stop_retained($tva->[0]);
-is($stop_retained, undef, 'stop_retained works with no $bvfo & $bvf');
+is($stop_retained, 0, 'stop_retained works with no $bvfo & $bvf');
 
 my $coding_unknown = Bio::EnsEMBL::Variation::Utils::VariationEffect::coding_unknown($tva->[0]);
 is($coding_unknown, 0, 'coding_unknown works with no $bvfo & $bvf');
