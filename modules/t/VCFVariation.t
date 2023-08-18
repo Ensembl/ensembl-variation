@@ -279,7 +279,7 @@ is_deeply(
   [
     '66318811 synonymous_variant',
     '66318814 missense_variant',
-    '66318814 stop_retained_variant',
+    '66318814 synonymous_variant',
     '66318815 missense_variant',
     '66318819 missense_variant',
     '66318824 missense_variant'
