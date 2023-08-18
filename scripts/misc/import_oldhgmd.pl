@@ -167,6 +167,12 @@ sub main {
   debug($config, "Inserting HGMD data into variation_feature table");
   insert_variation_feature($dbh, $sorted_new_vf);
 
+  if ($config->{transcript}) {
+    debug($config, "Inserting HGMD data into transcript_variation table");
+    insert_transcript_variation($dbh, $new_tv_file);
+    insert_mtmp_transcript_variation($dbh, $new_mtmp_file);
+  }
+
   debug($config, "Inserting HGMD data into variation_set_variation table");
   load_all_variation_sets($dbh, $new_var);
 
@@ -177,6 +183,8 @@ sub main {
 
   debug($config, "Inserting into phenotype_feature_attrib table");
   insert_pheno_feature_attrib($dbh, $sorted_new_pfa);
+
+
 
   debug($config, "Removing files");
   system("rm *.txt");
@@ -350,6 +358,70 @@ sub manipulate_var_ids {
 
 }
 
+sub insert_transcript_variation {
+  my $dbhvar = shift;
+  my $load_file = shift;
+
+ my $sql = $dbhvar->prepare(qq[INSERT INTO transcript_variation (transcript_variation_id, variation_feature_id, feature_stable_id, allele_string, somatic, consequence_types, cds_start, cds_end, cdna_start, cdna_end, translation_start, translation_end, distance_to_transcript, display) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)]);
+  
+  local *FH;
+  open FH, "<", "$load_file" or die "Can not open $load_file $!";
+  while (<FH>) {
+    chomp;
+    my $transcript_variation_id = (split)[0];
+    my $variation_feature_id = (split)[1];
+    my $feature_stable_id = (split)[2];
+    my $allele_string = (split)[3];
+    my $somatic = (split)[4];
+    my $consequence_types = (split)[5];
+    my $cds_start = (split)[6];
+    my $cds_end = split[7];
+    my $cdna_start = split[8];
+    my $cdna_end = split[9];
+    my $translation_start = split[10];
+    my $translation_end = split[11];
+    my $distance_to_transcript = split[12];
+    my $display = split[13];
+
+    $sql->execute($transcript_variation_id, $variation_feature_id, $feature_stable_id, $allele_string, $somatic, $consequence_types, $cds_start, $cds_end, $cdna_start, $cdna_end, $translation_start, $translation_end, $distance_to_transcript, $display);
+  }
+
+  close FH;
+  $sql->finish(); 
+
+
+}
+
+sub insert_mtmp_transcript_variation {
+  my $dbhvar = shift;
+  my $load_file = shift;
+
+  my $sql = $dbhvar->prepare(qq[INSERT INTO MTMP_transcript_variation (variation_feature_id, feature_stable_id, allele_string, consequence_types, cds_start, cds_end, cdna_start, cdna_end, translation_start, translation_end, distance_to_transcript) VALUES (?,?,?,?,?,?,?,?,?,?,?) ])
+  
+  local *FH;
+  open FH, "<", "$load_file" or die "Can not open $load_file $!";
+  while (<FH>) {
+    chomp;
+    my $variation_feature_id = (split)[0];
+    my $feature_stable_id = (split)[1];
+    my $allele_string = (split)[2];
+    my $consequence_types = (split)[3];
+    my $cds_start = (split)[4];
+    my $cds_end = split[5];
+    my $cdna_start = split[6];
+    my $cdna_end = split[7];
+    my $translation_start = split[8];
+    my $translation_end = split[9];
+    my $distance_to_transcript = split[10];
+
+    $sql->execute($variation_feature_id, $feature_stable_id, $allele_string, $consequence_types, $cds_start, $cds_end, $cdna_start, $cdna_end, $translation_start, $translation_end, $distance_to_transcript);
+  }
+
+  close FH;
+  $sql->finish(); 
+
+
+}
 sub manipulate_pheno_ids {
   my $dbhvar = shift;
 
