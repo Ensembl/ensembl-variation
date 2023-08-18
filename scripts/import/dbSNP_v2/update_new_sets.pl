@@ -181,15 +181,22 @@ sub load_all_variation_sets {
 sub update_variation_feature_table {
   # this function after populating the variation_feature_backup table created by inserting from the original table would then update the variation_set_id column uaing the file from the recalculate
   # using the parents and parents set id to update the variation feature table 
-  my $dbhvar = shift; 
-  my $load_file = shift;
+  my $dbh = shift;
+  my $tmp_num = shift;
+  my $chunk = shift;
+  my $size = shift;
+  
+  my $start = $chunk * $tmp_num;
+  my $end = $chunk + $start;
+  $end = $end < $size ? $end : $size;
 
 
   my $update_temp_vf = $dbhvar->prepare(q{ UPDATE variation_feature SET variation_set_id = ? 
-                                          WHERE variation_id = ? });
+                                          WHERE variation_id = ? AND variation_id > $start AND variation_id <= $end });
   
   #my %var_data;
-  open my $load_fh, "<", "$load_file" or die "Can not open $load_file: $!";
+  
+  open my $load_fh, "<", "$TMP_DIR/$tmp_vs_file" or die "Can not open $TMP_DIR/$tmp_vs_file: $!";
   while (<$load_fh>) {
     chomp;
     my @fields = split("\t");
