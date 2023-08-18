@@ -89,6 +89,7 @@ load_all_variation_sets($dbh, $tmp_merged);
 debug($config, "Recalculating the variation sets"); # takes from the merged file and recalculates and creates the concatenate file that will be used to update variation feature
 recalculate($tmp_merged, $tmp_vs_file);
 
+
 debug($config, "Updating the variation feature table");
 for my $tmp_num (map { $_ } $min_id/$chunk .. $max_id/$chunk) {
   update_variation_feature_table($dbh, $tmp_num, $chunk, $max_id);
@@ -105,7 +106,7 @@ $dbh->do(qq{
   ALTER TABLE variation_set_variation ENABLE keys;
 }) or die "Failed to alter variation_set_variation keys";
 
- 
+
 
 sub temp_table { 
   my $dbhvar = shift; 
@@ -163,7 +164,7 @@ sub load_all_variation_sets {
   my $dbhvar = shift;
   my $load_file = shift;
 
-  my $sql = qq{INSERT INTO variation_set_variation (variation_id, variation_set_id ) VALUES (?, ?)};
+  my $sql = qq{INSERT IGNORE INTO variation_set_variation (variation_id, variation_set_id ) VALUES (?, ?)};
   my $sth = $dbhvar->prepare($sql);
 
   open my $load_vs, "<", "$load_file" or die "Can not open $load_file: $!";
@@ -207,13 +208,16 @@ sub update_variation_feature_table {
     
 
     my @sets_array; 
-
-    my @sets_array = unique(split(',', $var_set_id));
-
-    my @sorted_array = sort { $a<=>$b } @sets_array;
-    my $values = join(',', @sorted_array);
-    $values =~ s/\s*,\s*/,/g; # to eliminate spaces and stuff 
-    $values =~ s/^\s+//;  #to eliminate spaces and stuff 
+    my $values;
+    if ($var_set_id =~ /,/) {
+      my @sets_array = unique(split(',', $var_set_id));
+      my @sorted_array = sort { $a<=>$b } @sets_array;
+      $values = join(',', @sorted_array);
+      $values =~ s/\s*,\s*/,/g; # to eliminate spaces and stuff 
+      $values =~ s/^\s+//;  #to eliminate spaces and stuff 
+    } else {
+      $values = "$var_set_id";
+    }
 
     $update_temp_vf->execute($values, $var_id); # creating a hash which has the var_id has the key and the set var_set_id has the values 
   }
