@@ -90,8 +90,9 @@ debug($config, "Recalculating the variation sets"); # takes from the merged file
 recalculate($tmp_merged, $tmp_vs_file);
 
 debug($config, "Updating the variation feature table");
-update_variation_feature_table($dbh, $tmp_vs_file);
-
+for my $tmp_num (map { $_ } $min_id/$chunk .. $max_id/$chunk) {
+  update_variation_feature_table($dbh, $tmp_num, $chunk, $max_id);
+}
 
 debug($config, "Adding failed variation to variation set");
 $dbh->do( qq{ 
@@ -196,7 +197,7 @@ sub update_variation_feature_table {
   
   #my %var_data;
   
-  open my $load_fh, "<", "$TMP_DIR/$tmp_vs_file" or die "Can not open $TMP_DIR/$tmp_vs_file: $!";
+  open my $load_fh, "<", "$TMP_DIR/$tmp_vs_file" or die "Can not open $TMP_DIR/$tmp_vs_file`: $!";
   while (<$load_fh>) {
     chomp;
     my @fields = split("\t");
