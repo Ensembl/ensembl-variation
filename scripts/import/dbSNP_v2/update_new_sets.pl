@@ -164,7 +164,7 @@ sub load_all_variation_sets {
   my $dbhvar = shift;
   my $load_file = shift;
 
-  my $sql = qq{INSERT IGNORE INTO variation_set_variation (variation_id, variation_set_id ) VALUES (?, ?)};
+  my $sql = qq{INSERT INTO variation_set_variation (variation_id, variation_set_id ) VALUES (?, ?)};
   my $sth = $dbhvar->prepare($sql);
 
   open my $load_vs, "<", "$load_file" or die "Can not open $load_file: $!";
