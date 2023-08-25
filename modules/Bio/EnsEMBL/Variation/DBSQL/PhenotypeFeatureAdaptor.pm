@@ -1166,7 +1166,7 @@ sub get_clinsig_alleles_by_location {
       CONCAT(pf.seq_region_id, ':', pf.seq_region_start, '-', pf.seq_region_end),
       CONCAT_WS('; ',
         CONCAT('id=', pf.object_id), CONCAT('pf_id=', pf.phenotype_feature_id),
-        GROUP_CONCAT(IF(at.code in ('risk_allele', 'clinvar_clin_sig', 'allele_symbol'), at.code, NULL), "=", concat('', pfa.value, '') SEPARATOR '; ')
+        GROUP_CONCAT(IF(at.code in ('risk_allele', 'clinvar_clin_sig'), at.code, NULL), "=", concat('', pfa.value, '') SEPARATOR '; ')
       ) AS attribute
 
       FROM
@@ -1184,7 +1184,7 @@ sub get_clinsig_alleles_by_location {
       AND pf.seq_region_start >= ?
       AND pf.seq_region_end <= ?
       AND pf.source_id = ? 
-      AND EXISTS(select value from phenotype_feature_attrib where phenotype_feature_id = pf.phenotype_feature_id && (attrib_type_id = 483 || attrib_type_id = 494))
+      AND EXISTS(select value from phenotype_feature_attrib where phenotype_feature_id = pf.phenotype_feature_id && attrib_type_id = 483)
 
       GROUP BY pf.phenotype_feature_id
       ORDER BY pf.seq_region_id, pf.seq_region_start, pf.seq_region_end
