@@ -21,6 +21,7 @@ params.registry        = null
 
 // Params for EVA import script
 params.input_file      = null
+input_file_tbi         = "${params.input_file}.tbi"
 params.source          = "EVA"
 params.description     = "Short variant data imported from EVA"
 params.version         = 4
@@ -89,17 +90,23 @@ if (params.help) {
              --var_syn_file GCA_000003025.6_merged_ids.vcf.gz \\
              --skipped_variants_file report_EVA_import.log \\
              --host [new database host] \\
+             --port [new database port] \\
+             --user [new database user] \\
+             --pass [new database password] \\
              --dbname [new database name] \\
              --old_dbname [previous database name] \\
 
     Options (mandatory):
     --species                 species name
-    --registry                registry file pointing to variation and core databases
+    --registry                registry file pointing to the new variation and core databases
     --release                 release number
     --input_file              EVA input file
     --var_syn_file            EVA variation synonyms file [GCA_*_merged_ids.vcf.gz]
     --skipped_variants_file   output file to write number of skipped variants in the EVA import
     --host                    new variation database host (necessary to prepare the db for the import)
+    --port                    new variation database port (necessary to prepare the db for the import)
+    --user                    new variation database user with write permission (necessary to prepare the db for the import)
+    --pass                    new variation database password with write permission (necessary to prepare the db for the import)
     --dbname                  new variation database name (necessary to prepare the db for the import)
     --old_dbname              previous variation database name (necessary to prepare the db for the import)
 
@@ -115,21 +122,26 @@ if (params.help) {
  exit 1
 }
 
-// Check input params
-if(!params.species) {
-  exit 1, "ERROR: species name must be provided when running EVA import"
+// Check host and database name
+if(!params.host || !params.dbname || !params.port || !params.user || !params.pass) {
+  exit 1, "ERROR: host (--host), port (--port), user (--user), password (--pass) and database name (--dbname) must be defined"
 }
 
-if(!params.input_file || !file(params.input_file)) {
-  exit 1, "ERROR: a valid input file must be provided when running EVA import"
+// Check input params
+if(!params.species) {
+  exit 1, "ERROR: species name (--species) must be provided when running EVA import"
+}
+
+if(!params.input_file || !file(params.input_file).exists() || !file(input_file_tbi).exists()) {
+  exit 1, "ERROR: a valid input file (--input_file) must be provided when running EVA import. Please make sure the file is compressed and indexed."
 }
 
 if(!params.release || !params.registry) {
-  exit 1, "ERROR: release version and registry file must be provided when running EVA import"
+  exit 1, "ERROR: release version (--release) and registry file (--registry) must be provided when running EVA import"
 }
 
 if(!params.old_dbname) {
-  exit 1, "ERROR: please provide the previous database name to copy phenotype and SV tables from the previous database"
+  exit 1, "ERROR: please provide the previous database name (--old_dbname) to copy phenotype and SV tables from the previous database"
 }
 
 if( (!params.old_host || !params.old_port || !params.old_dbname) && params.species == "rattus_norvegicus") {
@@ -137,11 +149,14 @@ if( (!params.old_host || !params.old_port || !params.old_dbname) && params.speci
 }
 
 if(!params.skipped_variants_file) {
-  exit 1, "ERROR: please provide an output file to the EVA import script"
+  exit 1, "ERROR: please provide an output file (--skipped_variants_file) to the EVA import script"
 }
 
 // Build command to run EVA import
-command_to_run = " -i ${params.input_file} --source ${params.source} --source_description '${params.description}' --version ${params.version} --registry ${params.registry} --species ${params.species} --skip_tables '${params.skip_tables}'"
+registry = file(params.registry)
+input_file = file(params.input_file)
+
+command_to_run = " -i ${input_file} --source ${params.source} --source_description '${params.description}' --version ${params.version} --registry ${registry} --species ${params.species} --skip_tables '${params.skip_tables}'"
 
 log.info """
   Importing EVA data with the following parameters: \
@@ -287,17 +302,17 @@ workflow {
 
   run_eva(prepare_tables.out, file(eva_script), command_to_run, params.merge_all_types, params.fork, params.sort_vf, params.chr_synonyms, params.remove_prefix, params.skipped_variants_file)
 
-  run_variant_synonyms(run_eva.out, file(var_syn_script), params.source, params.species, params.var_syn_file, params.registry, params.old_host, params.old_port, params.old_dbname)
+  run_variant_synonyms(run_eva.out, file(var_syn_script), params.source, params.species, params.var_syn_file, registry, params.old_host, params.old_port, params.old_dbname)
 
   if(set_names[params.species]) {
     my_species_set = Channel.fromList(set_names.get(params.species))
-    run_variation_set(run_variant_synonyms.out, my_species_set, var_set_script, files_path, filenames, params.species, params.registry)
+    run_variation_set(run_variant_synonyms.out, my_species_set, var_set_script, files_path, filenames, params.species, registry)
 
-    run_variation_set_2(run_variation_set.out.collect(), var_set_script_2, params.species, params.registry)
+    run_variation_set_2(run_variation_set.out.collect(), var_set_script_2, params.species, registry)
   }
 
   if(params.citations_file) {
-    run_citations(run_variant_synonyms.out, file(citations_script), params.species, params.registry, params.citations_file)
+    run_citations(run_variant_synonyms.out, file(citations_script), params.species, registry, params.citations_file)
   }
 }
 
