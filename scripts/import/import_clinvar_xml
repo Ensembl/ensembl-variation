@@ -42,6 +42,7 @@ limitations under the License.
   - external_id      = Acc
   - clinvar_clin_sig = Desc
   - risk_allele      = HGVS allele (dbSNP variants only)
+  - allele_symbol    = HGVS allele (dbSNP variants only) 
 
 =cut
 
@@ -55,9 +56,11 @@ use XML::Hash::XS qw();
 use Text::ParseWords;
 
 use Bio::EnsEMBL::Variation::Utils::Sequence qw( get_hgvs_alleles SO_variation_class);
+use Bio::EnsEMBL::Utils::Sequence qw( expand reverse_comp);
 use Bio::EnsEMBL::Variation::Utils::SpecialChar qw(replace_char decode_text);
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap);
 use Bio::EnsEMBL::Variation::Utils::Config qw(%ATTRIBS);
+use Bio::EnsEMBL::Variation::Utils::Reports qw(report_counts);
 use Bio::EnsEMBL::Variation::VariationFeature;
 use Bio::EnsEMBL::Slice;
 use Bio::DB::Fasta;
@@ -114,6 +117,10 @@ my $pheno_evidence_id = get_attrib_id('evidence',$phenotype_evidence);
 ## pre-load submitter ids - shortcutting the API for speed
 ## get ClinVar submitters names from the database
 my $submitters = get_submitter_ids($dba);
+
+# count number of rows before import
+my @count_tables = qw(variation variation_feature transcript_variation);
+report_counts($dba, "before", \@count_tables);
 
 ## remove old data
 clean_old_data() if defined $clean; 
@@ -196,6 +203,9 @@ while($reader->read) {
 }
 
 close ($data_file_fh);
+
+# count number of rows after import
+report_counts($dba, "after", \@count_tables);
 
 
 sub process_clinvar_set {
@@ -407,6 +417,7 @@ sub get_feature{
   my $type      = shift;
 
   my %feature;
+  my %alleles;
 
   my $measures = to_array($Measure);
   foreach my $measure(@{$measures}){
@@ -456,22 +467,33 @@ sub get_feature{
    }
 
     ## position on required assembly
+    my @chr_numbers;
+   
     next unless defined $measure->{SequenceLocation};
     my $seqLocs = to_array($measure->{SequenceLocation});
     foreach my $loc(@{$seqLocs}){
 
       next unless ref($loc) eq  'HASH'; 
       next unless $loc->{Assembly} eq $assembly;
+      
+      # push the $loc->Chr for mostly PAR variants
+      push @chr_numbers, $loc->{Chr};
 
       $feature{Chr}    = $loc->{Chr} ; 
       $feature{start}  = $loc->{start} ; 
       $feature{end}    = $loc->{stop} ; 
 
+      $alleles{ref} = $loc->{referenceAlleleVCF};
+      $alleles{alt} = $loc->{alternateAlleleVCF};
+
       $feature{measureXrefs}{$measure->{ID}}{Chr}   = $loc->{Chr}    if $type eq $haplotype_type;
       $feature{measureXrefs}{$measure->{ID}}{start} = $loc->{start}  if $type eq $haplotype_type;
       $feature{measureXrefs}{$measure->{ID}}{end}   = $loc->{stop}   if $type eq $haplotype_type;
     }
-
+    
+    #checking if the chr_numbers array has more than one value, if it does it is classified as a PAR variant so the new key Chr_other will be created 
+    # would be used in the get_variant function
+    $feature{Chr_other} = 1 if scalar @chr_numbers > 1;
     ## save SPDI canonical
     $feature{canonicalSPDI} = $measure->{CanonicalSPDI} if defined $measure->{CanonicalSPDI};
 
@@ -552,7 +574,8 @@ sub get_feature{
       delete $feature{haplo};
     }
   }
-
+  
+  %feature = (%feature, %alleles) if defined($feature{hgvs_g}) && $feature{hgvs_g} =~ /\=/;
   return \%feature;
 }
 
@@ -791,10 +814,21 @@ sub import_phenotype_feature{
   my $alt_allele     = shift;
 
   # deal with risk alleles longer than varchar 255
-  if ( defined $alt_allele && length($alt_allele) > 255 ) {
+  if ( defined $alt_allele && length($alt_allele) > 255 && defined($record->{feature_info}->{hgvs_g}) && $record->{feature_info}->{hgvs_g} !~ /\=/ ) {
     warn "alt_allele longer than 255 and will be removed from risk_allele: $alt_allele\n";
     $alt_allele = '';
   }
+   
+  if ( defined($record->{feature_info}->{hgvs_g})  =~ /\=/) {
+    $alt_allele = $record->{feature_info}->{ref};
+  }
+  
+  my ($ref_allele, $other_alt_allele);
+  eval{
+    ($ref_allele, $other_alt_allele) = get_hgvs_alleles( $record->{feature_info}->{hgvs_g} ) unless $record->{feature_info}->{hgvs_g} eq "unknown:" ;
+  };
+
+  $ref_allele = $record->{feature_info}->{ref} if defined($record->{feature_info}->{hgvs_g}) && $record->{feature_info}->{hgvs_g} =~ /\=/;
 
   ## deal with non-specified phenos
   $record->{disease} = $default_pheno unless $record->{disease} =~/\w+/;
@@ -823,12 +857,13 @@ sub import_phenotype_feature{
     warn "EXCEPTION in fetch of phenotype (RCV: ". $record->{Acc} .", VCV:". $record->{clinvar_variant_id}.") via SQL statement: $@";
     return;
   }
-
+  
   my %attribs;
   $attribs{review_status}    = $record->{Status};
   $attribs{external_id}      = $record->{Acc};
   $attribs{clinvar_clin_sig} = $record->{Desc} if $record->{Desc} ne ''; #avoids empty entry if explanation is missing for conflicting evidence
   $attribs{risk_allele}      = $alt_allele if defined $alt_allele && $alt_allele ne "-" && $alt_allele ne '';
+  $attribs{allele_symbol}    = $ref_allele if defined $ref_allele && $ref_allele ne "-" && $ref_allele ne '';
   $attribs{associated_gene}  = $record->{feature_info}->{gene} if defined $record->{feature_info}->{gene};
   $attribs{MIM}              = $record->{feature_info}->{MIM} if defined $record->{feature_info}->{MIM};
   $attribs{pubmed_id}        = join(",", @{$record->{citations}}) if $record->{citations} && exists $record->{citations}->[0];
@@ -1052,24 +1087,31 @@ sub get_variant{
       ($record->{feature_info}->{hgvs_g} = "unknown" . ":" . $record->{feature_info}->{hgvs_g} );
   }
   print "Seeking $dbSNP ". $record->{feature_info}->{hgvs_g} . " for RCV:". $record->{Acc} ." VCV:". $record->{clinvar_variant_id} ."\n" if $DEBUG ==1;
-
+  
   my ($ref_allele, $alt_allele);
   eval{
-    ($ref_allele, $alt_allele) = get_hgvs_alleles( $record->{feature_info}->{hgvs_g} ) unless $record->{feature_info}->{hgvs_g} eq "unknown:" ;
+    ($ref_allele, $alt_allele) = get_hgvs_alleles( $record->{feature_info}->{hgvs_g} ) if  $record->{feature_info}->{hgvs_g} ne "unknown:"  || $record->{feature_info}->{hgvs_g} =~ /\=/;
   };
+  
+  ($ref_allele, $alt_allele) = ( $record->{feature_info}->{ref}, $record->{feature_info}->{alt} ) if defined $record->{feature_info}->{ref} && defined $record->{feature_info}->{alt};
+  
+  reverse_comp(\$alt_allele) if  defined($alt_allele) &&  defined($ref_allele) && $ref_allele eq $alt_allele;
+
   ## not printing bulky error message
   print "Problem finding allele for hgvs ". $record->{feature_info}->{hgvs_g} ." \n" unless $@ eq '';
+
 
   unless (defined $ref_allele && defined $alt_allele && $ref_allele ne $alt_allele){
     print "Ref + Alt alleles not available for $dbSNP (" . $record->{feature_info}->{hgvs_g} .
           ") RCV:". $record->{Acc} ." VCV:". $record->{clinvar_variant_id} ."\n";
   }
 
+
   if (defined $rs_id) {
     ## look for existing variation object to return
     my $var_ob = $variation_adaptor->fetch_by_name($dbSNP);
-
-    if (defined $var_ob){
+    # checks if Chr_other does not exists and then returns the value
+    if (defined $var_ob && !exists $record->{feature_info}->{Chr_other}){
       my @features = $var_ob->get_all_VariationFeatures();
       return ($var_ob, @features , $alt_allele);
     }
@@ -1085,9 +1127,19 @@ sub get_variant{
       print "Not entering new refSNP: $rs_id as no parsable HGVS available for alleles ($record->{feature_info}->{hgvs_g})\n" if $DEBUG == 1;
       return undef;
     }
-
+    
+     my ($new_var_ob, $var_feat);
     ## enter new records
-    my ($new_var_ob, $var_feat) = enter_var($record,  $ref_allele, $alt_allele, $rs_id, $record->{inheritance_type});
+    # enter the new record based on what we have at the moment 
+    ($new_var_ob, $var_feat) = enter_var($record,  $ref_allele, $alt_allele, $rs_id, $record->{inheritance_type}) if $record->{feature_info}->{hgvs_g} !~ /\=/;
+    # when it is a PAR region, we need to map based on the PAR region to the X or the Y 
+    if (defined $record->{feature_info}->{Chr_other}) {
+      $record->{feature_info}->{Chr} = ($record->{feature_info}->{Chr} eq "X") ? "Y" : "X";
+      # adding the mapped based on the PAR region
+      my ($new_var_ob_2, $var_feat_2) = enter_var($record,  $ref_allele, $alt_allele, $rs_id, $record->{inheritance_type}) if $record->{feature_info}->{hgvs_g} !~ /\=/;
+      push @{$var_feat}, $var_feat_2->[0];
+      $new_var_ob = $new_var_ob_2;
+    }
     return ($new_var_ob,  $var_feat, $alt_allele);
 
   }
@@ -1101,9 +1153,9 @@ sub get_variant{
                     $ref_allele."_".$alt_allele ;
     my $var_feats = $var_feat_adaptor->fetch_all_by_location_identifier($location_str);
 
-    if ( scalar @$var_feats == 1 ){
+    if ( defined($var_feats) && scalar @$var_feats == 1 ) {
       return ($var_feats->[0]->variation(), $var_feats, $alt_allele);
-    } elsif (scalar @$var_feats > 1 && $DEBUG == 1) {
+    } elsif ( defined ($var_feats) && scalar @$var_feats > 1 && $DEBUG == 1) {
       # check that variation will always have same name for multiple variation features!
       print "multiple variation_features found for $location_str : \n";
       foreach my $vf (@$var_feats){
@@ -1190,7 +1242,7 @@ sub get_variant_by_slice_allele{
 
   return undef unless defined $cv_allele;
 
-  my $location_string = $record->{feature_info}->{Chr} .":" . $record->{feature_info}->{start}."-".$record->{feature_info}->{end};
+  my $location_string = $record->{feature_info}->{Chr} .":" . $record->{feature_info}->{start}."-".$record->{feature_info}->{end} if defined ($record->{feature_info}->{Chr}) && defined ($record->{feature_info}->{start}) && defined($record->{feature_info}->{end});
 
   if(!defined $record->{feature_info}->{end} || $record->{feature_info}->{start} != $record->{feature_info}->{end}) {
      print "too long for slice look up: $location_string\n" if $DEBUG == 1;
@@ -1339,15 +1391,21 @@ sub enter_var{
     'processed_pseudogene' => 1,
     'unprocessed_pseudogene' => 1,
   );
-
-  my $var = Bio::EnsEMBL::Variation::Variation->new
+  my $var;
+  # checking if the rsid exists in the db, if it does not, it stores it 
+  # if it does, it retrieves it and stores it as the $var 
+  if (!defined $variation_adaptor->fetch_by_name($dbSNP) ) {
+    $var = Bio::EnsEMBL::Variation::Variation->new
     ( -name              => $dbSNP,
       -source            => $source,
       -is_somatic        => $somatic,
       -adaptor           => $variation_adaptor,
       -class_SO_term     => $so_term,
     );
-  $variation_adaptor->store($var);
+    $variation_adaptor->store($var);
+  } else {
+    $var =  $variation_adaptor->fetch_by_name($dbSNP);
+  }
 
   # Create the variation feature
   my $vf = Bio::EnsEMBL::Variation::VariationFeature->new

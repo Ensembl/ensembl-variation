@@ -616,6 +616,13 @@ sub _raw_seq {
       $start = 1;
     }
 
+    if ($start > $fa_length) {
+      print STDERR "SLICE HAS START > SEQ LENGTH\n" if $DEBUG;
+
+      # return only one N (same behaviour as when not using a Faidx/FASTA file)
+      return 'N';
+    }
+
     if($end > $fa_length) {
       print STDERR "SLICE HAS END > SEQ LENGTH\n" if $DEBUG;
 

@@ -103,7 +103,7 @@ ok($cons->label() eq 'intron variant',                                        "c
 ok($cons->SO_term() eq 'intron_variant',                                      "consequence SO_term"); 
 ok($cons->SO_accession() eq 'SO:0001627',                                     "consequence SO_accession"); 
 ok($cons->tier() eq '3',                                                      "consequence tier"); 
-ok($cons->rank() eq '21',                                                     "consequence rank"); 
+ok($cons->rank() eq '28',                                                     "consequence rank"); 
 ok($cons->NCBI_term() eq 'intron',                                            "consequence NCBI term"); 
 ok($cons->impact() eq 'MODIFIER',                                             "consequence impact"); 
 ok($cons->display_term() eq 'INTRONIC',                                       "consequence display_term"); 
@@ -361,6 +361,7 @@ ok($vfs16a->[0]->variation_name() eq $vf_somatic_name, "somatic vf with phenotyp
 # test fetching VF with empty consequence type column
 is($vfa->fetch_by_dbID(997738282)->display_consequence, 'sequence_variant', 'empty consequence column');
 
+ok(scalar @{$vfa->fetch_all_by_location_identifier('18:40228819:A_G')} == 1, "fetch_all_by_location_identifier '18:40228819:A_G'");
 
 # test fetch Iterator
 print "\n# Test - fetch_Iterator\n";
@@ -439,11 +440,18 @@ $dbh->do(qq{DELETE FROM variation_feature WHERE variation_feature_id=$dbID;}) or
 
 print "\n# Test - fetch_by_hgvs_notation\n";
 my $hgvs_str = '9:g.139568335_1395683374GGCCGCTGGTGGGGATGGCTTCCAGCACCTGCACTGTGAC>GCGCAG';
-throws_ok {$vfa->fetch_by_hgvs_notation($hgvs_str); } qr/Region requested must be smaller than 5kb/, 'Throw on region longer than 5kbt.';
+throws_ok {$vfa->fetch_by_hgvs_notation($hgvs_str); } qr/Region requested must be smaller than/, 'HGVSg notation using a (too) long region throws an error';
 $hgvs_str = 'Q00872:p.Ala53Val';
 ok($vfa->fetch_by_hgvs_notation($hgvs_str)->allele_string eq 'C/T', 'HGVSp notation using UniProt ID');
 ok($vfa->fetch_by_hgvs_notation('ENST00000470094:c.55_111del')->end eq 32954180, 'HGVSc multi-exon deletion');
 ok($vfa->fetch_by_hgvs_notation('NM_000484:c.196_*3del')->end eq 27542743, 'HGVSc multi-exon *deletion');
+
+# test HGVS protein when codon is within two exons
+# forward strand
+ok($vfa->fetch_by_hgvs_notation('ENSP00000422007.1:p.Gly469Glu')->start eq 66325646, 'HGVSp multi-exon (forward)');
+# reverse strand
+ok($vfa->fetch_by_hgvs_notation('ENSP00000293261:p.Arg232Met')->start eq 48846578, 'HGVSp multi-exon (reverse)');
+
 
 print "\n# Test - fetch_by_spdi_notation\n";
 my $spdi_str = 'NC_000013.10:32954017::';

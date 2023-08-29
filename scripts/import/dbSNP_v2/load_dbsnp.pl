@@ -34,18 +34,27 @@ use File::Basename;
 use POSIX qw(strftime);
 use JSON;
 use FileHandle;
+use File::Basename;
 
 my $config = configure();
 
 print "species = $config->{'species'}\n";
 print "registry_file = $config->{'registry'}\n";
 
+my ($TMP_FILE, $TMP_DIR);
+my $VAR_ID = 1;
+my $VF_ID = 1;
+my $BA_ID = 1;
+my $FV_ID = 1;
+my $FVF_ID = 1;
+my $PA_ID = 1;
+my $VS_ID = 1;
+
 my $debug = $config->{'debug'};
 my $lines = 0;
 
 # TODO these need to be command line options
 my $add_map_weight = 1;
-my $max_lines = 5000000;
 
 init_reports($config);
 
@@ -88,8 +97,31 @@ my $nt_regions = get_nt_regions($dbh_var);
 my $ref_regions = get_ref_regions($dbh_core) if ($add_map_weight);
 my $lu_info = get_lu_info($dbh_var);
 
+my %fhs;
+my @tables = (
+  "batch_variation",
+  "batch",
+  "failed_variation_feature_spdi",
+  "failed_variation_feature",
+  "failed_variation",
+  "placement_allele",
+  "tmp_variation_citation",
+  "variation_feature",
+  "variation_synonym",
+  "variation"
+  );
+
+# Open files
+for my $tab (@tables) {
+  open $fhs{$tab}, '>', "${TMP_DIR}/tmp_${tab}_${TMP_FILE}" or die $!;
+}
+
 # Parsing the data file
 my ($num_lines) = parse_dbSNP_file($config);
+
+for my $tab (@tables) {
+  close ($fhs{$tab});
+}
 
 # Close open filehandles used for tracking the
 # update of any minor allele changes that are only done for
@@ -101,7 +133,7 @@ if (($config->{'assembly'} eq 'GRCh38') && ($config->{'add_maf'})) {
   }
 }
 
-report_summary($config, $num_lines);
+# report_summary($config, $num_lines);
 
 # Set up the reporting files
 sub init_reports {
@@ -121,6 +153,8 @@ sub init_reports {
   $config->{'error_file'} = join('/', $rpt_dir, $error_filename);
   $config->{'rpt_file'} = join('/', $rpt_dir, $rpt_filename);
   $config->{'data_file_short'} = join('', $base_filename, $suffix);
+  $TMP_DIR = $path;
+  $TMP_FILE = $base_filename;
 
   print "rpt_file ($config->{'rpt_file'})\n";
 
@@ -204,17 +238,11 @@ sub parse_dbSNP_file {
   }
 
   my $batch_id = get_batch_id($config->{'dbh_var'}, $config->{'data_file_short'});
-  die("no batch_id for $config->{'data_file_short'}") if (! $batch_id);
  
   $config->{'batch_id'} = $batch_id;
  
   while (my $json_string = <$in>) {
 
-    if ($lines >= $max_lines) {
-      print "Max lines ($max_lines) reached so stopping\n";
-      last;
-    }
-    $lines++;
 
     my $rs_obj = JSON->new->decode($json_string) or throw("ERROR: Failed to read file $inputfile");
     my $refsnp_data = parse_refsnp($config, $rs_obj);
@@ -1072,19 +1100,16 @@ sub import_refsnp {
   if (%{$rs_data->{'variant_fails'}}) {
     add_variant_fails($dbh, $variation_id, $rs_data->{'variant_fails'});
   } 
-  #add_failed_variation();
-  #add_publication();
+  
+  $VAR_ID++;
+
 }
 
 sub import_batch {
   my ($dbh, $batch_id, $variation_id, $variant_type) = @_;
 
-  $dbh->do(qq{INSERT INTO batch_variation
-             (batch_id, variation_id, variant_type)
-             VALUES
-             (?, ?, ?)},
-             undef,
-             $batch_id, $variation_id, $variant_type);
+  my @columns = ($batch_id, $variation_id, $variant_type);
+  dump_file($fhs{"batch_variation"}, @columns);
 }
 
 # Add the variation record
@@ -1111,24 +1136,13 @@ sub import_variation {
     $evidence_attribs_str = join(",", @{$data->{'evidence_attribs'}});
   }
 
-  $dbh->do(qq{INSERT INTO variation (name, source_id,
-                             minor_allele, minor_allele_freq, minor_allele_count,
-                             evidence_attribs, display,
-                             class_attrib_id) VALUES
-                    (?, ?, 
-                     ?, ?, ?,
-                     ?, ?,
-                     ?)},
-                    undef,
-                   $v->{'name'}, $v->{'source_id'}, 
-                   $minor_allele, $maf, $minor_allele_count,
-                   $evidence_attribs_str, $data->{'display'},
-                   $v->{'class_attrib_id'});
-  my $db_variation_id = $dbh->last_insert_id(undef, undef, qw(variation variation_id)) or die("no insert id for variation");
-  if (! $db_variation_id) {
-    die("Unable to get variation_id for $v->{'name'}: $!");
-  }
-  $v->{'variation_id'} = $db_variation_id;
+  my @columns = ($VAR_ID, $v->{'name'}, $v->{'source_id'},
+  $evidence_attribs_str, $data->{'display'}, $v->{'class_attrib_id'});
+
+  dump_file($fhs{"variation"}, @columns);
+
+  my $db_variation_id = $VAR_ID;
+
   return $db_variation_id;
 }
 
@@ -1189,23 +1203,6 @@ sub import_variation_feature {
   # 'seq_region_end' => 18862899,
   # 'allele_string' => 'G/AA'
 
-  my $sth=$dbh->prepare(qq[INSERT INTO variation_feature
-                           (variation_name, map_weight, 
-                            seq_region_id, seq_region_start, seq_region_end,
-                            seq_region_strand, 
-                            variation_id, allele_string, ancestral_allele,
-                            source_id, variation_set_id, class_attrib_id,
-                            minor_allele, minor_allele_freq, minor_allele_count,
-                            evidence_attribs, display
-                            )
-                          VALUES (
-                            ?, ?,
-                            ?, ?, ?,
-                            ?,
-                            ?, ?, ?,
-                            ?, ?, ?,
-                            ?, ?, ?,
-                            ?, ?)]);
   my %seen_vf;
 
   for my $vf (@$vfs) {
@@ -1237,20 +1234,21 @@ sub import_variation_feature {
     }
     $seen_vf{$loc} = 1;
 
-    $sth->execute($vf->{'variation_name'}, $map_weight,
+    my @columns = ($VF_ID, $vf->{'variation_name'}, $map_weight,
                   $vf->{'seq_region_id'}, $vf->{'seq_region_start'}, $vf->{'seq_region_end'},
                   $vf->{'seq_region_strand'},
                   $variation_id, $vf->{'allele_string'}, $vf->{'ancestral_allele'},
                   $source_id, $sets, $vf->{'class_attrib_id'},
-                  $minor_allele, $maf, $minor_allele_count,
                   $evidence_attribs_str, $data->{'display'});
+
+    dump_file($fhs{"variation_feature"}, @columns);
 
     # If there are allele_errors, add these to the failed_variation_feature
     # Need to get the last_insert_id in this case
 
     if (@{$vf->{'allele_errors'}} ||
            %{$vf->{'fails'}}) {
-      my $db_vf_id = $dbh->last_insert_id(undef, undef, qw(variation_feature variation_feature_id)) or die("no insert id for variation_feature");
+      my $db_vf_id = $VF_ID;
       if (! $db_vf_id) {
         die("Unable to get variation_feature_id for $vf->{'variation_name'}: $!");
       }
@@ -1261,6 +1259,8 @@ sub import_variation_feature {
         import_failed_variation_features($dbh, $db_vf_id, $vf->{'fails'});
       }
     }
+
+    $VF_ID++;
 
     # insert the placement allele
     import_placement_allele($dbh, $variation_id, $vf->{'alleles'}, $vf->{'variation_name'});
@@ -1309,14 +1309,6 @@ sub import_placement_allele {
   #                              }
   #                 }
   #              ],
-  my $sth=$dbh->prepare(qq[INSERT INTO placement_allele
-                           (variation_id,
-                            seq_id, position, deleted_sequence, inserted_sequence,
-                            hgvs)
-                          VALUES (
-                            ?,
-                            ?, ?, ?, ?,
-                            ?)]);
   for my $allele (@$alleles) {
     my $spdi = $allele->{'allele'}->{'spdi'};
     #print "seq_id = $spdi->{'seq_id'}\n";
@@ -1341,12 +1333,11 @@ sub import_placement_allele {
       log_errors($config, $var_name, $msg, $info);
     }
 
-    $sth->execute($variation_id,
-                  $spdi->{'seq_id'},
-                  $spdi->{'position'},
-                  $spdi->{'deleted_sequence'},
-                  $spdi->{'inserted_sequence'},
-                  $pa_hgvs);
+    my @columns = ($PA_ID, $variation_id, $spdi->{'seq_id'}, $spdi->{'position'}, $spdi->{'deleted_sequence'},
+                   $spdi->{'inserted_sequence'}, $pa_hgvs);
+    dump_file($fhs{"placement_allele"}, @columns);
+    
+    $PA_ID++;
   }
 }
 
@@ -1372,33 +1363,28 @@ sub check_spdi_lengths {
 sub import_failed_alleles {
   my ($dbh, $vf_id, $allele_errors, $allele_string) = @_;
 
-  my $sth=$dbh->prepare(qq[INSERT INTO failed_variation_feature_spdi
-                           (variation_feature_id, spdi_failed_description_id)
-                          VALUES (
-                            ?, ?)]);
-  my $sth_vf=$dbh->prepare(qq[INSERT INTO failed_variation_feature
-                           (variation_feature_id, failed_description_id)
-                          VALUES (
-                           ?, ?)]);
   for my $ae (@$allele_errors) {
-    $sth->execute($vf_id, $ae);
+    my @columns = ($vf_id, $ae);
+    dump_file($fhs{"failed_variation_feature_spdi"}, @columns);
   }
   if ($allele_string eq 'dbSNP_variant') {
-    $sth_vf->execute($vf_id, 22);
+    my @columns = ($FVF_ID, $vf_id, 22);
+    dump_file($fhs{"failed_variation_feature"}, @columns);
+    $FVF_ID++;
   } elsif ($allele_string eq 'dbSNP_novariation') {
-    $sth_vf->execute($vf_id, 4);
+    my @columns = ($FVF_ID, $vf_id, 4);
+    dump_file($fhs{"failed_variation_feature"}, @columns);
+    $FVF_ID++;
   }
 }
 
 sub import_failed_variation_features {
   my ($dbh, $vf_id, $errors) = @_;
 
-  my $sth=$dbh->prepare(qq[INSERT INTO failed_variation_feature
-                           (variation_feature_id, failed_description_id)
-                          VALUES (
-                            ?, ?)]);
   for my $error (sort {$a <=> $b} keys %$errors) {
-    $sth->execute($vf_id, $error);
+    my @columns = ($FVF_ID, $vf_id, $error);
+    dump_file($fhs{"failed_variation_feature"}, @columns);
+    $FVF_ID++;
   }
 }
 
@@ -1412,21 +1398,10 @@ sub import_merges {
  
   die("no variation id") if (! $variation_id);
 
-  #'merges' => [
-  #                      'rs17850737',
-  #                      'rs52818902',
-  #                      'rs386571803'
-  #            ],
-  my $sth=$dbh->prepare(qq[INSERT INTO variation_synonym
-                           (variation_id,
-                            source_id,
-                            name) 
-                          VALUES (
-                            ?,
-                            ?,
-                            ?)]);
   for my $name (@$merges) {
-    $sth->execute($variation_id, $source_id, $name);
+    my @columns = ($VS_ID, $variation_id, $source_id, $name);
+    dump_file($fhs{"variation_synonym"}, @columns);
+    $VS_ID++;
   }
 }
 
@@ -1440,21 +1415,10 @@ sub import_hgvs {
   
   die("no variation id") if (! $variation_id);
 
-  # [
-  #    'NP_000228.1:p.Asn318Ser',
-  #    'NM_000237.2:c.953A>G'
-  # ]
-  #
-  my $sth = $dbh->prepare(qq[INSERT INTO variation_synonym
-                          (variation_id,
-                           source_id,
-                           name)
-                          VALUES (
-                           ?,
-                           ?,
-                           ?)]);
   for my $name (@$hgvs) {
-    $sth->execute($variation_id, $source_id, $name);
+    my @columns = ($VS_ID, $variation_id, $source_id, $name);
+    dump_file($fhs{"variation_synonym"}, @columns);
+    $VS_ID++;
   }
 }
 
@@ -1474,15 +1438,9 @@ sub import_citations {
   #    'NM_000237.2:c.953A>G'
   #  ]
  
-  # Note doing an INSERT IGNORE just to get past the problem of rs HGVS 
-  # This needs to be removed
-  my $sth = $dbh->prepare(qq[INSERT INTO tmp_variation_citation
-                          (variation_id,
-                           pmid )
-                          VALUES (
-                           ?,?)]);
   for my $citation (@$citations) {
-    $sth->execute($variation_id, $citation);
+    my @columns = ($variation_id, $citation);
+    dump_file($fhs{"tmp_variation_citation"}, @columns);
    }
 }
 
@@ -1492,13 +1450,10 @@ sub add_unmapped_variant {
   debug("add_unmapped_variant") if ($debug);
 
   die("no variation id") if (! $variation_id);
-
-  my $sth = $dbh->prepare(qq[INSERT INTO failed_variation
-                             (variation_id, failed_description_id)
-                             VALUES (?, ?)
-                            ]);
   
-  $sth->execute($variation_id, 5);
+  my @columns = ($FV_ID, $variation_id, 5);
+  dump_file($fhs{"failed_variation"}, @columns);
+  $FV_ID++;
 }
 
 sub add_variant_fails {
@@ -1508,12 +1463,10 @@ sub add_variant_fails {
 
   die("no variation id") if (! $variation_id);
 
-  my $sth = $dbh->prepare(qq[INSERT INTO failed_variation
-                             (variation_id, failed_description_id)
-                             VALUES (?, ?)
-                            ]);
   for my $fail_id (keys %{$fails}) {
-    $sth->execute($variation_id, $fail_id) or die("Error inserting variation fails info");
+    my @columns = ($FV_ID, $variation_id, $fail_id);
+    dump_file($fhs{"failed_variation"}, @columns);
+    $FV_ID++;
   }
 }
 
@@ -1533,7 +1486,7 @@ sub get_variation_id {
   return $variant_id;
 }
   
-sub report_summary{
+sub report_summary {
 
   my ($config, $num_lines) = @_;
 
@@ -2074,6 +2027,14 @@ sub get_align_diff {
   return $align_info;
 }
 
+sub dump_file {
+
+    my ($fh_tmp, @columns) = @_;
+
+    print { $fh_tmp } join("\t", map {defined($_) ? $_ : '\N'} @columns) . "\n";
+
+}
+
 sub get_maf {
   my ($alleles_ref, $rsid) = @_;
 
@@ -2180,19 +2141,11 @@ sub format_frequency {
 sub get_batch_id {
   my ($dbh, $filename, $parent_file) = @_;
 
-  $dbh->do(qq{INSERT INTO batch
-              (filename, parent_filename)
-              VALUES
-               (?, ?)},
-                undef,
-                $filename,
-                $parent_file);
-  
-  my $batch_id = $dbh->last_insert_id(undef, undef, qw(batch batch_id)) or die("no batch_id for batch");
-  if (! $batch_id) {
-    die("Unable to get batch_id $filename: $!");
-  }
-  return $batch_id;
+    my @columns = ($BA_ID, $filename, $parent_file);
+    dump_file($fhs{"batch"}, @columns);
+    $BA_ID++;
+
+  return 1;
 }
 
 sub get_sources {

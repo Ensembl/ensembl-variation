@@ -194,7 +194,7 @@ sub fetch_all_by_dbID_list {
 =head2 fetch_all_by_Variation
 
   Arg [1]    : listref $list
-  Example    : $publication = $publication_adaptor->fetch_all_by_Variation( $var_object]);
+  Example    : $publication = $publication_adaptor->fetch_all_by_Variation($var_object);
   Description: Retrieves a listref of publication objects via a variation object
   Returntype : listref of Bio::EnsEMBL::Variation::Publication objects
   Exceptions : throw if variation argument is not defined
@@ -463,6 +463,97 @@ sub update_citation_data_source{
   
   $sth_update_source_attrib->execute;
   
+}
+
+=head2 remove_publication_by_dbID
+
+  Arg [1]    : Integer $dbID
+  Example    : $publication_adaptor->remove_publication_by_dbID($id);
+  Description: Based on a Publication dbID:
+                 - Delete the publication and variant citations
+                 - Set display to 0 for variants without any publications
+                   or phenotype features
+                 - Remove 'Cited' evidence from variant if there are no
+                   publications
+  Returntype : bool (0 = ID does not exist; 1 = deleted OK)
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub remove_publication_by_dbID {
+  my $self = shift;
+  my $id = shift;
+
+  my $publication = $self->fetch_by_dbID($id);
+  return 0 unless $publication;
+
+  # Save user setting for include_failed_variations to restore it later
+  my $include_failed_variants = $self->db->include_failed_variations();
+
+  # Get all variants (including if failed) from this publication
+  $self->db->include_failed_variations(1);
+  my @variants = @{ $publication->variations() };
+
+  # Delete this publication and its citations
+  my $dbh = $self->dbc->db_handle;
+  my $citation_delete_sth = $dbh->prepare(
+    qq[ delete from variation_citation where publication_id = $id ]);
+  my $pub_delete_sth = $dbh->prepare(
+    qq[ delete from publication where publication_id = $id ]);
+  $citation_delete_sth->execute();
+  $pub_delete_sth->execute();
+
+  # Get attribute ID associated with 'Cited' evidence
+  my $cited_attrib_id = $self->db->get_AttributeAdaptor->attrib_id_for_type_value('evidence', 'Cited');
+
+  # Prepare SQL statements before for loop
+  my $update_variation_display_sth = $dbh->prepare(
+    qq[ update variation set display = ? where variation_id = ? ]);
+  my $update_variation_feature_display_sth = $dbh->prepare(
+    qq[ update variation_feature set display = ? where variation_id = ? ]);
+  my $update_transcript_variation_display_sth = $dbh->prepare(
+    qq[ update transcript_variation set display = ? where variation_feature_id IN
+        (select variation_feature_id from variation_feature where variation_id = ?) ]);
+
+  my $remove_cited_evidence = qq[
+    update %s
+    set evidence_attribs = NULLIF(TRIM(BOTH ',' FROM REPLACE(
+        CONCAT(',', evidence_attribs, ','), ',$cited_attrib_id,', ',')), '')
+    WHERE variation_id = ? ];
+  my $remove_variation_cited_evidence_sth =
+    $dbh->prepare(sprintf $remove_cited_evidence, 'variation');
+  my $remove_variation_feature_cited_evidence_sth =
+    $dbh->prepare(sprintf $remove_cited_evidence, 'variation_feature');
+
+  # Clean-up evidence for each variant
+  for my $var (@variants) {
+    my $var_id = $var->dbID;
+
+    # Check if variant is cited in other publications
+    my $pubs = $var->get_all_Publications();
+    next if @$pubs;
+
+    # Do not display failed variants with no publications or phenotype features
+    if ($var->is_failed) {
+      my $phenos = $var->get_all_PhenotypeFeatures();
+      unless (@$phenos) {
+        $update_variation_display_sth->execute(0, $var_id);
+        $update_variation_feature_display_sth->execute(0, $var_id);
+        $update_transcript_variation_display_sth->execute(0, $var_id);
+      }
+    }
+
+    # Remove 'Cited' evidence if there are no publications for this variant
+    $remove_variation_cited_evidence_sth->execute($var_id);
+    $remove_variation_feature_cited_evidence_sth->execute($var_id);
+  }
+
+  # Restore user setting for include_failed_variations
+  $self->db->include_failed_variations($include_failed_variants);
+
+  return 1;
 }
 
 1;

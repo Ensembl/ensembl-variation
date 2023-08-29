@@ -108,11 +108,18 @@ sub _intron_overlap {
 }
 
 sub within_feature {
-    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    my ($bvfoa, $feat, $bvfo, $bvf, $match_chromosome) = @_;
     $bvf  ||= $bvfoa->base_variation_feature;
     $feat ||= $bvfoa->feature;
-    
-    return overlap(
+    $match_chromosome ||= 0;
+
+    my $cmp_chr = 1;
+    if ($match_chromosome) {
+      my $chr  = $bvf->{chr} || $bvf->{slice}->{seq_region_name};
+      $cmp_chr = $chr eq $feat->{slice}->{seq_region_name};
+    }
+
+    return $cmp_chr && overlap(
         $bvf->{start}, 
         $bvf->{end},
         $feat->{start}, 
@@ -154,6 +161,18 @@ sub complete_overlap_feature {
     );
 }
 
+sub _supporting_cnv_terms {
+  # if variant is CNV, return class SO terms for its supporting variants
+  my $bvf = shift;
+
+  return if $bvf->class_SO_term(undef, 1) ne "copy_number_variation";
+  return unless defined $bvf->structural_variation;
+
+  my $support_vars  = $bvf->structural_variation->get_all_SupportingStructuralVariants;
+  my @support_terms = map { $_->class_SO_term } @{$support_vars};
+  return @support_terms;
+}
+
 sub deletion {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
     $bvf ||= $bvfoa->base_variation_feature;
@@ -169,11 +188,12 @@ sub deletion {
     
     # structural variant depends on class
     if($bvf->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature')) {
-        return (
-            ($bvf->class_SO_term(undef, 1) eq 'deletion') or
-            ($bvf->class_SO_term(undef, 1) =~ /deletion/i) or
-            ($bvf->class_SO_term(undef, 1) =~ /loss/i)
-        );
+      return (
+          copy_number_loss(@_) or
+          ($bvf->class_SO_term(undef, 1) eq 'deletion') or
+          ($bvf->class_SO_term(undef, 1) =~ /deletion/i) or
+          grep(/deletion/i, _supporting_cnv_terms($bvf))
+      );
     }
     
     else { return 0; }
@@ -194,13 +214,14 @@ sub insertion {
     
     # structural variant depends on class
     if($bvf->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature')) {
-        return (
-            duplication(@_) or
-            tandem_duplication(@_) or
-            ($bvf->class_SO_term(undef, 1) eq 'insertion') or
-            ($bvf->class_SO_term(undef, 1) =~ /insertion/i) or
-            ($bvf->class_SO_term(undef, 1) =~ /gain/i)
-        );
+      my $class_SO_term = $bvf->class_SO_term(undef, 1);
+
+      return (
+          copy_number_gain(@_) or
+          ($bvf->class_SO_term(undef, 1) eq 'insertion') or
+          ($bvf->class_SO_term(undef, 1) =~ /insertion/i) or
+          grep(/insertion/i, _supporting_cnv_terms($bvf))
+      );
     }
     
     else { return 0; }
@@ -209,15 +230,23 @@ sub insertion {
 sub copy_number_gain {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
     $bvf ||= $bvfoa->base_variation_feature;
-    
-    return (duplication(@_) or tandem_duplication(@_) or $bvf->class_SO_term(undef, 1) =~ /gain/i);
+
+    return (
+        duplication(@_) or
+        tandem_duplication(@_) or
+        $bvf->class_SO_term(undef, 1) =~ /gain/i or
+        grep(/gain/i, _supporting_cnv_terms($bvf))
+    );
 }
 
 sub copy_number_loss {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
     $bvf ||= $bvfoa->base_variation_feature;
     
-    return $bvf->class_SO_term(undef, 1) =~ /loss/i;
+    return (
+      $bvf->class_SO_term(undef, 1) =~ /loss/i or
+      grep(/loss/i, _supporting_cnv_terms($bvf))
+    );
 }
 
 sub duplication {
@@ -227,7 +256,8 @@ sub duplication {
     return (
         (
             ($bvf->class_SO_term(undef, 1) eq 'duplication') or
-            ($bvf->class_SO_term(undef, 1) =~ /duplication/i)
+            ($bvf->class_SO_term(undef, 1) =~ /duplication/i) or
+            grep(/duplication/i, _supporting_cnv_terms($bvf))
         ) and
         (not tandem_duplication(@_))
     );
@@ -255,9 +285,22 @@ sub tandem_duplication {
     if($bvf->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature')) {
         return (
             ($bvf->class_SO_term(undef, 1) eq 'tandem_duplication') or
-            ($bvf->class_SO_term(undef, 1) =~ /tandem_duplication/i) 
+            ($bvf->class_SO_term(undef, 1) =~ /tandem_duplication/i) or
+            grep(/tandem_duplication/i, _supporting_cnv_terms($bvf))
         );
     }
+}
+
+sub chromosome_breakpoint {
+  my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+  $bvf ||= $bvfoa->base_variation_feature;
+
+  if ($bvf->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature')) {
+    return (
+      ($bvf->class_SO_term(undef, 1) eq 'chromosome_breakpoint') or
+      ($bvf->class_SO_term(undef, 1) =~ /chromosome_breakpoint/i)
+    );
+  }
 }
 
 sub feature_ablation {
@@ -288,10 +331,19 @@ sub feature_elongation {
 
 sub feature_truncation {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    $bvf  ||= $bvfoa->base_variation_feature;
     $feat ||= $bvfoa->base_variation_feature_overlap->feature;
     
     return 0 if $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele');
     
+    if(chromosome_breakpoint(@_)) {
+        for my $alt (@{$bvf->{_parsed_allele}}) {
+            # iterate over breakends to check if within_feature
+            return 1 if within_feature($bvfoa, $feat, $bvfo, $alt, 1);
+        }
+        return 1 if within_feature($bvfoa, $feat, $bvfo, $bvf, 1);
+    }
+
     return (
         (
             partial_overlap_feature($bvfoa, $feat, $bvfo, $bvf) or
@@ -1447,4 +1499,3 @@ sub contains_entire_feature {
 }
 
 1;
-
