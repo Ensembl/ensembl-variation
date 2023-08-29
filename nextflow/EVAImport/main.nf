@@ -29,8 +29,8 @@ params.chr_synonyms    = false
 params.merge_all_types = true
 params.fork            = 10
 params.skip_tables     = "allele,allele_code,population,population_genotype,genotype_code,compressed_genotype_var,sample"
-params.output_file     = null
-params.sort_vf         = true
+params.skipped_variants_file   = "report_EVA_import.log"
+params.sort_vf                 = true
 
 // Params for variant synonyms import
 params.var_syn_file    = null
@@ -87,21 +87,21 @@ if (params.help) {
              --release 111 \\
              --input_file GCA_000003025.6_current_ids.vcf.gz \\
              --var_syn_file GCA_000003025.6_merged_ids.vcf.gz \\
-             --output_file output_import.log \\
+             --skipped_variants_file report_EVA_import.log \\
              --host [new database host] \\
              --dbname [new database name] \\
              --old_dbname [previous database name] \\
 
     Options (mandatory):
-    --species             species name
-    --registry            registry file pointing to variation and core databases
-    --release             release number
-    --input_file          EVA input file
-    --var_syn_file        EVA variation synonyms file [GCA_*_merged_ids.vcf.gz]
-    --output_file         output file to write number of skipped variants in the EVA import
-    --host                new variation database host (necessary to prepare the db for the import)
-    --dbname              new variation database name (necessary to prepare the db for the import)
-    --old_dbname          previous variation database name (necessary to prepare the db for the import)
+    --species                 species name
+    --registry                registry file pointing to variation and core databases
+    --release                 release number
+    --input_file              EVA input file
+    --var_syn_file            EVA variation synonyms file [GCA_*_merged_ids.vcf.gz]
+    --skipped_variants_file   output file to write number of skipped variants in the EVA import
+    --host                    new variation database host (necessary to prepare the db for the import)
+    --dbname                  new variation database name (necessary to prepare the db for the import)
+    --old_dbname              previous variation database name (necessary to prepare the db for the import)
 
     Options (only mandatory for rat):
     --old_host             previous variation database host
@@ -136,7 +136,7 @@ if( (!params.old_host || !params.old_port || !params.old_dbname) && params.speci
   exit 1, "ERROR: please provide a host (--old_host), port (--old_port) and db name (--old_dbname) for a previous rat database"
 }
 
-if(!params.output_file) {
+if(!params.skipped_variants_file) {
   exit 1, "ERROR: please provide an output file to the EVA import script"
 }
 
@@ -285,7 +285,7 @@ process run_citations {
 workflow {
   prepare_tables(copy_tables_script, params.host, params.port, params.pass, params.user, params.dbname, params.old_dbname)
 
-  run_eva(prepare_tables.out, file(eva_script), command_to_run, params.merge_all_types, params.fork, params.sort_vf, params.chr_synonyms, params.remove_prefix, params.output_file)
+  run_eva(prepare_tables.out, file(eva_script), command_to_run, params.merge_all_types, params.fork, params.sort_vf, params.chr_synonyms, params.remove_prefix, params.skipped_variants_file)
 
   run_variant_synonyms(run_eva.out, file(var_syn_script), params.source, params.species, params.var_syn_file, params.registry, params.old_host, params.old_port, params.old_dbname)
 
