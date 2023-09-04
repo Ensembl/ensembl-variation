@@ -102,17 +102,10 @@ def join_information (hgvs, mapped_info, row, extra):
   var = mapped_info['variation']
   ref = mapped_info['vrs_ref_allele_seq']
 
-  start = var["location"]["interval"]["start"]["value"]
-  end   = var["location"]["interval"]["end"]["value"]
-
-  # increment 1 to start (except when start == end, such as in insertions)
-  if start < end:
-    start = start + 1
-
   mapped = OrderedDict(
     [("chr",   get_chromosome(hgvs)),
-     ("start", start),
-     ("end",   end),
+     ("start", var["location"]["interval"]["start"]["value"] + 1),
+     ("end",   var["location"]["interval"]["end"]["value"]),
      ("ref",   ref),
      ("alt",   var["state"]["sequence"]),
      ("hgvs",  hgvs)])
