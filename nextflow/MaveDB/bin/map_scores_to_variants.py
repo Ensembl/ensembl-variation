@@ -104,7 +104,7 @@ def join_information (hgvs, mapped_info, row, extra):
 
   mapped = OrderedDict(
     [("chr",   get_chromosome(hgvs)),
-     ("start", var["location"]["interval"]["start"]["value"]),
+     ("start", var["location"]["interval"]["start"]["value"] + 1),
      ("end",   var["location"]["interval"]["end"]["value"]),
      ("ref",   ref),
      ("alt",   var["state"]["sequence"]),
@@ -228,7 +228,7 @@ def write_variant_mapping (f, map):
 
 # download MaveDB scores
 urn         = f"urn:mavedb:{args.urn}"
-url         = f"https://api.mavedb.org/api/v1/scoresets/{urn}/scores"
+url         = f"https://api.mavedb.org/api/v1/score-sets/{urn}/scores"
 scores_file = f"{args.urn}_scores.txt"
 if not os.path.isfile(scores_file):
   print("Downloading MaveDB scores...", flush=True)
