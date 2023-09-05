@@ -107,16 +107,25 @@ sub _intron_overlap {
   }
 }
 
+sub compare_seq_region_names {
+  my $region1 = shift;
+  my $region2 = shift;
+
+  $region1 =~ s/^chr//;
+  $region2 =~ s/^chr//;
+  return lc($region1) eq lc($region2);
+}
+
 sub within_feature {
-    my ($bvfoa, $feat, $bvfo, $bvf, $match_chromosome) = @_;
+    my ($bvfoa, $feat, $bvfo, $bvf, $match_seq_region_names) = @_;
     $bvf  ||= $bvfoa->base_variation_feature;
     $feat ||= $bvfoa->feature;
-    $match_chromosome ||= 0;
+    $match_seq_region_names ||= 0;
 
     my $cmp_chr = 1;
-    if ($match_chromosome) {
+    if ($match_seq_region_names) {
       my $chr  = $bvf->{chr} || $bvf->{slice}->{seq_region_name};
-      $cmp_chr = $chr eq $feat->{slice}->{seq_region_name};
+      $cmp_chr = compare_seq_region_names($chr, $feat->{slice}->{seq_region_name});
     }
 
     return $cmp_chr && overlap(
