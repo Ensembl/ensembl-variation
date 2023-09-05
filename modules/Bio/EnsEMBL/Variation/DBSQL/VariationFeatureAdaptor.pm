@@ -1992,8 +1992,8 @@ sub _get_gene_transcripts {
   my ($self, $transcript_adaptor, $reference, $multiple_ok) = @_;
 
   my $gene_adaptor = $transcript_adaptor->db->get_GeneAdaptor();
-  my ($gene) = grep {($_->external_name || '') eq $reference} @{$gene_adaptor->fetch_all_by_external_name($reference)};
-  
+  my ($gene) = grep {($_->external_name || '') eq $reference && $_->is_reference} @{$gene_adaptor->fetch_all_by_external_name($reference)};
+
   my @transcripts;
 
   if($gene) {
