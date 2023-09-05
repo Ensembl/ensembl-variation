@@ -40,7 +40,7 @@ sub run {
     $var_dba->dbc->reconnect_when_lost(1);   
     my $dbc = $var_dba->dbc;
     
-    # first set the default consequence type - SKIPPED if running update mode
+    # first set the default consequence type
     $dbc->do(qq{
         UPDATE  variation_feature
         SET     consequence_types = 'intergenic_variant'
