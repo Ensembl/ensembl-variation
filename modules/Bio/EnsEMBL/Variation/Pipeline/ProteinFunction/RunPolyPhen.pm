@@ -44,6 +44,15 @@ my $PERSIST         = 1;
 my $MAX_PSIC_SEQS   = 8190;
 my $MAX_PSIC_SEQLEN = 409650;
 
+sub _insert_error_msg {
+  my $self = shift;
+  my ($translation_md5, $error, $analysis) = @_;
+  my $sql = "INSERT INTO failure_reason (translation_md5,error_msg,analysis) VALUES (?,?,?)";
+  my $sth = $self->data_dbc->prepare($sql);
+  $sth->execute($translation_md5, $error, $analysis);
+  $sth->finish();
+}
+
 sub run {
     my $self = shift;
 
@@ -167,7 +176,22 @@ sub run {
               "run_pph.pl -A -d $output_dir -s $protein_file $subs_file " .
               "1> $output_file 2> $error_file";
 
-    system($cmd) == 0 or die `echo "Failed to run $cmd:" && cat "$error_file"`;
+    my ($exit_code, $stderr, $flat_cmd) = $self->run_system_command($cmd);
+
+    my $skip = 0;
+    if ($exit_code != 0) {
+      open my $error_fh, "<", $error_file or die $!;
+      my $error_msg = do { local $/; <$error_fh> };
+      close $error_fh;
+
+      if ($error_msg =~ /Failed to locate sequence position/) {
+        $error_msg = 'Failed to locate sequence position in PDB database from PolyPhen-2';
+        $self->_insert_error_msg($translation_md5, $error_msg, 'pph2');
+        $skip = 1;
+      } else {
+        die $error_msg, "\n";
+      }
+    }
     
     $self->dbc->disconnect_when_inactive(0);
     
@@ -189,7 +213,7 @@ sub run {
          warn "Failed to gzip $output_file: $?"; 
     }
 
-    $self->param('feature_file', $output_file);
+    $self->param('feature_file', $output_file) if $skip;
 
     if (-s $error_file) {
         warn "run_pph.pl STDERR output in $error_file\n";
