@@ -385,7 +385,7 @@ sub pipeline_analyses {
             -parameters => {
               @common_params,
             },
-            -rc_name   => 'default',
+            -rc_name   => 'highmem',
             -flow_into => {
               1 => ['check_transcript_variation']
             },
