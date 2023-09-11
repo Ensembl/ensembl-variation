@@ -12,7 +12,7 @@ process fetch_licence {
   import json
 
   urn = "urn:mavedb:${mappings.simpleName}"
-  url = f"https://api.mavedb.org/api/v1/scoresets/{urn}"
+  url = f"https://api.mavedb.org/api/v1/score-sets/{urn}"
   res = urllib.request.urlopen(url).read()
   res = json.loads(res)
 

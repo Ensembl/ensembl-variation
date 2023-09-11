@@ -34,7 +34,7 @@ use strict;
 use warnings;
 
 use Bio::EnsEMBL::Variation::StructuralVariationOverlapAllele;
-use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(MAX_DISTANCE_FROM_TRANSCRIPT overlap _match_seq_region_name);
+use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(MAX_DISTANCE_FROM_TRANSCRIPT overlap _compare_seq_region_names);
 
 use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
@@ -132,7 +132,7 @@ sub _close_to_feature {
     my $feature = shift;
 
     my $chr = $self->{seq_region_name} || $self->{chr};
-    return 0 unless _match_seq_region_name($chr, $feature->seq_region_name);
+    return 0 unless _compare_seq_region_names($chr, $feature->seq_region_name);
 
     # check if breakend is within/around feature
     my $slice = $feature->{slice}->expand(

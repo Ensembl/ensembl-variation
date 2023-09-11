@@ -161,7 +161,7 @@ my $int_dba = Bio::EnsEMBL::Registry->get_DBAdaptor('multi', 'intvar');
 
 # count number of rows before import
 my @count_tables = qw(structural_variation structural_variation_feature structural_variation_sample structural_variation_association);
-report_counts($dba, "before", \@count_tables);
+report_counts($vdb, "before", \@count_tables);
 
 # set the target assembly
 $target_assembly ||= $default_cs->version;
@@ -274,7 +274,7 @@ foreach my $in_file (@files) {
 # Post processing for mouse annotation (delete duplicated entries in structural_variation_sample)
 post_processing_annotation() if ($species =~ /mouse|mus/i);
 post_processing_feature();
-post_processing_sample();
+post_processing_sample() if ($source_name eq 'DGVa');
 post_processing_phenotype();
 post_processing_clinical_significance();
 post_processing_failed_variants();
@@ -286,7 +286,7 @@ verifications(); # URLs
 cleanup() if (!defined($debug));
 
 # count number of rows after import
-report_counts($dba, "after", \@count_tables);
+report_counts($vdb, "after", \@count_tables);
 
 debug(localtime()." All done!");
 
@@ -428,7 +428,7 @@ sub study_table{
     $study_ftp = "https://www.ncbi.nlm.nih.gov/dbvar/studies/$study_ftp";
   }
 
-  my $assembly_desc = " [remapped from build $assembly]" if ($mapping and $assembly ne $target_assembly);
+  my $assembly_desc = $mapping and ($assembly ne $target_assembly) ? " [remapped from build $assembly]" : "";
 
   $stmt = qq{ SELECT st.study_id, st.description, st.external_reference FROM study st, source s
               WHERE s.source_id=st.source_id AND s.name='$source_name' and st.name='$study'};
@@ -1246,7 +1246,7 @@ sub get_header_info {
     ($label, $info) = split(' ', $line);
   } 
   elsif ($line =~ /\:/) {
-    $line =~ /^(.+)\:\s+(.+)$/;
+    $line =~ /^(.+?)\:\s+(.+)$/;
     $label = $1;
     $info  = $2;
   }

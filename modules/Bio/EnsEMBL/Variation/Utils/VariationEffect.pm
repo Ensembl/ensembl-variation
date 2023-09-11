@@ -55,7 +55,7 @@ use warnings;
 
 use base qw(Exporter);
 
-our @EXPORT_OK = qw(overlap _intron_overlap _match_seq_region_name within_feature within_cds MAX_DISTANCE_FROM_TRANSCRIPT within_intron stop_lost stop_retained start_lost frameshift $UPSTREAM_DISTANCE $DOWNSTREAM_DISTANCE);
+our @EXPORT_OK = qw(overlap _intron_overlap _compare_seq_region_names within_feature within_cds MAX_DISTANCE_FROM_TRANSCRIPT within_intron stop_lost stop_retained start_lost frameshift $UPSTREAM_DISTANCE $DOWNSTREAM_DISTANCE);
 
 use constant MAX_DISTANCE_FROM_TRANSCRIPT => 5000;
 
@@ -107,7 +107,7 @@ sub _intron_overlap {
   }
 }
 
-sub _match_seq_region_name {
+sub _compare_seq_region_names {
   my $region1 = shift;
   my $region2 = shift;
 
@@ -118,15 +118,15 @@ sub _match_seq_region_name {
 }
 
 sub within_feature {
-    my ($bvfoa, $feat, $bvfo, $bvf, $match_chromosome) = @_;
+    my ($bvfoa, $feat, $bvfo, $bvf, $match_seq_region_names) = @_;
     $bvf  ||= $bvfoa->base_variation_feature;
     $feat ||= $bvfoa->feature;
-    $match_chromosome ||= 0;
+    $match_seq_region_names ||= 0;
 
     my $cmp_chr = 1;
-    if ($match_chromosome) {
+    if ($match_seq_region_names) {
       my $chr  = $bvf->{chr} || $bvf->{slice}->{seq_region_name};
-      $cmp_chr = _match_seq_region_name($chr, $feat->{slice}->{seq_region_name});
+      $cmp_chr = _compare_seq_region_names($chr, $feat->{slice}->{seq_region_name});
     }
 
     return $cmp_chr && overlap(
