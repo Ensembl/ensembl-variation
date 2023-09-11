@@ -34,6 +34,7 @@ use strict;
 use warnings;
 
 use Bio::EnsEMBL::Variation::StructuralVariationOverlapAllele;
+use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(MAX_DISTANCE_FROM_TRANSCRIPT overlap _match_seq_region_name);
 
 use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
@@ -56,17 +57,36 @@ sub new {
     }
 
     # call the superclass constructor
-    my $self = $class->SUPER::new(%args);
-    
-    # construct a fake 'allele'
-    
-    $self->add_StructuralVariationOverlapAllele(
-        Bio::EnsEMBL::Variation::StructuralVariationOverlapAllele->new_fast({
-            structural_variation_overlap => $self,
-            allele_number                => 1,  
-        })
-    );
+    my $self      = $class->SUPER::new(%args);
+    my $vf        = $self->base_variation_feature;
+    my $breakends = $vf->get_breakends;
 
+    if (!$breakends) {
+        # construct a fake 'allele'
+        $self->add_StructuralVariationOverlapAllele(
+            Bio::EnsEMBL::Variation::StructuralVariationOverlapAllele->new_fast({
+                structural_variation_overlap => $self,
+                allele_number                => 1,
+            })
+        );
+    } else {
+        # construct alternate alleles (breakends)
+        my $feature = $self->feature;
+        my $num = 0;
+        for ($vf, @$breakends) {
+            next unless _close_to_feature($_, $feature);
+            $self->add_StructuralVariationOverlapAllele(
+                Bio::EnsEMBL::Variation::StructuralVariationOverlapAllele->new(
+                    -structural_variation_overlap => $self,
+                    -symbolic_allele              => $_->{string},
+                    -allele_number                => $num,
+                    -is_reference                 => $num == 0 ? 1 : 0,
+                    -breakend                     => $_,
+                )
+            );
+            $num++;
+        }
+    }
     return $self;
 }
 
@@ -105,6 +125,24 @@ sub new_fast {
     }
 
     return $self;
+}
+
+sub _close_to_feature {
+    my $self = shift;
+    my $feature = shift;
+
+    my $chr = $self->{seq_region_name} || $self->{chr};
+    return 0 unless _match_seq_region_name($chr, $feature->seq_region_name);
+
+    # check if breakend is within/around feature
+    my $slice = $feature->{slice}->expand(
+        MAX_DISTANCE_FROM_TRANSCRIPT,
+        MAX_DISTANCE_FROM_TRANSCRIPT
+    );
+    return 0 unless
+        overlap($self->{start}, $self->{end}, $slice->start, $slice->end);
+
+    return 1;
 }
 
 sub structural_variation_feature {

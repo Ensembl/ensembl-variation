@@ -33,7 +33,105 @@ package Bio::EnsEMBL::Variation::StructuralVariationOverlapAllele;
 use strict;
 use warnings;
 
+use Bio::EnsEMBL::Utils::Exception qw(throw warning);
+
 use base qw(Bio::EnsEMBL::Variation::BaseVariationFeatureOverlapAllele);
+
+=head2 new
+
+  Arg [-STRUCTURAL_VARIATION_OVERLAP] : 
+    The Bio::EnsEMBL::StructuralVariationOverlap with which this allele is 
+    associated
+
+  Arg [-SYMBOLIC_ALLELE] :
+    The symbolic allele string
+
+  Arg [-IS_REFERENCE] :
+    A flag indicating if this allele is the reference allele or not
+
+  Arg [-ALLELE_NUMBER] :
+    The order of this allele based on the BaseVariationFeature's allele string
+
+  Arg [-BREAKEND] :
+    Breakend information 
+
+  Example : 
+    my $vfoa = Bio::EnsEMBL::Variation::StructuralVariationOverlapAllele->new(
+        -structural_variation_overlap   => $svfo,
+        -symbolic_allele                => 'N[8:56445865[',
+        -is_reference                   => 0
+        -allele_number                  => 1,
+        -breakend                       => $breakend
+    );
+
+  Description: Constructs a new StructuralVariationOverlapAllele instance given a 
+               StructuralVariationOverlap and the sequence of the allele
+  Returntype : A new Bio::EnsEMBL::Variation::StructuralVariationOverlapAllele instance 
+  Exceptions : throws unless STRUCTURAL_VARIATION_OVERLAP is supplied
+  Status     : Stable
+
+=cut 
+
+sub new {
+    my $class = shift;
+
+    my %args = @_;
+
+    # swap a '-structural_variation_overlap' argument for a '-base_variation_feature_overlap'
+    # and a '-variation_feature' for a '-base_variation_feature' for the superclass
+    unless($args{'-base_variation_feature_overlap'} ||= delete $args{'-structural_variation_overlap'}) {
+        for my $arg (keys %args) {
+            if (lc($arg) eq '-structural_variation_overlap') {
+                $args{'-base_variation_feature_overlap'} = delete $args{$arg};
+            }
+        }
+    }
+
+  my $self = $class->SUPER::new(%args);
+
+  assert_ref($self->base_variation_feature_overlap, 'Bio::EnsEMBL::Variation::StructuralVariationOverlap') if $Bio::EnsEMBL::Utils::Scalar::ASSERTIONS;
+
+  my (
+    $symbolic_allele,
+    $allele_number,
+    $is_reference,
+    $breakend,
+  );
+
+  if($Bio::EnsEMBL::Utils::Argument::NO_REARRANGE) {
+    (
+      $symbolic_allele,
+      $allele_number,
+      $is_reference,
+      $breakend,
+    ) = (
+      $args{-symbolic_allele},
+      $args{-allele_number},
+      $args{-is_reference},
+      $args{-breakend},
+    );
+  }
+  else {
+    (
+      $symbolic_allele,
+      $allele_number,
+      $is_reference,
+      $breakend,
+    ) = rearrange([qw(
+      SYMBOLIC_ALLELE
+      ALLELE_NUMBER
+      IS_REFERENCE
+      BREAKEND
+    )], %args);
+  }
+
+  $self->{symbolic_allele} = $symbolic_allele;
+  $self->{allele_number} = $allele_number;
+  $self->{is_reference} = $is_reference;
+  $self->{breakend} = $breakend if defined $breakend;
+
+  return $self;
+}
 
 sub new_fast {
     my ($class, $hashref) = @_;
@@ -80,6 +178,38 @@ sub structural_variation_overlap {
 sub structural_variation_feature {
     my $self = shift;
     return $self->structural_variation_overlap->structural_variation_feature;
+}
+
+=head2 symbolic_allele
+
+  Args [1]   : The symbolic allele string
+  Description: Get/set the string of this symbolic allele.
+  Returntype : string
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
+sub symbolic_allele {
+    my ($self, $sva) = @_;
+    $self->{symbolic_allele} = $sva if $sva;
+    return $self->{symbolic_allele};
+}
+
+=head2 breakend
+
+  Args [1]   : The breakend information for this allele
+  Description: Get/set the breakend for this allele
+  Returntype : string
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
+sub breakend {
+    my ($self, $breakend) = @_;
+    $self->{breakend} = $breakend if $breakend;
+    return $self->{breakend};
 }
 
 # required for intron overlap checking

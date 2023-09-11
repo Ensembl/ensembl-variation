@@ -347,11 +347,7 @@ sub feature_truncation {
     return 0 if $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele');
     
     if(chromosome_breakpoint(@_)) {
-        for my $alt (@{$bvf->{_parsed_allele}}) {
-            # iterate over breakends to check if within_feature
-            return 1 if within_feature($bvfoa, $feat, $bvfo, $alt, 1);
-        }
-        return 1 if within_feature($bvfoa, $feat, $bvfo, $bvf, 1);
+        return 1 if within_feature($bvfoa, $feat, $bvfo, $bvfoa->breakend, 1);
     }
 
     return (
