@@ -132,7 +132,11 @@ sub _close_to_feature {
     my $feature = shift;
 
     my $chr = $self->{seq_region_name} || $self->{chr};
-    return 0 unless _compare_seq_region_names($chr, $feature->seq_region_name);
+    return 0 unless (
+      defined $chr and
+      defined $feature and defined $feature->seq_region_name and
+      _compare_seq_region_names($chr, $feature->seq_region_name)
+    );
 
     # check if breakend is within/around feature
     my $slice = $feature->{slice}->expand(
