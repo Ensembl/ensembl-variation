@@ -118,6 +118,59 @@ ok($svf->source_version eq $source_version,         'svf -> source_version');
 is($svf->feature_so_acc, 'SO:0001537', 'StructuralVariationFeature feature SO acc is correct (structural variant)');
 is($svf->feature_so_term, 'structural_variant', 'StructuralVariationFeature feature SO term is correct (structural variant)');
 
+# test parsing breakends for breakpoint SV
+is($svf->get_breakends, undef, "svf -> no breakends if not breakpoint");
+is($svf->{string}, undef, "svf -> no string without breakends");
+
+$svf->{class_SO_term} = 'chromosome_breakpoint';
+$svf->{allele_string} = 'A[8:1230000[/]18:3728]TCG/CC]12:9887]';
+my $breakend = [
+  {
+    string    => 'A[8:1230000[',
+    allele    => 'A',
+    placement => 'right',
+    inverted  => 0,
+    chr       => 8,
+    pos       => 1230000,
+    start     => 1230000,
+    end       => 1230000,
+    slice     => Bio::EnsEMBL::Slice->new_fast({
+      seq_region_name => 8,
+      start           => 1230000,
+      end             => 1230000,
+    })
+  }, {
+    string    => ']18:3728]TCG',
+    allele    => 'TCG',
+    placement => 'left',
+    inverted  => 0,
+    chr       => 18,
+    pos       => 3728,
+    start     => 3728,
+    end       => 3728,
+    slice     => Bio::EnsEMBL::Slice->new_fast({
+      seq_region_name => 18,
+      start           => 3728,
+      end             => 3728,
+    })
+  },  {
+    string    => 'CC]12:9887]',
+    allele    => 'CC',
+    placement => 'right',
+    inverted  => 1,
+    chr       => 12,
+    pos       => 9887,
+    start     => 9887,
+    end       => 9887,
+    slice     => Bio::EnsEMBL::Slice->new_fast({
+      seq_region_name => 12,
+      start           => 9887,
+      end             => 9887,
+    })
+  }
+];
+is_deeply($svf->get_breakends, $breakend, "svf -> parse breakends");
+is($svf->{string}, "N.", "svf -> reference breakend string");
 
 # test getter/setters
 my $var_name2 = 'esv89107';
