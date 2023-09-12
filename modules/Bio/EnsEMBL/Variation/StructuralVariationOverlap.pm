@@ -34,11 +34,11 @@ use strict;
 use warnings;
 
 use Bio::EnsEMBL::Variation::StructuralVariationOverlapAllele;
-use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(MAX_DISTANCE_FROM_TRANSCRIPT overlap _compare_seq_region_names);
 
 use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
+use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(MAX_DISTANCE_FROM_TRANSCRIPT overlap _compare_seq_region_names);
 
 use base qw(Bio::EnsEMBL::Variation::BaseVariationFeatureOverlap);
 
@@ -79,8 +79,6 @@ sub new {
                 Bio::EnsEMBL::Variation::StructuralVariationOverlapAllele->new(
                     -structural_variation_overlap => $self,
                     -symbolic_allele              => $_->{string},
-                    -allele_number                => $num,
-                    -is_reference                 => $num == 0 ? 1 : 0,
                     -breakend                     => $_,
                 )
             );

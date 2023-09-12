@@ -33,7 +33,9 @@ package Bio::EnsEMBL::Variation::StructuralVariationOverlapAllele;
 use strict;
 use warnings;
 
+use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
+use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 
 use base qw(Bio::EnsEMBL::Variation::BaseVariationFeatureOverlapAllele);
 
@@ -46,12 +48,6 @@ use base qw(Bio::EnsEMBL::Variation::BaseVariationFeatureOverlapAllele);
   Arg [-SYMBOLIC_ALLELE] :
     The symbolic allele string
 
-  Arg [-IS_REFERENCE] :
-    A flag indicating if this allele is the reference allele or not
-
-  Arg [-ALLELE_NUMBER] :
-    The order of this allele based on the BaseVariationFeature's allele string
-
   Arg [-BREAKEND] :
     Breakend information 
 
@@ -59,8 +55,6 @@ use base qw(Bio::EnsEMBL::Variation::BaseVariationFeatureOverlapAllele);
     my $vfoa = Bio::EnsEMBL::Variation::StructuralVariationOverlapAllele->new(
         -structural_variation_overlap   => $svfo,
         -symbolic_allele                => 'N[8:56445865[',
-        -is_reference                   => 0
-        -allele_number                  => 1,
         -breakend                       => $breakend
     );
 
@@ -101,33 +95,23 @@ sub new {
   if($Bio::EnsEMBL::Utils::Argument::NO_REARRANGE) {
     (
       $symbolic_allele,
-      $allele_number,
-      $is_reference,
       $breakend,
     ) = (
       $args{-symbolic_allele},
-      $args{-allele_number},
-      $args{-is_reference},
       $args{-breakend},
     );
   }
   else {
     (
       $symbolic_allele,
-      $allele_number,
-      $is_reference,
       $breakend,
     ) = rearrange([qw(
       SYMBOLIC_ALLELE
-      ALLELE_NUMBER
-      IS_REFERENCE
       BREAKEND
     )], %args);
   }
 
   $self->{symbolic_allele} = $symbolic_allele;
-  $self->{allele_number} = $allele_number;
-  $self->{is_reference} = $is_reference;
   $self->{breakend} = $breakend if defined $breakend;
 
   return $self;
