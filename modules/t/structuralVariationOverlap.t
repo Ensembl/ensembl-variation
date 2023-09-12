@@ -33,7 +33,62 @@ use_ok('Bio::EnsEMBL::Variation::StructuralVariationFeature');
 use_ok('Bio::EnsEMBL::Variation::StructuralVariationOverlap');
 use_ok('Bio::EnsEMBL::Variation::StructuralVariationOverlapAllele');
 
-my $svf = Bio::EnsEMBL::Variation::StructuralVariationFeature->new(
+# test copy number variant
+my $dbID = 4509635;
+my $outer_start = 7803891;
+my $inner_start = 7805991;
+my $inner_end = 7823440;
+my $outer_end = 7825340;
+my $var_name = 'esv93078';
+my $chr = '8';
+my $is_somatic = 0;
+my $sv_length = $outer_end-$outer_start+1;
+my $SO_term = 'copy_number_variant';
+
+my $svf = Bio::EnsEMBL::Variation::StructuralVariationFeature->new
+  (-adaptor     => $svf_adaptor,
+   -outer_start => $outer_start,
+   -start       => $outer_start,
+   -inner_start => $inner_start,
+   -inner_end   => $inner_end,
+   -end         => $outer_end,
+   -outer_end   => $outer_end,
+   -strand      => 1,
+   -variation_name => $var_name,
+   -is_somatic => $is_somatic,
+   -length => $sv_length,
+   -class_SO_term => $SO_term,
+);
+
+sub _create_feature {
+  my $obj = shift;
+
+  return Bio::EnsEMBL::Feature->new(
+    -seqname => $obj->{chr},
+    -start   => $obj->{start} - 100,
+    -end     => $obj->{end} + 100,
+    -strand  => 0,
+    -slice   => Bio::EnsEMBL::Slice->new_fast({
+      seq_region_name => $obj->{chr},
+      start           => $obj->{start} - 100,
+      end             => $obj->{end} + 100,
+    })
+  );
+}
+
+my $feature = _create_feature($svf);
+my $svo = Bio::EnsEMBL::Variation::StructuralVariationOverlap->new(
+  -feature                      => $feature,
+  -structural_variation_feature => $svf,
+  -no_transfer                  => 1,
+);
+is($svo->{breakends}, undef, "cnv -> no breakends");
+my $svoas = $svo->get_all_StructuralVariationOverlapAlleles();
+is($svoas->[0]->allele_number, 1, "cnv -> allele_number 1");
+is($svoas->[0]->structural_variation_overlap, $svo, "cnv -> svo");
+
+# test chromosomal breakpoint
+$svf = Bio::EnsEMBL::Variation::StructuralVariationFeature->new(
   -adaptor         => $svf_adaptor,
   -outer_start     => 7803891,
   -start           => 7803891,
@@ -53,30 +108,14 @@ my $svf = Bio::EnsEMBL::Variation::StructuralVariationFeature->new(
 );
 $svf->{chr} = $svf->seq_region_name;
 
-sub _create_feature {
-  my $obj = shift;
-
-  return Bio::EnsEMBL::Feature->new(
-    -seqname => $obj->{chr},
-    -start   => $obj->{start} - 100,
-    -end     => $obj->{end} + 100,
-    -strand  => 0,
-    -slice   => Bio::EnsEMBL::Slice->new_fast({
-      seq_region_name => $obj->{chr},
-      start           => $obj->{start} - 100,
-      end             => $obj->{end} + 100,
-    })
-  );
-}
-
 # create SVOverlap object
 my $feat0 = _create_feature($svf);
-my $svo = Bio::EnsEMBL::Variation::StructuralVariationOverlap->new(
+$svo = Bio::EnsEMBL::Variation::StructuralVariationOverlap->new(
   -feature                      => $feat0,
   -structural_variation_feature => $svf,
   -no_transfer                  => 1,
 );
-my $svoas = $svo->get_all_StructuralVariationOverlapAlleles();
+$svoas = $svo->get_all_StructuralVariationOverlapAlleles();
 is($svoas->[0]->symbolic_allele, '.N', "svoa -> ref symbolic allele");
 
 # check if breakends were parsed after calling SVOverlap
