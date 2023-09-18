@@ -1327,7 +1327,7 @@ sub _parse_breakends {
 
 sub get_breakends {
   my $self = shift;
-  return unless $self->class_SO_term =~ /breakpoint/;
+  return [] unless $self->class_SO_term =~ /breakpoint/;
   $self->{'breakends'} = $self->_parse_breakends unless $self->{'breakends'};
   return $self->{'breakends'};
 }
