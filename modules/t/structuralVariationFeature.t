@@ -119,7 +119,7 @@ is($svf->feature_so_acc, 'SO:0001537', 'StructuralVariationFeature feature SO ac
 is($svf->feature_so_term, 'structural_variant', 'StructuralVariationFeature feature SO term is correct (structural variant)');
 
 # test parsing breakends for breakpoint SV
-is($svf->get_breakends, undef, "svf -> no breakends if not breakpoint");
+is_deeply($svf->get_breakends, [], "svf -> no breakends if not breakpoint");
 is($svf->{string}, undef, "svf -> no string without breakends");
 
 $svf->{class_SO_term} = 'chromosome_breakpoint';

@@ -61,7 +61,7 @@ sub new {
     my $vf        = $self->base_variation_feature;
     my $breakends = $vf->get_breakends;
 
-    if (!$breakends) {
+    if (!@$breakends) {
         # construct a fake 'allele'
         $self->add_StructuralVariationOverlapAllele(
             Bio::EnsEMBL::Variation::StructuralVariationOverlapAllele->new_fast({
