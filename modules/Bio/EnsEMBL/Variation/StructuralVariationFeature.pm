@@ -1273,7 +1273,11 @@ sub _parse_breakends {
     my ($alt_allele) = ($alt_string =~ '[\[\]]?([A-Za-z]+)[\[\]]?');
     my ($alt_chr, $alt_pos) = ($alt_string =~ '([A-Za-z0-9]+) ?: ?([0-9]+)');
 
-    next if !defined $alt_allele or !defined $alt_chr or !defined $alt_pos;
+    unless (defined $alt_allele and defined $alt_chr and defined $alt_pos) {
+      # Check if single breakend symbol, such as 'N.'
+      ($ref) = $alt_string =~ '^[\.]?([ACGTN]+)[\.]?$';
+      next;
+    }
 
     # Mate orientation:
     #   C[2:321682[  - normal
