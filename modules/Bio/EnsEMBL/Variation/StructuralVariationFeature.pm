@@ -1264,7 +1264,8 @@ sub _parse_breakends {
   my $alt  = $self->allele_string;
   return unless defined $alt;
 
-  my $any_left_breakend = 0;
+  my $any_right_breakend = 0;
+  my $ref;
 
   my $breakends = [];
   # Support multiple breakends from ALT in the format C[2:321682[,]17:198982]G
@@ -1287,7 +1288,7 @@ sub _parse_breakends {
     #   C[2:321682[  - right
     #   C]2:321682]  - right
     my $placement = ($alt_string =~ '^(\[|\])') ? 'left' : 'right';
-    $any_left_breakend = 1 if $placement eq 'left';
+    $any_right_breakend = 1 if $placement eq 'right';
 
     my $slice = Bio::EnsEMBL::Slice->new_fast({
       seq_region_name => $alt_chr,
@@ -1309,8 +1310,8 @@ sub _parse_breakends {
   }
 
   # Fix string for reference breakend based on the placement of other breakends
-  $self->{string} = $any_left_breakend ? 'N.' : '.N';
-
+  $ref ||= 'N';
+  $self->{string} = $any_right_breakend ? "$ref." : ".$ref";
   return $breakends;
 }
 
