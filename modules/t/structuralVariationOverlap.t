@@ -153,3 +153,5 @@ $svo = Bio::EnsEMBL::Variation::StructuralVariationOverlap->new(
 );
 $svoas = $svo->get_all_StructuralVariationOverlapAlleles();
 is($svoas->[0]->symbolic_allele, 'A[4:66578[', "svoa -> breakend 1 symbolic allele");
+
+done_testing();
