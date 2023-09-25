@@ -171,7 +171,7 @@ $svf = Bio::EnsEMBL::Variation::StructuralVariationFeature->new(
     end             => 7803891,
   }),
   -strand          => 1,
-  -allele_string   => ".TCG",
+  -allele_string   => "TCG.",
   -class_SO_term   => 'chromosome_breakpoint',
 );
 $svf->{chr} = $svf->seq_region_name;
@@ -184,7 +184,7 @@ $svo = Bio::EnsEMBL::Variation::StructuralVariationOverlap->new(
   -no_transfer                  => 1,
 );
 $svoas = $svo->get_all_StructuralVariationOverlapAlleles();
-is($svoas->[0]->base_variation_feature->{string}, '.TCG', "svoa -> single breakend");
+is($svoas->[0]->base_variation_feature->{string}, 'TCG.', "svoa -> single breakend");
 
 # test if variation/breakends are close to specific features
 is(_close_to_feature($svf,  $feat0), 1, "svf -> near feature 0");
