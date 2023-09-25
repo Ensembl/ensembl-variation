@@ -116,7 +116,7 @@ $svo = Bio::EnsEMBL::Variation::StructuralVariationOverlap->new(
   -no_transfer                  => 1,
 );
 $svoas = $svo->get_all_StructuralVariationOverlapAlleles();
-is($svoas->[0]->symbolic_allele, '.N', "svoa -> ref symbolic allele");
+is($svoas->[0]->symbolic_allele, 'N.', "svoa -> ref symbolic allele");
 
 # check if breakends were parsed after calling SVOverlap
 is_deeply($svf->{breakends}->[0]->{chr},       4, "svf -> breakend 1 chr");
@@ -153,5 +153,40 @@ $svo = Bio::EnsEMBL::Variation::StructuralVariationOverlap->new(
 );
 $svoas = $svo->get_all_StructuralVariationOverlapAlleles();
 is($svoas->[0]->symbolic_allele, 'A[4:66578[', "svoa -> breakend 1 symbolic allele");
+
+
+# test single breakend
+$svf = Bio::EnsEMBL::Variation::StructuralVariationFeature->new(
+  -adaptor         => $svf_adaptor,
+  -outer_start     => 7803891,
+  -start           => 7803891,
+  -inner_start     => 7803891,
+  -inner_end       => 7803891,
+  -end             => 7803891,
+  -outer_end       => 7803891,
+  -seq_region_name => '8',
+  -slice           => Bio::EnsEMBL::Slice->new_fast({
+    seq_region_name => 8,
+    start           => 7803891,
+    end             => 7803891,
+  }),
+  -strand          => 1,
+  -allele_string   => ".TCG",
+  -class_SO_term   => 'chromosome_breakpoint',
+);
+$svf->{chr} = $svf->seq_region_name;
+
+# create SVOverlap object
+$feat0 = _create_feature($svf);
+$svo = Bio::EnsEMBL::Variation::StructuralVariationOverlap->new(
+  -feature                      => $feat0,
+  -structural_variation_feature => $svf,
+  -no_transfer                  => 1,
+);
+$svoas = $svo->get_all_StructuralVariationOverlapAlleles();
+is($svoas->[0]->base_variation_feature->{string}, '.TCG', "svoa -> single breakend");
+
+# test if variation/breakends are close to specific features
+is(_close_to_feature($svf,  $feat0), 1, "svf -> near feature 0");
 
 done_testing();
