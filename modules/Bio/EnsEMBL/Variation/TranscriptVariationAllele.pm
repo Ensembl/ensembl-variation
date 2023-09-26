@@ -244,6 +244,10 @@ sub _return_3prime {
   
   my $shift_length;
   my $strand = $tr->strand;
+
+  # vf can be on different strand than transcript
+  my $vf_strand = $self->variation_feature->strand;
+  reverse_comp(\$seq_to_check) if $vf_strand != $strand;
   
   ## Actually performs the shift, and provides raw data in order to create shifting hash
   ($shift_length, $seq_to_check, $hgvs_output_string, $start, $end) = $self->perform_shift($seq_to_check, $post_seq, $pre_seq, $start, $end, $hgvs_output_string, (-1 * ($strand -1))/2, $strand); 
