@@ -170,7 +170,7 @@ my $breakend = [
   }
 ];
 is_deeply($svf->get_breakends, $breakend, "svf -> parse breakends");
-is($svf->{string}, "N.", "svf -> reference breakend string");
+is($svf->{string}, ".N", "svf -> reference breakend string");
 
 # test getter/setters
 my $var_name2 = 'esv89107';
