@@ -1378,15 +1378,7 @@ sub hgvs_transcript {
   ## this may be different to the input one for insertions/deletions
     print "vfs: $variation_feature_sequence &  $self->{_slice_start} -> $self->{_slice_end}\n" if $DEBUG ==1;
   if($variation_feature_sequence && $vf->strand != $refseq_strand) {
-    if($vf->strand == 1){
-      reverse_comp(\$variation_feature_sequence);
-    }
-    else{
-      # if variation feature is in + strand and transcript in - strand only complementing is 
-      # enough as variation feature sequence will be from reverse strand but in 3'-5' direction
-      $variation_feature_sequence =~
-        tr/acgtrymkswhbvdnxACGTRYMKSWHBVDNX/tgcayrkmswdvbhnxTGCAYRKMSWDVBHNX/;
-    }
+    reverse_comp(\$variation_feature_sequence);
   };
   ## delete consequences if we have an offset. This is only in here for when we want HGVS to shift but not consequences.
   ## TODO add no_shift flag test
@@ -1395,8 +1387,6 @@ sub hgvs_transcript {
   
   return undef if (($self->{_slice}->end - $self->{_slice}->start + 1) < ($self->{_slice_end} + $offset_to_add));
   #return undef if (length($self->{_slice}->seq()) < ($self->{_slice_end} + $offset_to_add));
-  
-  my $dup_lookup_direction = ($refseq_strand == -1 && !$offset_to_add) ? 1 : -1;
   $hgvs_notation = hgvs_variant_notation(
     $variation_feature_sequence,    ### alt_allele,
     $self->{_slice}->seq(),                             ### using this to extract ref allele
@@ -1404,8 +1394,7 @@ sub hgvs_transcript {
     $self->{_slice_end} + $offset_to_add,
     "",
     "",
-    $var_name,
-    $dup_lookup_direction
+    $var_name
   );
   
   ### This should not happen
