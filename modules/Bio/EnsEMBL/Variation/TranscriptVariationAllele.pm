@@ -246,7 +246,7 @@ sub _return_3prime {
   my $strand = $tr->strand;
   
   ## Actually performs the shift, and provides raw data in order to create shifting hash
-  ($shift_length, $seq_to_check, $hgvs_output_string, $start, $end) = $self->perform_shift($seq_to_check, $post_seq, $pre_seq, $start, $end, $hgvs_output_string, (-1 * ($strand -1))/2); 
+  ($shift_length, $seq_to_check, $hgvs_output_string, $start, $end) = $self->perform_shift($seq_to_check, $post_seq, $pre_seq, $start, $end, $hgvs_output_string, (-1 * ($strand -1))/2, $strand); 
   
   ## Creates shift_hash to attach to VF and TVA objects for 
   $self->create_shift_hash($seq_to_check, $post_seq, $pre_seq, $start, $end, $hgvs_output_string, $type, $shift_length, $strand, 0);
@@ -286,10 +286,14 @@ sub check_tva_shifting_hashes {
 
 sub perform_shift {
   ## Performs the shifting calculation
-  my ($self, $seq_to_check, $post_seq, $pre_seq, $var_start, $var_end, $hgvs_output_string, $reverse) = @_;
+  my ($self, $seq_to_check, $post_seq, $pre_seq, $var_start, $var_end, $hgvs_output_string, $reverse, $seq_strand) = @_;
   ## get length of pattern to check 
   my $indel_length = (length $seq_to_check);
   my $shift_length = 0;
+
+  # hgvs_output_string can be on different strand than seq_to_check
+  my $vf_strand = $self->variation_feature->strand;
+  my $hgvs_reverse = ($vf_strand != $seq_strand);
   
   ## Sets up the for loop, ensuring that the correct bases are compared depending on the strand
   my $loop_limiter = $reverse ? (length($pre_seq) - $indel_length) + 1 : (length($post_seq) - $indel_length);
@@ -305,12 +309,12 @@ sub perform_shift {
     {
       $check_next_del  = substr($seq_to_check, length($seq_to_check) -1, 1);
       $check_next_pre = substr($pre_seq, length($pre_seq) - $n, 1);
-      $hgvs_next_del  = substr($hgvs_output_string, length($hgvs_output_string) -1, 1);
+      $hgvs_next_del  = $hgvs_reverse ? substr($hgvs_output_string, 0, 1) : substr($hgvs_output_string, length($hgvs_output_string) -1, 1);
     }
     else{
       $check_next_del  = substr($seq_to_check, 0, 1);
       $check_next_pre = substr($post_seq, $n, 1);
-      $hgvs_next_del  = substr($hgvs_output_string, 0, 1);  
+      $hgvs_next_del  = $hgvs_reverse ? substr($hgvs_output_string, length($hgvs_output_string) -1, 1) : substr($hgvs_output_string, 0, 1); 
     }
     if($check_next_del eq $check_next_pre){
       
@@ -321,16 +325,16 @@ sub perform_shift {
       if($reverse)
       {
         $seq_to_check = substr($seq_to_check, 0, length($seq_to_check) -1);
-        $hgvs_output_string = substr($hgvs_output_string, 0, length($hgvs_output_string) -1);
+        $hgvs_output_string = $hgvs_reverse ? substr($hgvs_output_string,1) : substr($hgvs_output_string, 0, length($hgvs_output_string) -1);
         $seq_to_check = $check_next_del . $seq_to_check;  
-        $hgvs_output_string = $hgvs_next_del . $hgvs_output_string;
+        $hgvs_output_string = $hgvs_reverse ? $hgvs_output_string . $hgvs_next_del : $hgvs_next_del . $hgvs_output_string;
       }
       else
       {
         $seq_to_check = substr($seq_to_check,1);
-        $hgvs_output_string = substr($hgvs_output_string,1);
+        $hgvs_output_string = $hgvs_reverse ? substr($hgvs_output_string, 0, length($hgvs_output_string) -1) : substr($hgvs_output_string,1);
         $seq_to_check .= $check_next_del;
-        $hgvs_output_string .= $hgvs_next_del;
+        $hgvs_output_string = $hgvs_reverse ? $hgvs_next_del . $hgvs_output_string : $hgvs_output_string . $hgvs_next_del;
         $var_start++;
         $var_end++;
       }
@@ -451,7 +455,7 @@ sub _genomic_shift
   reverse_comp(\$seq_to_check) if $self->variation_feature->strand <0; 
   
   ## Actually performs the shift, and provides raw data in order to create shifting hash
-  ($shift_length, $seq_to_check, $hgvs_output_string, $var_start, $var_end) = $self->perform_shift($seq_to_check, $post_seq, $pre_seq, $var_start, $var_end, $hgvs_output_string, (-1 * ($strand -1))/2); 
+  ($shift_length, $seq_to_check, $hgvs_output_string, $var_start, $var_end) = $self->perform_shift($seq_to_check, $post_seq, $pre_seq, $var_start, $var_end, $hgvs_output_string, (-1 * ($strand -1))/2, 1); 
   
   ## Creates shift_hash to attach to VF and TVA objects for 
   $self->create_shift_hash($seq_to_check, $post_seq, $pre_seq, $var_start, $var_end, $hgvs_output_string, $type, $shift_length, $strand, 1);
