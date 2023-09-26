@@ -55,7 +55,7 @@ use warnings;
 
 use base qw(Exporter);
 
-our @EXPORT_OK = qw(overlap _intron_overlap within_feature within_cds MAX_DISTANCE_FROM_TRANSCRIPT within_intron stop_lost stop_retained start_lost frameshift $UPSTREAM_DISTANCE $DOWNSTREAM_DISTANCE);
+our @EXPORT_OK = qw(overlap _intron_overlap _compare_seq_region_names within_feature within_cds MAX_DISTANCE_FROM_TRANSCRIPT within_intron stop_lost stop_retained start_lost frameshift $UPSTREAM_DISTANCE $DOWNSTREAM_DISTANCE);
 
 use constant MAX_DISTANCE_FROM_TRANSCRIPT => 5000;
 
@@ -107,13 +107,14 @@ sub _intron_overlap {
   }
 }
 
-sub compare_seq_region_names {
+sub _compare_seq_region_names {
   my $region1 = shift;
   my $region2 = shift;
 
   $region1 =~ s/^chr//;
   $region2 =~ s/^chr//;
-  return lc($region1) eq lc($region2);
+
+  return lc $region1 eq lc $region2;
 }
 
 sub within_feature {
@@ -125,7 +126,7 @@ sub within_feature {
     my $cmp_chr = 1;
     if ($match_seq_region_names) {
       my $chr  = $bvf->{chr} || $bvf->{slice}->{seq_region_name};
-      $cmp_chr = compare_seq_region_names($chr, $feat->{slice}->{seq_region_name});
+      $cmp_chr = _compare_seq_region_names($chr, $feat->{slice}->{seq_region_name});
     }
 
     return $cmp_chr && overlap(
@@ -346,11 +347,7 @@ sub feature_truncation {
     return 0 if $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele');
     
     if(chromosome_breakpoint(@_)) {
-        for my $alt (@{$bvf->{_parsed_allele}}) {
-            # iterate over breakends to check if within_feature
-            return 1 if within_feature($bvfoa, $feat, $bvfo, $alt, 1);
-        }
-        return 1 if within_feature($bvfoa, $feat, $bvfo, $bvf, 1);
+        return 1 if within_feature($bvfoa, $feat, $bvfo, $bvfoa->breakend, 1);
     }
 
     return (
