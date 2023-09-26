@@ -2069,7 +2069,9 @@ sub _hgvs_from_components {
   # take alternate allele from genomic reference & coordinates if not supplied in HGVS string for a duplication
   if($description =~ /dup/){ 
     ## special case: handle as insertion for ensembl object purposes 
-    $start = $end + 1; 
+    $start = $end ;
+    if($strand  == 1){ $start++; }
+    else{             $end--;   }
 
     $ref_allele = "-" ;
     $alt_allele = $refseq_allele;
