@@ -1385,8 +1385,10 @@ sub hgvs_transcript {
   }
   ## this may be different to the input one for insertions/deletions
     print "vfs: $variation_feature_sequence &  $self->{_slice_start} -> $self->{_slice_end}\n" if $DEBUG ==1;
+  my $dup_lookup_direction = -1;
   if($variation_feature_sequence && $vf->strand != $refseq_strand) {
     reverse_comp(\$variation_feature_sequence);
+    $dup_lookup_direction = !$offset_to_add ? 1 : -1;
   };
   ## delete consequences if we have an offset. This is only in here for when we want HGVS to shift but not consequences.
   ## TODO add no_shift flag test
@@ -1402,9 +1404,10 @@ sub hgvs_transcript {
     $self->{_slice_end} + $offset_to_add,
     "",
     "",
-    $var_name
+    $var_name,
+    $dup_lookup_direction
   );
-  
+
   ### This should not happen
   unless($hgvs_notation->{'type'}){
     #warn "Error - not continuing; no HGVS annotation\n";
