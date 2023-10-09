@@ -505,7 +505,7 @@ sub hgvs_variant_notation {
   $display_end ||= $ref_end;
 
   # the direction to look for ref seq match with alt allele to see if it is dup type
-  $dup_lookup_direction ||= -1;
+  $dup_lookup_direction ||= 1;
   
   #Throw an exception if the lengths of the display interval and reference interval are different
   throw("The coordinate interval for display is of different length than for the reference allele") if (($display_end - $display_start) != ($ref_end - $ref_start));

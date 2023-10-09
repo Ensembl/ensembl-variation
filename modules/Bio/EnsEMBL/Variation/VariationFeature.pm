@@ -1935,8 +1935,7 @@ sub hgvs_genomic {
     my $offset = 0;
     my $var_class  =  $self->var_class();
     $var_class  =~ s/somatic_//;
-
-    my $dup_lookup_direction = -1;
+    # my $dup_lookup_direction = 1;
 
     ##  only check insertions & deletions & don't move beyond transcript
     if(
@@ -1969,7 +1968,6 @@ sub hgvs_genomic {
    }
     else{
       reverse_comp(\$check_allele) if $flip_allele == 1 ;
-      $dup_lookup_direction = 1 if $vf_strand < 0;
     }
 
     my $hgvs_notation = hgvs_variant_notation(
@@ -1980,7 +1978,6 @@ sub hgvs_genomic {
       $chr_start + $offset,   ## start wrt seq region slice is on (eg. chrom)
       $chr_end + $offset,
       $self->variation_name(), ## for error message
-      $dup_lookup_direction
     );
 
     # Skip if e.g. allele is identical to the reference slice
