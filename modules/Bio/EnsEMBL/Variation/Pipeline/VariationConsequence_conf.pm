@@ -166,6 +166,25 @@ sub default_options {
         # Should hive use triggeres?
         hive_use_triggers       => 0,
 
+        # a file containing history of datachecks ran potentially used to determine
+        # if a datacheck can be skipped
+        history_file            => '/nfs/production/flicek/ensembl/production/datachecks/history/vertebrates.json',
+
+        #  output dir where datacheck result will be stored
+        dc_outdir               => $self->o('pipeline_dir')."/".$self->o('pipeline_name')."_dc_output",
+
+        # if set, fails the datacheck pipeline job if the datacheck fails
+        # can be overwritten when running the pipeline
+        failures_fatal          => 1,
+
+        # if set, runs the datachecks analysis jobs
+        # can be overwritten when running the pipeline
+        run_dc                  => 0,
+
+        # the uri of the database server which stores the database of previous release
+        # supported format is mysql://[a_user]@[some_host]:[port_number]/[old_release_number]
+        old_server_uri          => undef,
+
         # init_pipeline.pl will create the hive database on this machine, naming it
         # <username>_<pipeline_name>, and will drop any existing database with this
         # name
@@ -206,6 +225,8 @@ sub resource_classes {
                               'SLURM' => $self->o('default_long_slurm_options') },
           'highmem'      => { 'LSF'   => $self->o('highmem_lsf_options'),
                               'SLURM' => $self->o('highmem_slurm_options') },
+          'highmem_long' => { 'LSF'   => $self->o('highmem_lsf_options'),
+                              'SLURM' => $self->o('highmem_long_slurm_options') },
           'medmem'       => { 'LSF'   => $self->o('medmem_lsf_options'),
                               'SLURM' => $self->o('medmem_slurm_options') },
     };
@@ -232,6 +253,7 @@ sub pipeline_analyses {
               fasta => $self->o('fasta'),
               sort_variation_feature => $self->o('sort_variation_feature'),
               update_diff => $self->o('update_diff'),
+              include_lrg => $self->o('include_lrg'),
               @common_params,
             },
             -rc_name   => 'default',
@@ -377,7 +399,7 @@ sub pipeline_analyses {
             -parameters => {
               @common_params,
             },
-            -rc_name   => ($self->o('species') !~ /homo_sapiens|human/) ? 'default' : 'default_long',
+            -rc_name   => ($self->o('species') !~ /homo_sapiens|human/) ? 'highmem' : 'highmem_long',
             -flow_into => {
               1 => ['check_transcript_variation']
             },
@@ -386,13 +408,24 @@ sub pipeline_analyses {
             -module => 'Bio::EnsEMBL::Variation::Pipeline::CheckTranscriptVariation',
             -parameters => {
               @common_params,
+              run_dc          => !$self->o('run_dc') && ($self->o('species') !~ /homo_sapiens|human/) ? 1 : $self->o('run_dc'),
+              old_server_uri  => $self->o('old_server_uri'),
+              ensembl_release => $self->o('ensembl_release'),
+              species         => $self->o('species')
             },
             -rc_name   => 'default',
+            -flow_into => {
+              1 => WHEN (
+                '#run_dc#' => [ 'datacheck_vc' ]
+                )
+            }
           }
         );
     }
 
+   my $flag;
    if ($self->o('run_variation_class') && (($self->o('species') !~ /homo_sapiens|human/) || $self->o('human_default_override'))) {
+        $flag = 1;
 
         push @analyses, (
 
@@ -439,6 +472,29 @@ sub pipeline_analyses {
 
         );
     }
+
+    push @analyses, (
+    {   -logic_name     => 'datacheck_vc',
+        -module         => 'Bio::EnsEMBL::DataCheck::Pipeline::RunDataChecks',
+        -parameters     => {
+            datacheck_names => [
+            'TranscriptVariation'
+          ],
+            history_file   => $self->o('history_file'),
+            registry_file  => $self->o('reg_file'),
+            output_dir     => $self->o('dc_outdir'),
+            failures_fatal => $self->o('failures_fatal')
+        },
+        -input_ids         => [],
+        -hive_capacity     => 1,
+        -analysis_capacity => 1,
+        -rc_name           => 'default',
+        -flow_into         => {},
+        -wait_for          => ( $flag ? [ 'finish_variation_class' ] : [] ),
+        -failed_job_tolerance => 0,
+        -max_retry_count   => 0,
+    }
+    );
 
     return \@analyses;
 }

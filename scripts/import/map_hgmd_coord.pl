@@ -107,6 +107,8 @@ else {
 }
 
 
+my %seq_regions;
+
 $dbVar->do(qq{CREATE TABLE IF NOT EXISTS `$header\_variation` (
   `variation_id` int(10) unsigned not null auto_increment, # PK
   `source_id` int(10) unsigned not null,
@@ -139,13 +141,28 @@ while (<IN>) {
               'consequence' => 'HGMD_MUTATION'
             );
     
-  my $slice = $sa->fetch_by_region('chromosome', $data{region_name}, $data{start},$data{end});
-  if (!$slice) {
-    print_buffered($buffer,"$TMP_DIR/$header\_error",join ("\t",$data{var_name},$data{region_name},$data{start}) . "\n");
-    next;
+  my $seq_region_id;
+
+  if(!$seq_regions{$seq_region_name}) {
+    my $seq_region_sth = $dbVar->prepare(qq{ SELECT seq_region_id FROM seq_region WHERE name = ? });
+    $seq_region_sth->execute($seq_region_name);
+
+    my $result = $seq_region_sth->fetchall_arrayref();
+    $seq_region_id = $result->[0]->[0];
+
+    if(!$seq_region_id) {
+      print_buffered($buffer,"$TMP_DIR/$header\_error",join ("\t",$data{var_name},$data{region_name},$data{start}) . "\n");
+      next;
+    }
+
+    $seq_regions{$seq_region_name} = $seq_region_id;
   }
-  $data{region_id} = $slice->get_seq_region_id;
-    
+  else {
+    $seq_region_id = $seq_regions{$seq_region_name};
+  }
+
+  $data{region_id} = $seq_region_id;
+
   print_all_buffers(\%data);
 }
 

@@ -35,6 +35,9 @@ use Getopt::Long;
 
 use Bio::EnsEMBL::Registry;
 
+use IO::Handle;
+STDOUT->autoflush(1); # flush STDOUT buffer immediately
+
 my $registry_file;
 my $source_name;
 my $help;
@@ -110,16 +113,19 @@ print "- 'failed_variation' entries deleted\n";
 my $tv_del_sth = $dbh->prepare(qq[ SELECT vf.variation_feature_id from variation_feature vf
                                           WHERE vf.source_id = $source_id;
                                          ]);
-$tv_del_sth->execute() || die "Error selecting variation feature from $source_name\n";
+$tv_del_sth->execute() or die "Error selecting variation feature from $source_name\n";
 my $tv_to_del = $tv_del_sth->fetchall_arrayref();
+
+# Prepare SQL statements before for loop
+my $del_vf_sth = $dbh->prepare(qq[ DELETE FROM variation_feature WHERE variation_feature_id = ? ]);
+my $del_sth = $dbh->prepare(qq[ DELETE FROM transcript_variation WHERE variation_feature_id = ? ]);
+my $del_mtmp_sth = $dbh->prepare(qq[ DELETE FROM MTMP_transcript_variation WHERE variation_feature_id = ? ]);
+
 foreach my $to_del (@{$tv_to_del}){
   my $vf_id_del = $to_del->[0];
-  my $del_vf_sth = $dbh->prepare(qq[ DELETE FROM variation_feature WHERE variation_feature_id = $vf_id_del ]);
-  my $del_sth = $dbh->prepare(qq[ DELETE FROM transcript_variation WHERE variation_feature_id = $vf_id_del ]);
-  my $del_mtmp_sth = $dbh->prepare(qq[ DELETE FROM MTMP_transcript_variation WHERE variation_feature_id = $vf_id_del ]);
-  $del_vf_sth->execute() || die "Could not delete entry with variation_feature_id = $vf_id_del from variation_feature\n";
-  $del_sth->execute() || die "Could not delete entry with variation_feature_id = $vf_id_del from transcript_variation\n";
-  $del_mtmp_sth->execute() || die "Could not delete entry with variation_feature_id = $vf_id_del from MTMP_transcript_variation\n";
+  $del_vf_sth->execute($vf_id_del) or die "Error deleting variation_feature_id $vf_id_del from variation_feature\n";
+  $del_sth->execute($vf_id_del) or die "Error deleting variation_feature_id = $vf_id_del from transcript_variation\n";
+  $del_mtmp_sth->execute($vf_id_del) or die "Error deleting variation_feature_id = $vf_id_del from MTMP_transcript_variation\n";
 }
 print "- 'variation_feature', 'transcript_variation' and 'MTMP_transcript_variation' entries deleted\n";
 

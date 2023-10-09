@@ -126,7 +126,7 @@ sub pipeline_analyses {
       },
       -rc_name           => 'medium_mem',
       -max_retry_count   => 0,
-      -analysis_capacity => 5,
+      -analysis_capacity => 500,
     },
     {
       -logic_name => 'finish_dump_hgvs',

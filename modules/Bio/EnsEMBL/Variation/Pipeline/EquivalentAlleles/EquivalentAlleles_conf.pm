@@ -48,7 +48,7 @@ sub default_options {
     hive_auto_rebalance_semaphores => 0, 
     hive_no_init => 0,
     hive_debug_init => 1,
-    hive_default_max_retry_count => 0,
+    hive_default_max_retry_count => 3,
 
     # the location of your checkout of the ensembl API (the hive looks for SQL files here)
         
@@ -74,25 +74,24 @@ sub default_options {
     # configuration for the various resource options used in the pipeline
     # EBI farm users should either change these here, or override them on the
     # command line to suit the EBI farm.
-    default_lsf_options => '-qproduction -R"select[mem>4000] rusage[mem=4000]" -M4000',
-    medium_lsf_options  => '-qproduction -R"select[mem>6000] rusage[mem=6000]" -M6000',
+    default_lsf_options => '-qproduction -R"select[mem>8000] rusage[mem=8000]" -M8000',
+    medium_lsf_options  => '-qproduction -R"select[mem>16000] rusage[mem=16000]" -M16000',
 
     default_slurm_options      => '--partition=standard --time=24:00:00 --mem=4G',
     default_long_slurm_options => '--partition=standard --time=48:00:00 --mem=4G',
     medium_slurm_options       => '--partition=standard --time=24:00:00 --mem=6G',
 
-
     # size of region to be checked in a single job
-    region_size =>  100000000,
+    region_size =>  1000000,
 
     # size of bin to be checked for equivalent alleles
-    bin_size  =>  5000000,
+    bin_size  =>  100000,
 
     ## overlap between checking bins
     overlap   => 1000,
 
     # number of workers used for the parallelisable analysis
-    capacity  => 30,
+    capacity  => 300,
 
 
     # connection parameters for the hive database, you should supply the hive_db_password

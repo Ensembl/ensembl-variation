@@ -1695,10 +1695,26 @@ sub _parse_hgvs_transcript_position {
 
     # Handle multi-exon location
     if(scalar(@coords) != 1){
-      my $n_coord = scalar(@coords);
+      my @genomic_coordinates;
+      my @gap_coordinates;
+      foreach my $coord (@coords) {
+        push @genomic_coordinates, $coord if($coord->isa('Bio::EnsEMBL::Mapper::Coordinate'));
+        push @gap_coordinates, $coord if($coord->isa('Bio::EnsEMBL::Mapper::Gap'));
+      }
+      my $n_coord = scalar(@genomic_coordinates);
+      $start = $strand == 1 ? $genomic_coordinates[0]->start() : $genomic_coordinates[$n_coord-1]->start();
+      $end = $strand == 1 ? $genomic_coordinates[$n_coord-1]->end() : $genomic_coordinates[0]->end();
 
-      $start = $strand == 1 ? $coords[0]->start() : $coords[$n_coord-1]->start();
-      $end = $strand == 1 ? $coords[$n_coord-1]->end() : $coords[0]->end();
+      # adjust coordinates start and end
+      if(scalar @gap_coordinates >= 1) {
+        my $diff = $gap_coordinates[0]->end() - $gap_coordinates[0]->start() + 1;
+        if($strand == 1) {
+          $end += $diff;
+        }
+        else {
+          $start = $end - $diff;
+        }
+      }
     }
     else{
       ### overwrite exonic location with genomic coordinates
@@ -1749,12 +1765,13 @@ sub _parse_hgvs_transcript_position {
 sub fetch_by_hgvs_notation {
   my $self = shift;
 
-  my ($hgvs, $user_slice_adaptor, $user_transcript_adaptor, $multiple_ok, $replace_ref) = rearrange([qw(
+  my ($hgvs, $user_slice_adaptor, $user_transcript_adaptor, $multiple_ok, $replace_ref, $max_size) = rearrange([qw(
     HGVS
     SLICE_ADAPTOR
     TRANSCRIPT_ADAPTOR
     MULTIPLE_OK
     REPLACE_REF
+    MAX_SIZE
   )], @_);
 
   if($DEBUG ==1){print "\nStarting fetch_by_hgvs_notation for $hgvs\n";}
@@ -1863,7 +1880,8 @@ sub fetch_by_hgvs_notation {
   elsif($type =~ m/g|m/i) {
     ($start, $end) = _parse_hgvs_genomic_position($description) ;  
 
-    throw ("Region requested must be smaller than 5kb") unless ($end - $start < 5000);
+    $max_size ||= 5000;
+    throw ("Region requested must be smaller than $max_size") unless ($end - $start < $max_size);
 
     ## grab reference allele; second call after "||" allows for LRG regions to be fetched
     $slice = $slice_adaptor->fetch_by_region('chromosome', $reference ) || $slice_adaptor->fetch_by_region(undef, $reference);
@@ -1974,8 +1992,8 @@ sub _get_gene_transcripts {
   my ($self, $transcript_adaptor, $reference, $multiple_ok) = @_;
 
   my $gene_adaptor = $transcript_adaptor->db->get_GeneAdaptor();
-  my ($gene) = grep {($_->external_name || '') eq $reference} @{$gene_adaptor->fetch_all_by_external_name($reference)};
-  
+  my ($gene) = grep {($_->external_name || '') eq $reference && $_->is_reference} @{$gene_adaptor->fetch_all_by_external_name($reference)};
+
   my @transcripts;
 
   if($gene) {
@@ -2012,11 +2030,12 @@ sub _get_gene_transcripts {
 sub fetch_all_possible_by_hgvs_notation {
   my $self = shift;
 
-  my ($hgvs, $user_slice_adaptor, $user_transcript_adaptor, $replace_ref) = rearrange([qw(
+  my ($hgvs, $user_slice_adaptor, $user_transcript_adaptor, $replace_ref, $max_size) = rearrange([qw(
     HGVS
     SLICE_ADAPTOR
     TRANSCRIPT_ADAPTOR
     REPLACE_REF
+    MAX_SIZE
   )], @_);
 
   return $self->fetch_by_hgvs_notation(
@@ -2024,7 +2043,8 @@ sub fetch_all_possible_by_hgvs_notation {
     -slice_adaptor      => $user_slice_adaptor,
     -transcript_adaptor => $user_transcript_adaptor,
     -replace_ref        => $replace_ref,
-    -multiple_ok        => 1
+    -multiple_ok        => 1,
+    -max_size           => $max_size
   );
 }
 
@@ -2048,10 +2068,8 @@ sub _hgvs_from_components {
   
   # take alternate allele from genomic reference & coordinates if not supplied in HGVS string for a duplication
   if($description =~ /dup/){ 
-     ## special case: handle as insertion for ensembl object purposes 
-     $start = $end ;
-     if($strand  == 1){ $start++; }
-     else{             $end--;   }
+    ## special case: handle as insertion for ensembl object purposes 
+    $start = $end + 1; 
 
     $ref_allele = "-" ;
     $alt_allele = $refseq_allele;
@@ -2206,20 +2224,15 @@ sub _pick_likely_transcript {
 }
 
 ## Extract enough information to make a variation_feature from HGVS protein nomenclature
-## Only attempts substitutions
+## Only attempts substitutions or simple deletions-insertions (delins)
 ##    - assumes protein change results from minimum number of nucleotide changes
 ##    - returns VF information only if one minimal solution found
 sub _parse_hgvs_protein_position{
 
   my ($description, $reference, $transcript ) = @_;
-  ## only supporting the parsing of hgvs substitutions [eg. Met213Ile]
-  my ($from, $pos, $to) = $description =~ /^(\w+?)(\d+)(\w+?|\*)$/; 
-
-  throw("Could not parse HGVS protein notation " . $reference . ":p.". $description ) unless $from and $pos and $to;
-
-  # convert three letter AA to single
-  $from = $Bio::SeqUtils::ONECODE{$from} || $from;
-  $to   = $Bio::SeqUtils::ONECODE{$to} || $to;
+  ## only parses hgvs substitutions [eg. Met213Ile] or delins [eg. 124delinsAla]
+  my ($from, $pos, $to) = $description =~ /^([A-Za-z]+?)?(\d+)(?:delins)?(\w+|\*|\=|\?)$/;
+  $to = $from if $to eq "=";
 
   # get genomic position - returns seq on transcript strand
   my ($from_codon_ref, $start, $end, $strand) = get_reference($transcript, $pos, undef, 0);  
@@ -2231,10 +2244,17 @@ sub _parse_hgvs_protein_position{
 
   # default to the vertebrate codon table which is denoted as 1 
   my $codon_table = Bio::Tools::CodonTable->new( -id => ($attrib ? $attrib->value : 1)); 
+  my $check_prot = $codon_table->translate($from_codon_ref);
+  $from = $check_prot if !defined $from && $description =~ /delins/;
+
+  throw("Could not parse HGVS protein notation " . $reference . ":p.". $description )
+    unless ($from and $pos and $to);
+
+  # convert three letter AA to single
+  $from = $Bio::SeqUtils::ONECODE{$from} || $from;
+  $to   = $Bio::SeqUtils::ONECODE{$to} || $to;
 
   # check genomic codon is compatible with input HGVS
-  my $check_prot   = $codon_table->translate($from_codon_ref);
-
   my @from_codons = ();
   ## if the genomic sequence translates to match the input HGVS ref protein, use this
   if ($check_prot eq $from){
@@ -2245,7 +2265,7 @@ sub _parse_hgvs_protein_position{
   }
 
   # rev-translate alt sequence
-  my @to_codons   = $codon_table->revtranslate($to); 
+  my @to_codons = $codon_table->revtranslate($to);
 
   # now iterate over all possible mutation paths 
   my %paths; 
@@ -2256,7 +2276,7 @@ sub _parse_hgvs_protein_position{
       for my $i(0..2) { 
        
         my ($a, $b) = (substr($from_codon, $i, 1), substr($to_codon, $i, 1)); 
-        next if uc($a) eq uc($b); 
+        next if uc($a) eq uc($b) and uc($from_codon) ne uc($to_codon);
         push @{$paths{$key}}, $i.'_'.uc($a).'/'.uc($b); 
       } 
 
@@ -2352,11 +2372,47 @@ sub get_reference{
   
   my $tr_mapper = $transcript->get_TranscriptMapper(); 
 
+  # If the codon overlaps an exon-intron boundary @coords can return two coordinates:
+  #  one for the first exon where the codon starts
+  #  a second coordinate for the exon where the codon ends
   my @coords = defined($pos2) ? $tr_mapper->pep2genomic($pos, $pos2) : $tr_mapper->pep2genomic($pos, $pos);  
 
-  my $start  = $coords[0]->start();
-  my $end    = $coords[0]->end();
+  my $start;
+  my $end;
+  my $real_start;
+  my $real_end;
   my $strand = $coords[0]->strand();
+
+  # Assign start and end when we have two coordinates
+  # This is the most common alternative
+  if(scalar(@coords) == 2){
+    if(($coords[0]->end() - $coords[0]->start() + 1) % 2 == 0) {
+      if($strand == 1) {
+        $start = $coords[0]->start();
+        $end = $start + 2;
+        $real_end = $coords[1]->end();
+      }
+      else {
+        $end = $coords[0]->end();
+        $start = $end - 2;
+        $real_start = $coords[1]->start();
+      }
+    }
+    elsif($strand == 1) {
+      $end = $coords[1]->end();
+      $start = $end - 2;
+      $real_start = $coords[0]->start();
+    }
+    else {
+      $start = $coords[0]->start();
+      $end = $start + 2;
+      $real_end = $coords[1]->end();
+    }
+  }
+  else{
+    $start = $coords[0]->start();
+    $end   = $coords[0]->end();
+  }
 
   my $seq_length = $type_del == 1 ? ($end-$start) + 1 : 3;  
 
@@ -2374,8 +2430,11 @@ sub get_reference{
 
   my $from_codon_ref = $from_slice->seq(); 
   
+  $start = $real_start ? $real_start : $start;
+  $end = $real_end ? $real_end : $end;
+  
   ## correct for strand
-  reverse_comp(\$from_codon_ref) if $strand <0; 
+  reverse_comp(\$from_codon_ref) if $strand <0;
   
   return ($from_codon_ref, $start, $end, $strand); 
 }

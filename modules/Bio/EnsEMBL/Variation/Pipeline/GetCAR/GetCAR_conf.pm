@@ -126,7 +126,7 @@ sub pipeline_analyses {
       },
       -rc_name           => 'default_mem',
       -max_retry_count   => 0,
-      -analysis_capacity => 1,
+      -analysis_capacity => 30,
     },
     {
       -logic_name => 'finish_get_car',

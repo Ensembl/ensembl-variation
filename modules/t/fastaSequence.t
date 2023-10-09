@@ -120,6 +120,8 @@ $slice1 = $sa->fetch_by_region('chromosome', 21, 1, 10);
 is($slice1->seq, 'N' x 10, "start of chrom");
 is($slice1->expand(10, 0)->seq, 'N' x 20, "expand beyond start of chrom");
 
+$slice1 = $sa->fetch_by_region('chromosome', 21, 46709993, 46709997);
+is($slice1->seq, 'N', "subseq out of bounds");
 
 # test synonyms
 clear_fasta_cache();

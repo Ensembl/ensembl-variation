@@ -44,7 +44,7 @@ use POSIX qw(strftime);
 use File::Path qw(make_path);
 use Data::Dumper;
 
-use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(OMIA ANIMALSET NONE SPECIES);
+use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(OMIA ANIMALSET MOUSE NONE SPECIES);
 
 use base qw(Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation);
 
@@ -235,8 +235,9 @@ sub process_output_ids {
   
   $self->warning("run type $run_type");
   unless ($run_type eq NONE) {
-    my $type = ($run_type eq ANIMALSET) ? 'OMIA' : $run_type;
-    my @dc_params;
+    my ($type, @dc_params);
+    $type = ($run_type eq ANIMALSET) ? 'OMIA' : $run_type;
+    $type = ($run_type eq MOUSE) ? 'IMPC' : $run_type;
     
     map {
       my $adaptor = $self->get_adaptor($_, 'variation');
@@ -248,9 +249,10 @@ sub process_output_ids {
         my ($host) = ( split(/\./, $host_domain) );
         my $port = $adaptor->dbc()->port();
         my $user = $adaptor->dbc()->user();
+        my $pass = $adaptor->dbc()->pass();
         my $old_release_number = ( $self->param('ensembl_release') - 1 );
         
-        $old_server_uri = "mysql://" . ${user} . "@" . ${host} . ":" . ${port} . "/" . $old_release_number;
+        $old_server_uri ||= sprintf("mysql://%s:%s@%s:%s/%s", $user, $pass, $host, $port, $old_release_number);
       }
       
       push @dc_params, { dbname => $dbname, old_server_uri => [ $old_server_uri ] }; 

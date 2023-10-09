@@ -410,18 +410,33 @@ sub _bvf_preds {
   
   my $is_sv = $bvf->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature') ? 1 : 0;
   $self->_update_preds($bvf_preds, 'sv', $is_sv, \$pred_digest);
-  
+
   # use SO term to determine class
   if($is_sv) {
     my $class_SO_term = $bvf->class_SO_term;
 
-    if($class_SO_term =~ /deletion/) {
+    my $is_CNV = $class_SO_term eq "copy_number_variation";
+    my $is_CNV_deletion  = 0;
+    my $is_CNV_insertion = 0;
+    if ($is_CNV and defined $bvf->structural_variation) {
+      my $support_vars  = $bvf->structural_variation->get_all_SupportingStructuralVariants;
+      my @support_terms = map { $_->class_SO_term } @{$support_vars};
+
+      $is_CNV_deletion  = grep(/deletion|loss/i,              @support_terms);
+      $is_CNV_insertion = grep(/insertion|duplication|gain/i, @support_terms);
+    }
+
+    if($class_SO_term =~ /deletion|loss/i || $is_CNV_deletion) {
       $self->_update_preds($bvf_preds, 'deletion', 1, \$pred_digest);
       $self->_update_preds($bvf_preds, 'decrease_length', 1, \$pred_digest);
     }
-    elsif($class_SO_term =~ /insertion|duplication/) {
+    elsif($class_SO_term =~ /insertion|duplication|gain/i || $is_CNV_insertion) {
       $self->_update_preds($bvf_preds, 'insertion', 1, \$pred_digest);
       $self->_update_preds($bvf_preds, 'increase_length', 1, \$pred_digest);
+    }
+    elsif($class_SO_term =~ /chromosome_breakpoint/) {
+      $self->_update_preds($bvf_preds, 'chromosome_breakpoint', 1, \$pred_digest);
+      $self->_update_preds($bvf_preds, 'decrease_length', 1, \$pred_digest);
     }
   }
   
@@ -450,6 +465,11 @@ sub _bvfo_preds {
   if ( $bvf->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature') &&
        $vf_start <= $feat->{start} && $vf_end >= $feat->{end} ) {
     $self->_update_preds($bvfo_preds, 'complete_overlap', 1, \$pred_digest);
+    $self->_update_preds($bvfo_preds, 'within_feature',   1, \$pred_digest);
+
+    if($preds->{feature_class} eq 'Bio::EnsEMBL::Transcript') {
+      $self->_update_preds($bvfo_preds, $feat->biotype, 1, \$pred_digest);
+    }
 
     $bvfo_preds->{_digest} = $pred_digest;
 

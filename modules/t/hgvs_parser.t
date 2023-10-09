@@ -486,7 +486,7 @@ my %test_input = (
 );
 
 my %test_input_shifted = (
-     28 => ["X:g.131215392_131215393insA",
+     28 => ["X:g.131215393_131215394insA",
             "ENST00000298542.4:c.905+998dup", 
             "X:g.131215401dup",
            ],    
@@ -530,9 +530,9 @@ my %test_input_shifted = (
 
 ## results which change on left-shifting - not shifted
 my %test_output_no_shift = ( 
-     1 => ["X:g.131215393dup",
+     1 => ["X:g.131215394dup",
            "A",
-           "ENST00000298542.4:c.905+997dup", 
+           "ENST00000298542.4:c.905+997dup",
            "T",
            "",
            "duplication, intronic rc transcript"
@@ -551,12 +551,12 @@ my %test_output_no_shift = (
            "ENSP00000337623.2:p.Glu206GlyfsTer13",
            "insertion, frameshift",
            ],
-     4 =>  ["NC_000006.11:g.30558477_30558478insA",
+     4 =>  ["NC_000006.11:g.30558477G>A",
            "A",
-           "ENST00000396515.3:c.716_717insA",
+           "ENST00000396515.3:c.716G>A",
            "A", 
            "ENSP00000379772.3:p.Ter239=",
-           "insertion, stop retained"
+           "substitution, stop retained"
           ],
      5 => ["NC_000001.10:g.154140413_154140415del",
            "-", 
@@ -586,8 +586,8 @@ my %test_output_no_shift = (
 
 
 my %test_input_no_shift = ( 
-     1 => ["X:g.131215393dup",
-           "ENST00000298542.4:c.905+997dup", 
+     1 => ["X:g.131215394dup",
+           "ENST00000298542.4:c.905+997dup",
           ],    
      2 => ["NC_000011.9:g.32417913_32417914insCCTACGAGTACTACC",
            "ENST00000530998.1:c.451_452insGGTAGTACTCGTAGG",
@@ -597,9 +597,9 @@ my %test_input_no_shift = (
            "ENST00000336617.2:c.615_616insG",
            "ENSP00000337623.2:p.Glu206GlyfsTer13",
            ],
-     4 => ["NC_000006.11:g.30558477_30558478insA",
-           "ENST00000396515.3:c.716_717insA",
-           "ENST00000396515.3:c.716_717insA(p.=)",
+     4 => ["NC_000006.11:g.30558477G>A",
+           "ENST00000396515.3:c.716G>A",
+           "ENST00000396515.3:c.716G>A(p.=)",
            "ENSP00000379772.3:p.Ter239=",
           ],
      5 => ["NC_000001.10:g.154140413_154140415del",
@@ -710,7 +710,7 @@ sub test_output{
   ## genomic level
   my $hgvs_genomic      = $variation_feature->get_all_hgvs_notations("", "g");
 
-  ok(  $hgvs_genomic->{$allele} eq $output->[0], "$input genomic level $output->[0], $output->[5]" );
+  is_deeply(  $hgvs_genomic->{$allele}, $output->[0], "$input genomic level $output->[0], $output->[5]" );
   if($DEBUG==1){print "TEMP: $input => gen; expected $output->[0]\t returns: $hgvs_genomic->{$allele} for allele:$allele\n";} 
 
   ## transcript level - transcript to be supplied as ref feature  - alt allele may be complimented wrt genomic reference 
@@ -718,7 +718,7 @@ sub test_output{
 
   my $hgvs_coding  = $variation_feature->get_all_hgvs_notations($transcript, "c");
 
-  ok( $hgvs_coding->{$allele} eq $output->[2], "$input ->  transcript level from VF $output->[2], $output->[5]");
+  is_deeply( $hgvs_coding->{$allele}, $output->[2], "$input ->  transcript level from VF $output->[2], $output->[5]");
   if($DEBUG==1){  print "TEMP: $input => trans; expected $output->[2]\t returns: $hgvs_coding->{$allele} for allele:$allele\n\n";}
 
   ## protein level - transcript to be supplied as ref feature - alt allele may be complimented
@@ -733,14 +733,14 @@ sub test_output{
 
     ##get from TVA too
     my $tva = $transcript_variation->get_all_alternate_BaseVariationFeatureOverlapAlleles();
-    ok( $tva->[0]->hgvs_transcript() eq $output->[2], "$input ->  transcript level from TVA $output->[2], $output->[5]");
+    is_deeply( $tva->[0]->hgvs_transcript(), $output->[2], "$input ->  transcript level from TVA $output->[2], $output->[5]");
 
     if (defined $output->[6]){ ## check reference sequence as used in HGVS is as expected
-      ok( $tva->[0]->hgvs_transcript_reference() eq $output->[6], "$input ->  transcript level correct ref,$output->[6] ");
+      is_deeply( $tva->[0]->hgvs_transcript_reference(), $output->[6], "$input ->  transcript level correct ref,$output->[6] ");
     }
 
 
-    ok( $hgvs_protein->{$allele} eq $output->[4], "$input -> protein level - $output->[4]  $output->[5]");
+    is_deeply( $hgvs_protein->{$allele}, $output->[4], "$input -> protein level - $output->[4]  $output->[5]");
     if($DEBUG==1){   print "TEMP: $input => prot; expected $output->[4]\t returns: $hgvs_protein->{$allele} for allele:$allele\n";}
   }
 }

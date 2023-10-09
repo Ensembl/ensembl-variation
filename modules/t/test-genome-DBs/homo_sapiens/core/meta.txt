@@ -1,5 +1,5 @@
 885	1	xref.timestamp	2010-12-02 16:01:38
-1	\N	schema_version	110
+1	\N	schema_version	112
 2	\N	patch	patch_52_53_a.sql|schema_version
 3	\N	patch	patch_52_53_b.sql|external_db_type_enum
 4	\N	patch	patch_52_53_c.sql|identity_xref_rename
@@ -252,3 +252,6 @@
 1052	\N	patch	patch_109_110_a.sql|schema_version
 1053	\N	patch	patch_109_110_b.sql|Add IS_PAR relationship to link X- and Y-PAR genes
 1054	\N	patch	patch_109_110_c.sql|Allow gene id to belong to multiple alt allele groups
+1055	\N	patch	patch_110_111_a.sql|schema_version
+1056	\N	patch	patch_111_112_a.sql|schema_version
+1057	\N	patch	patch_111_112_b.sql|Allow meta_value to be null

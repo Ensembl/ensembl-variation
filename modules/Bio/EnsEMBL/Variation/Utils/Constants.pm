@@ -54,6 +54,7 @@ our @EXPORT_OK = qw(
   SO_TERM_ALU_DELETION
   SO_TERM_ALU_INSERTION
   SO_TERM_CODING_SEQUENCE_VARIANT
+  SO_TERM_CODING_TRANSCRIPT_VARIANT
   SO_TERM_COMPLEX_CHROMOSOMAL_REARRANGEMENT
   SO_TERM_COMPLEX_STRUCTURAL_ALTERATION
   SO_TERM_COMPLEX_SUBSTITUTION
@@ -172,6 +173,7 @@ our %EXPORT_TAGS = (
     SO_TERM_3_PRIME_UTR_VARIANT
     SO_TERM_5_PRIME_UTR_VARIANT
     SO_TERM_CODING_SEQUENCE_VARIANT
+    SO_TERM_CODING_TRANSCRIPT_VARIANT
     SO_TERM_DOWNSTREAM_GENE_VARIANT
     SO_TERM_FEATURE_ELONGATION
     SO_TERM_FEATURE_TRUNCATION
@@ -324,46 +326,47 @@ use constant SO_TERM_COMPLEX_CHROMOSOMAL_REARRANGEMENT => 'complex_chromosomal_r
 use constant SO_TERM_COMPLEX_SUBSTITUTION => 'complex_substitution';
 use constant SO_TERM_SHORT_TANDEM_REPEAT_VARIATION => 'short_tandem_repeat_variation';
 use constant SO_TERM_LOSS_OF_HETEROZYGOSITY => 'loss_of_heterozygosity';
-use constant SO_TERM_SEQUENCE_VARIANT => 'sequence_variant';
-use constant SO_TERM_INTERGENIC_VARIANT => 'intergenic_variant';
-use constant SO_TERM_UPSTREAM_GENE_VARIANT => 'upstream_gene_variant';
-use constant SO_TERM_DOWNSTREAM_GENE_VARIANT => 'downstream_gene_variant';
-use constant SO_TERM_SPLICE_DONOR_VARIANT => 'splice_donor_variant';
-use constant SO_TERM_SPLICE_ACCEPTOR_VARIANT => 'splice_acceptor_variant';
-use constant SO_TERM_SPLICE_REGION_VARIANT => 'splice_region_variant';
-use constant SO_TERM_SPLICE_DONOR_5TH_BASE_VARIANT => 'splice_donor_5th_base_variant';
-use constant SO_TERM_SPLICE_DONOR_REGION_VARIANT => 'splice_donor_region_variant';
-use constant SO_TERM_SPLICE_POLYPYRIMIDINE_TRACT_VARIANT => 'splice_polypyrimidine_tract_variant';
-use constant SO_TERM_INTRON_VARIANT => 'intron_variant';
-use constant SO_TERM_5_PRIME_UTR_VARIANT => '5_prime_UTR_variant';
-use constant SO_TERM_3_PRIME_UTR_VARIANT => '3_prime_UTR_variant';
-use constant SO_TERM_SYNONYMOUS_VARIANT => 'synonymous_variant';
-use constant SO_TERM_MISSENSE_VARIANT => 'missense_variant';
-use constant SO_TERM_INFRAME_INSERTION => 'inframe_insertion';
-use constant SO_TERM_INFRAME_DELETION => 'inframe_deletion';
-use constant SO_TERM_STOP_GAINED => 'stop_gained';
-use constant SO_TERM_STOP_LOST => 'stop_lost';
-use constant SO_TERM_STOP_RETAINED_VARIANT => 'stop_retained_variant';
-use constant SO_TERM_START_LOST => 'start_lost';
-use constant SO_TERM_START_RETAINED_VARIANT => 'start_retained_variant';
-use constant SO_TERM_FRAMESHIFT_VARIANT => 'frameshift_variant';
-use constant SO_TERM_INCOMPLETE_TERMINAL_CODON_VARIANT => 'incomplete_terminal_codon_variant';
-use constant SO_TERM_NMD_TRANSCRIPT_VARIANT => 'NMD_transcript_variant';
-use constant SO_TERM_NON_CODING_TRANSCRIPT_VARIANT => 'non_coding_transcript_variant';
-use constant SO_TERM_NON_CODING_TRANSCRIPT_EXON_VARIANT => 'non_coding_transcript_exon_variant';
-use constant SO_TERM_MATURE_MIRNA_VARIANT => 'mature_miRNA_variant';
-use constant SO_TERM_CODING_SEQUENCE_VARIANT => 'coding_sequence_variant';
-use constant SO_TERM_REGULATORY_REGION_VARIANT => 'regulatory_region_variant';
-use constant SO_TERM_TF_BINDING_SITE_VARIANT => 'TF_binding_site_variant';
 use constant SO_TERM_TRANSCRIPT_ABLATION => 'transcript_ablation';
+use constant SO_TERM_SPLICE_ACCEPTOR_VARIANT => 'splice_acceptor_variant';
+use constant SO_TERM_SPLICE_DONOR_VARIANT => 'splice_donor_variant';
+use constant SO_TERM_STOP_GAINED => 'stop_gained';
+use constant SO_TERM_FRAMESHIFT_VARIANT => 'frameshift_variant';
+use constant SO_TERM_STOP_LOST => 'stop_lost';
+use constant SO_TERM_START_LOST => 'start_lost';
 use constant SO_TERM_TRANSCRIPT_AMPLIFICATION => 'transcript_amplification';
-use constant SO_TERM_TFBS_ABLATION => 'TFBS_ablation';
-use constant SO_TERM_TFBS_AMPLIFICATION => 'TFBS_amplification';
-use constant SO_TERM_REGULATORY_REGION_ABLATION => 'regulatory_region_ablation';
-use constant SO_TERM_REGULATORY_REGION_AMPLIFICATION => 'regulatory_region_amplification';
 use constant SO_TERM_FEATURE_ELONGATION => 'feature_elongation';
 use constant SO_TERM_FEATURE_TRUNCATION => 'feature_truncation';
+use constant SO_TERM_INFRAME_INSERTION => 'inframe_insertion';
+use constant SO_TERM_INFRAME_DELETION => 'inframe_deletion';
+use constant SO_TERM_MISSENSE_VARIANT => 'missense_variant';
 use constant SO_TERM_PROTEIN_ALTERING_VARIANT => 'protein_altering_variant';
+use constant SO_TERM_SPLICE_DONOR_5TH_BASE_VARIANT => 'splice_donor_5th_base_variant';
+use constant SO_TERM_SPLICE_REGION_VARIANT => 'splice_region_variant';
+use constant SO_TERM_SPLICE_DONOR_REGION_VARIANT => 'splice_donor_region_variant';
+use constant SO_TERM_SPLICE_POLYPYRIMIDINE_TRACT_VARIANT => 'splice_polypyrimidine_tract_variant';
+use constant SO_TERM_INCOMPLETE_TERMINAL_CODON_VARIANT => 'incomplete_terminal_codon_variant';
+use constant SO_TERM_START_RETAINED_VARIANT => 'start_retained_variant';
+use constant SO_TERM_STOP_RETAINED_VARIANT => 'stop_retained_variant';
+use constant SO_TERM_SYNONYMOUS_VARIANT => 'synonymous_variant';
+use constant SO_TERM_CODING_SEQUENCE_VARIANT => 'coding_sequence_variant';
+use constant SO_TERM_MATURE_MIRNA_VARIANT => 'mature_miRNA_variant';
+use constant SO_TERM_5_PRIME_UTR_VARIANT => '5_prime_UTR_variant';
+use constant SO_TERM_3_PRIME_UTR_VARIANT => '3_prime_UTR_variant';
+use constant SO_TERM_NON_CODING_TRANSCRIPT_EXON_VARIANT => 'non_coding_transcript_exon_variant';
+use constant SO_TERM_INTRON_VARIANT => 'intron_variant';
+use constant SO_TERM_NMD_TRANSCRIPT_VARIANT => 'NMD_transcript_variant';
+use constant SO_TERM_NON_CODING_TRANSCRIPT_VARIANT => 'non_coding_transcript_variant';
+use constant SO_TERM_CODING_TRANSCRIPT_VARIANT => 'coding_transcript_variant';
+use constant SO_TERM_UPSTREAM_GENE_VARIANT => 'upstream_gene_variant';
+use constant SO_TERM_DOWNSTREAM_GENE_VARIANT => 'downstream_gene_variant';
+use constant SO_TERM_TFBS_ABLATION => 'TFBS_ablation';
+use constant SO_TERM_TFBS_AMPLIFICATION => 'TFBS_amplification';
+use constant SO_TERM_TF_BINDING_SITE_VARIANT => 'TF_binding_site_variant';
+use constant SO_TERM_REGULATORY_REGION_ABLATION => 'regulatory_region_ablation';
+use constant SO_TERM_REGULATORY_REGION_AMPLIFICATION => 'regulatory_region_amplification';
+use constant SO_TERM_REGULATORY_REGION_VARIANT => 'regulatory_region_variant';
+use constant SO_TERM_INTERGENIC_VARIANT => 'intergenic_variant';
+use constant SO_TERM_SEQUENCE_VARIANT => 'sequence_variant';
 
 our %VARIATION_CLASSES = (
 'SNV' => {
@@ -630,62 +633,48 @@ our $DEFAULT_OVERLAP_CONSEQUENCE = Bio::EnsEMBL::Variation::OverlapConsequence->
                },
   'is_default' => 1,
   'label' => 'intergenic variant',
-  'rank' => '38',
+  'rank' => '40',
   'tier' => '4'
 }
 );
 
 
 our %OVERLAP_CONSEQUENCES = (
-'sequence_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-  'SO_accession' => 'SO:0001060',
-  'SO_term' => 'sequence_variant',
-  'description' => 'A sequence_variant is a non exact copy of a sequence_feature or genome exhibiting one or more sequence_alteration',
-  'display_term' => 'SEQUENCE_VARIANT',
-  'impact' => 'MODIFIER',
-  'include' => {
-                 'within_feature' => 0
-               },
-  'label' => 'sequence variant',
-  'rank' => '39',
-  'tier' => '4'
-}
-),
-'intergenic_variant' => $DEFAULT_OVERLAP_CONSEQUENCE,
-'upstream_gene_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-  'SO_accession' => 'SO:0001631',
-  'SO_term' => 'upstream_gene_variant',
-  'description' => 'A sequence variant located 5\' of a gene',
-  'display_term' => 'UPSTREAM',
-  'feature_SO_term' => 'transcript',
+'transcript_ablation' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'SO_accession' => 'SO:0001893',
+  'SO_term' => 'transcript_ablation',
+  'description' => 'A feature ablation whereby the deleted region includes a transcript feature',
+  'feature_SO_term' => 'mRNA',
   'feature_class' => 'Bio::EnsEMBL::Transcript',
-  'impact' => 'MODIFIER',
+  'impact' => 'HIGH',
   'include' => {
-                 'within_feature' => 0
+                 'complete_overlap' => 1,
+                 'deletion' => 1
                },
-  'label' => 'upstream gene variant',
-  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::upstream',
-  'rank' => '24',
-  'tier' => '3',
+  'label' => 'transcript ablation',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::feature_ablation',
+  'rank' => '1',
+  'tier' => '1',
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
 }
 ),
-'downstream_gene_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-  'SO_accession' => 'SO:0001632',
-  'SO_term' => 'downstream_gene_variant',
-  'description' => 'A sequence variant located 3\' of a gene',
-  'display_term' => 'DOWNSTREAM',
-  'feature_SO_term' => 'transcript',
+'splice_acceptor_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'NCBI_term' => 'splice-3',
+  'SO_accession' => 'SO:0001574',
+  'SO_term' => 'splice_acceptor_variant',
+  'description' => 'A splice variant that changes the 2 base region at the 3\' end of an intron',
+  'display_term' => 'ESSENTIAL_SPLICE_SITE',
+  'feature_SO_term' => 'primary_transcript',
   'feature_class' => 'Bio::EnsEMBL::Transcript',
-  'impact' => 'MODIFIER',
+  'impact' => 'HIGH',
   'include' => {
-                 'within_feature' => 0
+                 'intron_boundary' => 1
                },
-  'label' => 'downstream gene variant',
-  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::downstream',
-  'rank' => '25',
+  'label' => 'splice acceptor variant',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::acceptor_splice_site',
+  'rank' => '2',
   'tier' => '3',
-  'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
+  'variant_feature_class' => 'Bio::EnsEMBL::Variation::VariationFeature'
 }
 ),
 'splice_donor_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
@@ -707,235 +696,6 @@ our %OVERLAP_CONSEQUENCES = (
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::VariationFeature'
 }
 ),
-'splice_acceptor_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-  'NCBI_term' => 'splice-3',
-  'SO_accession' => 'SO:0001574',
-  'SO_term' => 'splice_acceptor_variant',
-  'description' => 'A splice variant that changes the 2 base region at the 3\' end of an intron',
-  'display_term' => 'ESSENTIAL_SPLICE_SITE',
-  'feature_SO_term' => 'primary_transcript',
-  'feature_class' => 'Bio::EnsEMBL::Transcript',
-  'impact' => 'HIGH',
-  'include' => {
-                 'intron_boundary' => 1
-               },
-  'label' => 'splice acceptor variant',
-  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::acceptor_splice_site',
-  'rank' => '3',
-  'tier' => '3',
-  'variant_feature_class' => 'Bio::EnsEMBL::Variation::VariationFeature'
-}
-),
-'splice_region_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-  'SO_accession' => 'SO:0001630',
-  'SO_term' => 'splice_region_variant',
-  'description' => 'A sequence variant in which a change has occurred within the region of the splice site, either within 1-3 bases of the exon or 3-8 bases of the intron',
-  'display_term' => 'SPLICE_SITE',
-  'feature_SO_term' => 'primary_transcript',
-  'feature_class' => 'Bio::EnsEMBL::Transcript',
-  'impact' => 'LOW',
-  'include' => {
-                 'intron_boundary' => 1
-               },
-  'label' => 'splice region variant',
-  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::splice_region',
-  'rank' => '13',
-  'tier' => '3',
-  'variant_feature_class' => 'Bio::EnsEMBL::Variation::VariationFeature'
-}
-),
-'splice_donor_5th_base_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-  'SO_accession' => 'SO:0001787',
-  'SO_term' => 'splice_donor_5th_base_variant',
-  'description' => 'A sequence variant that causes a change at the 5th base pair after the start of the intron in the orientation of the transcript',
-  'display_term' => 'SPLICE_SITE',
-  'feature_SO_term' => 'primary_transcript',
-  'feature_class' => 'Bio::EnsEMBL::Transcript',
-  'impact' => 'LOW',
-  'include' => {
-                 'intron_boundary' => 1
-               },
-  'label' => 'splice donor 5th base variant',
-  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::splice_donor_5th_base_variant',
-  'rank' => '4',
-  'tier' => '3',
-  'variant_feature_class' => 'Bio::EnsEMBL::Variation::VariationFeature'
-}
-),
-'splice_donor_region_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-  'SO_accession' => 'SO:0002170',
-  'SO_term' => 'splice_donor_region_variant',
-  'description' => 'A sequence variant that falls in the region between the 3rd and 6th base after splice junction (5\' end of intron).',
-  'display_term' => 'SPLICE_SITE',
-  'feature_SO_term' => 'primary_transcript',
-  'feature_class' => 'Bio::EnsEMBL::Transcript',
-  'impact' => 'LOW',
-  'include' => {
-                 'intron_boundary' => 1
-               },
-  'label' => 'splice donor region variant',
-  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::splice_donor_region_variant',
-  'rank' => '14',
-  'tier' => '3',
-  'variant_feature_class' => 'Bio::EnsEMBL::Variation::VariationFeature'
-}
-),
-'splice_polypyrimidine_tract_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-  'SO_accession' => 'SO:0002169',
-  'SO_term' => 'splice_polypyrimidine_tract_variant',
-  'description' => 'A sequence variant that falls in the polypyrimidine tract at 3\' end of intron between 17 and 3 bases from the end (acceptor -3 to acceptor -17)',
-  'display_term' => 'SPLICE_SITE',
-  'feature_SO_term' => 'primary_transcript',
-  'feature_class' => 'Bio::EnsEMBL::Transcript',
-  'impact' => 'LOW',
-  'include' => {
-                 'exon' => 0,
-                 'intron' => 1
-               },
-  'label' => 'splice polypyrimidine tract variant',
-  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::splice_polypyrimidine_tract_variant',
-  'rank' => '13',
-  'tier' => '3',
-  'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
-}
-),
-'intron_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-  'NCBI_term' => 'intron',
-  'SO_accession' => 'SO:0001627',
-  'SO_term' => 'intron_variant',
-  'description' => 'A transcript variant occurring within an intron',
-  'display_term' => 'INTRONIC',
-  'feature_SO_term' => 'primary_transcript',
-  'feature_class' => 'Bio::EnsEMBL::Transcript',
-  'impact' => 'MODIFIER',
-  'include' => {
-                 'intron' => 1
-               },
-  'label' => 'intron variant',
-  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_intron',
-  'rank' => '21',
-  'tier' => '3',
-  'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
-}
-),
-'5_prime_UTR_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-  'NCBI_term' => 'untranslated_5',
-  'SO_accession' => 'SO:0001623',
-  'SO_term' => '5_prime_UTR_variant',
-  'description' => 'A UTR variant of the 5\' UTR',
-  'display_term' => '5PRIME_UTR',
-  'feature_SO_term' => 'mRNA',
-  'feature_class' => 'Bio::EnsEMBL::Transcript',
-  'impact' => 'MODIFIER',
-  'include' => {
-                 'exon' => 1,
-                 'utr' => 1
-               },
-  'label' => '5 prime UTR variant',
-  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_5_prime_utr',
-  'rank' => '18',
-  'tier' => '3',
-  'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
-}
-),
-'3_prime_UTR_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-  'NCBI_term' => 'untranslated_3',
-  'SO_accession' => 'SO:0001624',
-  'SO_term' => '3_prime_UTR_variant',
-  'description' => 'A UTR variant of the 3\' UTR',
-  'display_term' => '3PRIME_UTR',
-  'feature_SO_term' => 'mRNA',
-  'feature_class' => 'Bio::EnsEMBL::Transcript',
-  'impact' => 'MODIFIER',
-  'include' => {
-                 'exon' => 1,
-                 'utr' => 1
-               },
-  'label' => '3 prime UTR variant',
-  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_3_prime_utr',
-  'rank' => '19',
-  'tier' => '3',
-  'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
-}
-),
-'synonymous_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-  'NCBI_term' => 'cds-synon',
-  'SO_accession' => 'SO:0001819',
-  'SO_term' => 'synonymous_variant',
-  'description' => 'A sequence variant where there is no resulting change to the encoded amino acid',
-  'display_term' => 'SYNONYMOUS_CODING',
-  'feature_SO_term' => 'mRNA',
-  'feature_class' => 'Bio::EnsEMBL::Transcript',
-  'impact' => 'LOW',
-  'include' => {
-                 'coding' => 1
-               },
-  'label' => 'synonymous variant',
-  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::synonymous_variant',
-  'rank' => '15',
-  'tier' => '3',
-  'variant_feature_class' => 'Bio::EnsEMBL::Variation::VariationFeature'
-}
-),
-'missense_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-  'NCBI_term' => 'missense',
-  'SO_accession' => 'SO:0001583',
-  'SO_term' => 'missense_variant',
-  'description' => 'A sequence variant, that changes one or more bases, resulting in a different amino acid sequence but where the length is preserved',
-  'display_term' => 'NON_SYNONYMOUS_CODING',
-  'feature_SO_term' => 'mRNA',
-  'feature_class' => 'Bio::EnsEMBL::Transcript',
-  'impact' => 'MODERATE',
-  'include' => {
-                 'coding' => 1,
-                 'decrease_length' => 0,
-                 'increase_length' => 0
-               },
-  'label' => 'missense variant',
-  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::missense_variant',
-  'rank' => '12',
-  'tier' => '3',
-  'variant_feature_class' => 'Bio::EnsEMBL::Variation::VariationFeature'
-}
-),
-'inframe_insertion' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-  'SO_accession' => 'SO:0001821',
-  'SO_term' => 'inframe_insertion',
-  'description' => 'An inframe non synonymous variant that inserts bases into in the coding sequence',
-  'display_term' => 'NON_SYNONYMOUS_CODING',
-  'feature_SO_term' => 'mRNA',
-  'feature_class' => 'Bio::EnsEMBL::Transcript',
-  'impact' => 'MODERATE',
-  'include' => {
-                 'coding' => 1,
-                 'insertion' => 1
-               },
-  'label' => 'inframe insertion',
-  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::inframe_insertion',
-  'rank' => '10',
-  'tier' => '3',
-  'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
-}
-),
-'inframe_deletion' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-  'SO_accession' => 'SO:0001822',
-  'SO_term' => 'inframe_deletion',
-  'description' => 'An inframe non synonymous variant that deletes bases from the coding sequence',
-  'display_term' => 'NON_SYNONYMOUS_CODING',
-  'feature_SO_term' => 'mRNA',
-  'feature_class' => 'Bio::EnsEMBL::Transcript',
-  'impact' => 'MODERATE',
-  'include' => {
-                 'coding' => 1,
-                 'deletion' => 1
-               },
-  'label' => 'inframe deletion',
-  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::inframe_deletion',
-  'rank' => '11',
-  'tier' => '3',
-  'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
-}
-),
 'stop_gained' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
   'NCBI_term' => 'nonsense',
   'SO_accession' => 'SO:0001587',
@@ -953,78 +713,6 @@ our %OVERLAP_CONSEQUENCES = (
   'rank' => '4',
   'tier' => '3',
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::VariationFeature'
-}
-),
-'stop_lost' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-  'SO_accession' => 'SO:0001578',
-  'SO_term' => 'stop_lost',
-  'description' => 'A sequence variant where at least one base of the terminator codon (stop) is changed, resulting in an elongated transcript',
-  'display_term' => 'STOP_LOST',
-  'feature_SO_term' => 'mRNA',
-  'feature_class' => 'Bio::EnsEMBL::Transcript',
-  'impact' => 'HIGH',
-  'include' => {
-                 'coding' => 1
-               },
-  'label' => 'stop lost',
-  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::stop_lost',
-  'rank' => '6',
-  'tier' => '3',
-  'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
-}
-),
-'stop_retained_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-  'SO_accession' => 'SO:0001567',
-  'SO_term' => 'stop_retained_variant',
-  'description' => 'A sequence variant where at least one base in the terminator codon is changed, but the terminator remains',
-  'display_term' => 'SYNONYMOUS_CODING',
-  'feature_SO_term' => 'mRNA',
-  'feature_class' => 'Bio::EnsEMBL::Transcript',
-  'impact' => 'LOW',
-  'include' => {
-                 'coding' => 1
-               },
-  'label' => 'stop retained variant',
-  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::stop_retained',
-  'rank' => '15',
-  'tier' => '3',
-  'variant_feature_class' => 'Bio::EnsEMBL::Variation::VariationFeature'
-}
-),
-'start_lost' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-  'SO_accession' => 'SO:0002012',
-  'SO_term' => 'start_lost',
-  'description' => 'A codon variant that changes at least one base of the canonical start codon',
-  'display_term' => 'NON_SYNONYMOUS_CODING',
-  'feature_SO_term' => 'mRNA',
-  'feature_class' => 'Bio::EnsEMBL::Transcript',
-  'impact' => 'HIGH',
-  'include' => {
-                 'coding' => 1
-               },
-  'label' => 'start lost',
-  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::start_lost',
-  'rank' => '7',
-  'tier' => '3',
-  'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
-}
-),
-'start_retained_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-  'SO_accession' => 'SO:0002019',
-  'SO_term' => 'start_retained_variant',
-  'description' => 'A sequence variant where at least one base in the start codon is changed, but the start remains',
-  'display_term' => 'SYNONYMOUS_CODING',
-  'feature_SO_term' => 'mRNA',
-  'feature_class' => 'Bio::EnsEMBL::Transcript',
-  'impact' => 'LOW',
-  'include' => {
-                 'coding' => 1
-               },
-  'label' => 'start retained variant',
-  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::start_retained_variant',
-  'rank' => '15',
-  'tier' => '3',
-  'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
 }
 ),
 'frameshift_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
@@ -1047,165 +735,39 @@ our %OVERLAP_CONSEQUENCES = (
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
 }
 ),
-'incomplete_terminal_codon_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-  'SO_accession' => 'SO:0001626',
-  'SO_term' => 'incomplete_terminal_codon_variant',
-  'description' => 'A sequence variant where at least one base of the final codon of an incompletely annotated transcript is changed',
-  'display_term' => 'PARTIAL_CODON',
-  'feature_SO_term' => 'mRNA',
-  'feature_class' => 'Bio::EnsEMBL::Transcript',
-  'impact' => 'LOW',
-  'include' => {
-                 'coding' => 1
-               },
-  'label' => 'incomplete terminal codon variant',
-  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::partial_codon',
-  'rank' => '14',
-  'tier' => '3',
-  'variant_feature_class' => 'Bio::EnsEMBL::Variation::VariationFeature'
-}
-),
-'NMD_transcript_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-  'SO_accession' => 'SO:0001621',
-  'SO_term' => 'NMD_transcript_variant',
-  'description' => 'A variant in a transcript that is the target of NMD',
-  'display_term' => 'NMD_TRANSCRIPT',
-  'feature_SO_term' => 'mRNA',
-  'feature_class' => 'Bio::EnsEMBL::Transcript',
-  'impact' => 'MODIFIER',
-  'include' => {
-                 'nonsense_mediated_decay' => 1,
-                 'within_feature' => 1
-               },
-  'label' => 'NMD transcript variant',
-  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_nmd_transcript',
-  'rank' => '22',
-  'tier' => '3',
-  'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
-}
-),
-'non_coding_transcript_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-  'SO_accession' => 'SO:0001619',
-  'SO_term' => 'non_coding_transcript_variant',
-  'description' => 'A transcript variant of a non coding RNA gene',
-  'display_term' => 'WITHIN_NON_CODING_GENE',
-  'feature_SO_term' => 'ncRNA',
-  'feature_class' => 'Bio::EnsEMBL::Transcript',
-  'impact' => 'MODIFIER',
-  'include' => {
-                 'protein_coding' => 0,
-                 'within_feature' => 1
-               },
-  'label' => 'non coding transcript variant',
-  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_non_coding_gene',
-  'rank' => '23',
-  'tier' => '3',
-  'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
-}
-),
-'non_coding_transcript_exon_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-  'SO_accession' => 'SO:0001792',
-  'SO_term' => 'non_coding_transcript_exon_variant',
-  'description' => 'A sequence variant that changes non-coding exon sequence in a non-coding transcript',
-  'display_term' => 'WITHIN_NON_CODING_GENE',
-  'feature_SO_term' => 'ncRNA',
-  'feature_class' => 'Bio::EnsEMBL::Transcript',
-  'impact' => 'MODIFIER',
-  'include' => {
-                 'exon' => 1,
-                 'protein_coding' => 0,
-                 'within_feature' => 1
-               },
-  'label' => 'non coding transcript exon variant',
-  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::non_coding_exon_variant',
-  'rank' => '20',
-  'tier' => '3',
-  'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
-}
-),
-'mature_miRNA_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-  'SO_accession' => 'SO:0001620',
-  'SO_term' => 'mature_miRNA_variant',
-  'description' => 'A transcript variant located with the sequence of the mature miRNA',
-  'display_term' => 'WITHIN_MATURE_miRNA',
-  'feature_SO_term' => 'miRNA',
-  'feature_class' => 'Bio::EnsEMBL::Transcript',
-  'impact' => 'MODIFIER',
-  'include' => {
-                 'nonsense_mediated_decay' => 0,
-                 'protein_coding' => 0,
-                 'within_feature' => 1
-               },
-  'label' => 'mature miRNA variant',
-  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_mature_miRNA',
-  'rank' => '17',
-  'tier' => '2',
-  'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
-}
-),
-'coding_sequence_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-  'SO_accession' => 'SO:0001580',
-  'SO_term' => 'coding_sequence_variant',
-  'description' => 'A sequence variant that changes the coding sequence',
-  'display_term' => 'CODING_UNKNOWN',
-  'feature_SO_term' => 'mRNA',
-  'feature_class' => 'Bio::EnsEMBL::Transcript',
-  'impact' => 'MODIFIER',
-  'include' => {
-                 'coding' => 1
-               },
-  'label' => 'coding sequence variant',
-  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::coding_unknown',
-  'rank' => '16',
-  'tier' => '3',
-  'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
-}
-),
-'regulatory_region_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-  'SO_accession' => 'SO:0001566',
-  'SO_term' => 'regulatory_region_variant',
-  'description' => 'A sequence variant located within a regulatory region',
-  'display_term' => 'REGULATORY_REGION',
-  'feature_SO_term' => 'regulatory_region',
-  'feature_class' => 'Bio::EnsEMBL::Funcgen::RegulatoryFeature',
-  'impact' => 'MODIFIER',
-  'label' => 'regulatory region variant',
-  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_regulatory_feature',
-  'rank' => '36',
-  'tier' => '2',
-  'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
-}
-),
-'TF_binding_site_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-  'SO_accession' => 'SO:0001782',
-  'SO_term' => 'TF_binding_site_variant',
-  'description' => 'A sequence variant located within a transcription factor binding site',
-  'display_term' => 'REGULATORY_REGION',
-  'feature_SO_term' => 'TF_binding_site',
-  'feature_class' => 'Bio::EnsEMBL::Funcgen::MotifFeature',
-  'impact' => 'MODIFIER',
-  'label' => 'TF binding site',
-  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_motif_feature',
-  'rank' => '30',
-  'tier' => '2',
-  'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
-}
-),
-'transcript_ablation' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-  'SO_accession' => 'SO:0001893',
-  'SO_term' => 'transcript_ablation',
-  'description' => 'A feature ablation whereby the deleted region includes a transcript feature',
+'stop_lost' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'SO_accession' => 'SO:0001578',
+  'SO_term' => 'stop_lost',
+  'description' => 'A sequence variant where at least one base of the terminator codon (stop) is changed, resulting in an elongated transcript',
+  'display_term' => 'STOP_LOST',
   'feature_SO_term' => 'mRNA',
   'feature_class' => 'Bio::EnsEMBL::Transcript',
   'impact' => 'HIGH',
   'include' => {
-                 'complete_overlap' => 1,
-                 'deletion' => 1
+                 'coding' => 1
                },
-  'label' => 'transcript ablation',
-  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::feature_ablation',
-  'rank' => '1',
-  'tier' => '1',
+  'label' => 'stop lost',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::stop_lost',
+  'rank' => '6',
+  'tier' => '3',
+  'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
+}
+),
+'start_lost' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'SO_accession' => 'SO:0002012',
+  'SO_term' => 'start_lost',
+  'description' => 'A codon variant that changes at least one base of the canonical start codon',
+  'display_term' => 'NON_SYNONYMOUS_CODING',
+  'feature_SO_term' => 'mRNA',
+  'feature_class' => 'Bio::EnsEMBL::Transcript',
+  'impact' => 'HIGH',
+  'include' => {
+                 'coding' => 1
+               },
+  'label' => 'start lost',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::start_lost',
+  'rank' => '7',
+  'tier' => '3',
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
 }
 ),
@@ -1224,78 +786,6 @@ our %OVERLAP_CONSEQUENCES = (
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::feature_amplification',
   'rank' => '8',
   'tier' => '1',
-  'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
-}
-),
-'TFBS_ablation' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-  'SO_accession' => 'SO:0001895',
-  'SO_term' => 'TFBS_ablation',
-  'description' => 'A feature ablation whereby the deleted region includes a transcription factor binding site',
-  'feature_SO_term' => 'TF_binding_site',
-  'feature_class' => 'Bio::EnsEMBL::Funcgen::MotifFeature',
-  'impact' => 'MODERATE',
-  'include' => {
-                 'complete_overlap' => 1,
-                 'deletion' => 1
-               },
-  'label' => 'TFBS ablation',
-  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::feature_ablation',
-  'rank' => '26',
-  'tier' => '2',
-  'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
-}
-),
-'TFBS_amplification' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-  'SO_accession' => 'SO:0001892',
-  'SO_term' => 'TFBS_amplification',
-  'description' => 'A feature amplification of a region containing a transcription factor binding site',
-  'feature_SO_term' => 'TF_binding_site',
-  'feature_class' => 'Bio::EnsEMBL::Funcgen::MotifFeature',
-  'impact' => 'MODIFIER',
-  'include' => {
-                 'complete_overlap' => 1,
-                 'increase_length' => 1
-               },
-  'label' => 'TFBS amplification',
-  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::feature_amplification',
-  'rank' => '28',
-  'tier' => '2',
-  'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
-}
-),
-'regulatory_region_ablation' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-  'SO_accession' => 'SO:0001894',
-  'SO_term' => 'regulatory_region_ablation',
-  'description' => 'A feature ablation whereby the deleted region includes a regulatory region',
-  'feature_SO_term' => 'TF_binding_site',
-  'feature_class' => 'Bio::EnsEMBL::Funcgen::RegulatoryFeature',
-  'impact' => 'MODIFIER',
-  'include' => {
-                 'complete_overlap' => 1,
-                 'deletion' => 1
-               },
-  'label' => 'regulatory region ablation',
-  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::feature_ablation',
-  'rank' => '31',
-  'tier' => '2',
-  'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
-}
-),
-'regulatory_region_amplification' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
-  'SO_accession' => 'SO:0001891',
-  'SO_term' => 'regulatory_region_amplification',
-  'description' => 'A feature amplification of a region containing a regulatory region',
-  'feature_SO_term' => 'TF_binding_site',
-  'feature_class' => 'Bio::EnsEMBL::Funcgen::RegulatoryFeature',
-  'impact' => 'MODIFIER',
-  'include' => {
-                 'complete_overlap' => 1,
-                 'increase_length' => 1
-               },
-  'label' => 'regulatory region amplification',
-  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::feature_amplification',
-  'rank' => '33',
-  'tier' => '2',
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
 }
 ),
@@ -1330,9 +820,68 @@ our %OVERLAP_CONSEQUENCES = (
                },
   'label' => 'feature truncation',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::feature_truncation',
-  'rank' => '9',
+  'rank' => '10',
   'tier' => '3',
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
+}
+),
+'inframe_insertion' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'SO_accession' => 'SO:0001821',
+  'SO_term' => 'inframe_insertion',
+  'description' => 'An inframe non synonymous variant that inserts bases into in the coding sequence',
+  'display_term' => 'NON_SYNONYMOUS_CODING',
+  'feature_SO_term' => 'mRNA',
+  'feature_class' => 'Bio::EnsEMBL::Transcript',
+  'impact' => 'MODERATE',
+  'include' => {
+                 'coding' => 1,
+                 'insertion' => 1
+               },
+  'label' => 'inframe insertion',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::inframe_insertion',
+  'rank' => '11',
+  'tier' => '3',
+  'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
+}
+),
+'inframe_deletion' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'SO_accession' => 'SO:0001822',
+  'SO_term' => 'inframe_deletion',
+  'description' => 'An inframe non synonymous variant that deletes bases from the coding sequence',
+  'display_term' => 'NON_SYNONYMOUS_CODING',
+  'feature_SO_term' => 'mRNA',
+  'feature_class' => 'Bio::EnsEMBL::Transcript',
+  'impact' => 'MODERATE',
+  'include' => {
+                 'coding' => 1,
+                 'deletion' => 1
+               },
+  'label' => 'inframe deletion',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::inframe_deletion',
+  'rank' => '12',
+  'tier' => '3',
+  'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
+}
+),
+'missense_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'NCBI_term' => 'missense',
+  'SO_accession' => 'SO:0001583',
+  'SO_term' => 'missense_variant',
+  'description' => 'A sequence variant, that changes one or more bases, resulting in a different amino acid sequence but where the length is preserved',
+  'display_term' => 'NON_SYNONYMOUS_CODING',
+  'feature_SO_term' => 'mRNA',
+  'feature_class' => 'Bio::EnsEMBL::Transcript',
+  'impact' => 'MODERATE',
+  'include' => {
+                 'coding' => 1,
+                 'decrease_length' => 0,
+                 'increase_length' => 0
+               },
+  'label' => 'missense variant',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::missense_variant',
+  'rank' => '13',
+  'tier' => '3',
+  'variant_feature_class' => 'Bio::EnsEMBL::Variation::VariationFeature'
 }
 ),
 'protein_altering_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
@@ -1347,9 +896,482 @@ our %OVERLAP_CONSEQUENCES = (
                },
   'label' => 'protein altering variant',
   'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::protein_altering_variant',
-  'rank' => '12',
+  'rank' => '14',
   'tier' => '3',
   'variant_feature_class' => 'Bio::EnsEMBL::Variation::VariationFeature'
+}
+),
+'splice_donor_5th_base_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'SO_accession' => 'SO:0001787',
+  'SO_term' => 'splice_donor_5th_base_variant',
+  'description' => 'A sequence variant that causes a change at the 5th base pair after the start of the intron in the orientation of the transcript',
+  'display_term' => 'SPLICE_SITE',
+  'feature_SO_term' => 'primary_transcript',
+  'feature_class' => 'Bio::EnsEMBL::Transcript',
+  'impact' => 'LOW',
+  'include' => {
+                 'intron_boundary' => 1
+               },
+  'label' => 'splice donor 5th base variant',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::splice_donor_5th_base_variant',
+  'rank' => '15',
+  'tier' => '3',
+  'variant_feature_class' => 'Bio::EnsEMBL::Variation::VariationFeature'
+}
+),
+'splice_region_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'SO_accession' => 'SO:0001630',
+  'SO_term' => 'splice_region_variant',
+  'description' => 'A sequence variant in which a change has occurred within the region of the splice site, either within 1-3 bases of the exon or 3-8 bases of the intron',
+  'display_term' => 'SPLICE_SITE',
+  'feature_SO_term' => 'primary_transcript',
+  'feature_class' => 'Bio::EnsEMBL::Transcript',
+  'impact' => 'LOW',
+  'include' => {
+                 'intron_boundary' => 1
+               },
+  'label' => 'splice region variant',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::splice_region',
+  'rank' => '16',
+  'tier' => '3',
+  'variant_feature_class' => 'Bio::EnsEMBL::Variation::VariationFeature'
+}
+),
+'splice_donor_region_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'SO_accession' => 'SO:0002170',
+  'SO_term' => 'splice_donor_region_variant',
+  'description' => 'A sequence variant that falls in the region between the 3rd and 6th base after splice junction (5\' end of intron).',
+  'display_term' => 'SPLICE_SITE',
+  'feature_SO_term' => 'primary_transcript',
+  'feature_class' => 'Bio::EnsEMBL::Transcript',
+  'impact' => 'LOW',
+  'include' => {
+                 'intron_boundary' => 1
+               },
+  'label' => 'splice donor region variant',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::splice_donor_region_variant',
+  'rank' => '17',
+  'tier' => '3',
+  'variant_feature_class' => 'Bio::EnsEMBL::Variation::VariationFeature'
+}
+),
+'splice_polypyrimidine_tract_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'SO_accession' => 'SO:0002169',
+  'SO_term' => 'splice_polypyrimidine_tract_variant',
+  'description' => 'A sequence variant that falls in the polypyrimidine tract at 3\' end of intron between 17 and 3 bases from the end (acceptor -3 to acceptor -17)',
+  'display_term' => 'SPLICE_SITE',
+  'feature_SO_term' => 'primary_transcript',
+  'feature_class' => 'Bio::EnsEMBL::Transcript',
+  'impact' => 'LOW',
+  'include' => {
+                 'exon' => 0,
+                 'intron' => 1
+               },
+  'label' => 'splice polypyrimidine tract variant',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::splice_polypyrimidine_tract_variant',
+  'rank' => '18',
+  'tier' => '3',
+  'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
+}
+),
+'incomplete_terminal_codon_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'SO_accession' => 'SO:0001626',
+  'SO_term' => 'incomplete_terminal_codon_variant',
+  'description' => 'A sequence variant where at least one base of the final codon of an incompletely annotated transcript is changed',
+  'display_term' => 'PARTIAL_CODON',
+  'feature_SO_term' => 'mRNA',
+  'feature_class' => 'Bio::EnsEMBL::Transcript',
+  'impact' => 'LOW',
+  'include' => {
+                 'coding' => 1
+               },
+  'label' => 'incomplete terminal codon variant',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::partial_codon',
+  'rank' => '19',
+  'tier' => '3',
+  'variant_feature_class' => 'Bio::EnsEMBL::Variation::VariationFeature'
+}
+),
+'start_retained_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'SO_accession' => 'SO:0002019',
+  'SO_term' => 'start_retained_variant',
+  'description' => 'A sequence variant where at least one base in the start codon is changed, but the start remains',
+  'display_term' => 'SYNONYMOUS_CODING',
+  'feature_SO_term' => 'mRNA',
+  'feature_class' => 'Bio::EnsEMBL::Transcript',
+  'impact' => 'LOW',
+  'include' => {
+                 'coding' => 1
+               },
+  'label' => 'start retained variant',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::start_retained_variant',
+  'rank' => '20',
+  'tier' => '3',
+  'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
+}
+),
+'stop_retained_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'SO_accession' => 'SO:0001567',
+  'SO_term' => 'stop_retained_variant',
+  'description' => 'A sequence variant where at least one base in the terminator codon is changed, but the terminator remains',
+  'display_term' => 'SYNONYMOUS_CODING',
+  'feature_SO_term' => 'mRNA',
+  'feature_class' => 'Bio::EnsEMBL::Transcript',
+  'impact' => 'LOW',
+  'include' => {
+                 'coding' => 1
+               },
+  'label' => 'stop retained variant',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::stop_retained',
+  'rank' => '21',
+  'tier' => '3',
+  'variant_feature_class' => 'Bio::EnsEMBL::Variation::VariationFeature'
+}
+),
+'synonymous_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'NCBI_term' => 'cds-synon',
+  'SO_accession' => 'SO:0001819',
+  'SO_term' => 'synonymous_variant',
+  'description' => 'A sequence variant where there is no resulting change to the encoded amino acid',
+  'display_term' => 'SYNONYMOUS_CODING',
+  'feature_SO_term' => 'mRNA',
+  'feature_class' => 'Bio::EnsEMBL::Transcript',
+  'impact' => 'LOW',
+  'include' => {
+                 'coding' => 1
+               },
+  'label' => 'synonymous variant',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::synonymous_variant',
+  'rank' => '22',
+  'tier' => '3',
+  'variant_feature_class' => 'Bio::EnsEMBL::Variation::VariationFeature'
+}
+),
+'coding_sequence_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'SO_accession' => 'SO:0001580',
+  'SO_term' => 'coding_sequence_variant',
+  'description' => 'A sequence variant that changes the coding sequence',
+  'display_term' => 'CODING_UNKNOWN',
+  'feature_SO_term' => 'mRNA',
+  'feature_class' => 'Bio::EnsEMBL::Transcript',
+  'impact' => 'MODIFIER',
+  'include' => {
+                 'coding' => 1
+               },
+  'label' => 'coding sequence variant',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::coding_unknown',
+  'rank' => '23',
+  'tier' => '3',
+  'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
+}
+),
+'mature_miRNA_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'SO_accession' => 'SO:0001620',
+  'SO_term' => 'mature_miRNA_variant',
+  'description' => 'A transcript variant located with the sequence of the mature miRNA',
+  'display_term' => 'WITHIN_MATURE_miRNA',
+  'feature_SO_term' => 'miRNA',
+  'feature_class' => 'Bio::EnsEMBL::Transcript',
+  'impact' => 'MODIFIER',
+  'include' => {
+                 'nonsense_mediated_decay' => 0,
+                 'protein_coding' => 0,
+                 'within_feature' => 1
+               },
+  'label' => 'mature miRNA variant',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_mature_miRNA',
+  'rank' => '24',
+  'tier' => '2',
+  'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
+}
+),
+'5_prime_UTR_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'NCBI_term' => 'untranslated_5',
+  'SO_accession' => 'SO:0001623',
+  'SO_term' => '5_prime_UTR_variant',
+  'description' => 'A UTR variant of the 5\' UTR',
+  'display_term' => '5PRIME_UTR',
+  'feature_SO_term' => 'mRNA',
+  'feature_class' => 'Bio::EnsEMBL::Transcript',
+  'impact' => 'MODIFIER',
+  'include' => {
+                 'exon' => 1,
+                 'utr' => 1
+               },
+  'label' => '5 prime UTR variant',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_5_prime_utr',
+  'rank' => '25',
+  'tier' => '3',
+  'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
+}
+),
+'3_prime_UTR_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'NCBI_term' => 'untranslated_3',
+  'SO_accession' => 'SO:0001624',
+  'SO_term' => '3_prime_UTR_variant',
+  'description' => 'A UTR variant of the 3\' UTR',
+  'display_term' => '3PRIME_UTR',
+  'feature_SO_term' => 'mRNA',
+  'feature_class' => 'Bio::EnsEMBL::Transcript',
+  'impact' => 'MODIFIER',
+  'include' => {
+                 'exon' => 1,
+                 'utr' => 1
+               },
+  'label' => '3 prime UTR variant',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_3_prime_utr',
+  'rank' => '26',
+  'tier' => '3',
+  'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
+}
+),
+'non_coding_transcript_exon_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'SO_accession' => 'SO:0001792',
+  'SO_term' => 'non_coding_transcript_exon_variant',
+  'description' => 'A sequence variant that changes non-coding exon sequence in a non-coding transcript',
+  'display_term' => 'WITHIN_NON_CODING_GENE',
+  'feature_SO_term' => 'ncRNA',
+  'feature_class' => 'Bio::EnsEMBL::Transcript',
+  'impact' => 'MODIFIER',
+  'include' => {
+                 'exon' => 1,
+                 'protein_coding' => 0,
+                 'within_feature' => 1
+               },
+  'label' => 'non coding transcript exon variant',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::non_coding_exon_variant',
+  'rank' => '27',
+  'tier' => '3',
+  'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
+}
+),
+'intron_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'NCBI_term' => 'intron',
+  'SO_accession' => 'SO:0001627',
+  'SO_term' => 'intron_variant',
+  'description' => 'A transcript variant occurring within an intron',
+  'display_term' => 'INTRONIC',
+  'feature_SO_term' => 'primary_transcript',
+  'feature_class' => 'Bio::EnsEMBL::Transcript',
+  'impact' => 'MODIFIER',
+  'include' => {
+                 'intron' => 1
+               },
+  'label' => 'intron variant',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_intron',
+  'rank' => '28',
+  'tier' => '3',
+  'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
+}
+),
+'NMD_transcript_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'SO_accession' => 'SO:0001621',
+  'SO_term' => 'NMD_transcript_variant',
+  'description' => 'A variant in a transcript that is the target of NMD',
+  'display_term' => 'NMD_TRANSCRIPT',
+  'feature_SO_term' => 'mRNA',
+  'feature_class' => 'Bio::EnsEMBL::Transcript',
+  'impact' => 'MODIFIER',
+  'include' => {
+                 'nonsense_mediated_decay' => 1,
+                 'within_feature' => 1
+               },
+  'label' => 'NMD transcript variant',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_nmd_transcript',
+  'rank' => '29',
+  'tier' => '3',
+  'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
+}
+),
+'non_coding_transcript_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'SO_accession' => 'SO:0001619',
+  'SO_term' => 'non_coding_transcript_variant',
+  'description' => 'A transcript variant of a non coding RNA gene',
+  'display_term' => 'WITHIN_NON_CODING_GENE',
+  'feature_SO_term' => 'ncRNA',
+  'feature_class' => 'Bio::EnsEMBL::Transcript',
+  'impact' => 'MODIFIER',
+  'include' => {
+                 'protein_coding' => 0,
+                 'within_feature' => 1
+               },
+  'label' => 'non coding transcript variant',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_non_coding_gene',
+  'rank' => '30',
+  'tier' => '3',
+  'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
+}
+),
+'coding_transcript_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'SO_accession' => 'SO:0001968',
+  'SO_term' => 'coding_transcript_variant',
+  'description' => 'A transcript variant of a protein coding gene',
+  'display_term' => 'CODING_TRANSCRIPT_VARIANT',
+  'feature_SO_term' => 'mRNA',
+  'feature_class' => 'Bio::EnsEMBL::Transcript',
+  'impact' => 'MODIFIER',
+  'include' => {
+                 'protein_coding' => 1,
+                 'within_feature' => 1
+               },
+  'label' => 'coding transcript variant',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::coding_transcript_variant',
+  'rank' => '31',
+  'tier' => '3',
+  'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
+}
+),
+'upstream_gene_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'SO_accession' => 'SO:0001631',
+  'SO_term' => 'upstream_gene_variant',
+  'description' => 'A sequence variant located 5\' of a gene',
+  'display_term' => 'UPSTREAM',
+  'feature_SO_term' => 'transcript',
+  'feature_class' => 'Bio::EnsEMBL::Transcript',
+  'impact' => 'MODIFIER',
+  'include' => {
+                 'within_feature' => 0
+               },
+  'label' => 'upstream gene variant',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::upstream',
+  'rank' => '32',
+  'tier' => '3',
+  'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
+}
+),
+'downstream_gene_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'SO_accession' => 'SO:0001632',
+  'SO_term' => 'downstream_gene_variant',
+  'description' => 'A sequence variant located 3\' of a gene',
+  'display_term' => 'DOWNSTREAM',
+  'feature_SO_term' => 'transcript',
+  'feature_class' => 'Bio::EnsEMBL::Transcript',
+  'impact' => 'MODIFIER',
+  'include' => {
+                 'within_feature' => 0
+               },
+  'label' => 'downstream gene variant',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::downstream',
+  'rank' => '33',
+  'tier' => '3',
+  'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
+}
+),
+'TFBS_ablation' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'SO_accession' => 'SO:0001895',
+  'SO_term' => 'TFBS_ablation',
+  'description' => 'A feature ablation whereby the deleted region includes a transcription factor binding site',
+  'feature_SO_term' => 'TF_binding_site',
+  'feature_class' => 'Bio::EnsEMBL::Funcgen::MotifFeature',
+  'impact' => 'MODERATE',
+  'include' => {
+                 'complete_overlap' => 1,
+                 'deletion' => 1
+               },
+  'label' => 'TFBS ablation',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::feature_ablation',
+  'rank' => '34',
+  'tier' => '2',
+  'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
+}
+),
+'TFBS_amplification' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'SO_accession' => 'SO:0001892',
+  'SO_term' => 'TFBS_amplification',
+  'description' => 'A feature amplification of a region containing a transcription factor binding site',
+  'feature_SO_term' => 'TF_binding_site',
+  'feature_class' => 'Bio::EnsEMBL::Funcgen::MotifFeature',
+  'impact' => 'MODIFIER',
+  'include' => {
+                 'complete_overlap' => 1,
+                 'increase_length' => 1
+               },
+  'label' => 'TFBS amplification',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::feature_amplification',
+  'rank' => '35',
+  'tier' => '2',
+  'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
+}
+),
+'TF_binding_site_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'SO_accession' => 'SO:0001782',
+  'SO_term' => 'TF_binding_site_variant',
+  'description' => 'A sequence variant located within a transcription factor binding site',
+  'display_term' => 'REGULATORY_REGION',
+  'feature_SO_term' => 'TF_binding_site',
+  'feature_class' => 'Bio::EnsEMBL::Funcgen::MotifFeature',
+  'impact' => 'MODIFIER',
+  'label' => 'TF binding site',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_motif_feature',
+  'rank' => '36',
+  'tier' => '2',
+  'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
+}
+),
+'regulatory_region_ablation' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'SO_accession' => 'SO:0001894',
+  'SO_term' => 'regulatory_region_ablation',
+  'description' => 'A feature ablation whereby the deleted region includes a regulatory region',
+  'feature_SO_term' => 'TF_binding_site',
+  'feature_class' => 'Bio::EnsEMBL::Funcgen::RegulatoryFeature',
+  'impact' => 'MODIFIER',
+  'include' => {
+                 'complete_overlap' => 1,
+                 'deletion' => 1
+               },
+  'label' => 'regulatory region ablation',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::feature_ablation',
+  'rank' => '37',
+  'tier' => '2',
+  'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
+}
+),
+'regulatory_region_amplification' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'SO_accession' => 'SO:0001891',
+  'SO_term' => 'regulatory_region_amplification',
+  'description' => 'A feature amplification of a region containing a regulatory region',
+  'feature_SO_term' => 'TF_binding_site',
+  'feature_class' => 'Bio::EnsEMBL::Funcgen::RegulatoryFeature',
+  'impact' => 'MODIFIER',
+  'include' => {
+                 'complete_overlap' => 1,
+                 'increase_length' => 1
+               },
+  'label' => 'regulatory region amplification',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::feature_amplification',
+  'rank' => '38',
+  'tier' => '2',
+  'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
+}
+),
+'regulatory_region_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'SO_accession' => 'SO:0001566',
+  'SO_term' => 'regulatory_region_variant',
+  'description' => 'A sequence variant located within a regulatory region',
+  'display_term' => 'REGULATORY_REGION',
+  'feature_SO_term' => 'regulatory_region',
+  'feature_class' => 'Bio::EnsEMBL::Funcgen::RegulatoryFeature',
+  'impact' => 'MODIFIER',
+  'label' => 'regulatory region variant',
+  'predicate' => 'Bio::EnsEMBL::Variation::Utils::VariationEffect::within_regulatory_feature',
+  'rank' => '39',
+  'tier' => '2',
+  'variant_feature_class' => 'Bio::EnsEMBL::Variation::BaseVariationFeature'
+}
+),
+'intergenic_variant' => $DEFAULT_OVERLAP_CONSEQUENCE,
+'sequence_variant' => Bio::EnsEMBL::Variation::OverlapConsequence->new_fast({
+  'SO_accession' => 'SO:0001060',
+  'SO_term' => 'sequence_variant',
+  'description' => 'A sequence_variant is a non exact copy of a sequence_feature or genome exhibiting one or more sequence_alteration',
+  'display_term' => 'SEQUENCE_VARIANT',
+  'impact' => 'MODIFIER',
+  'include' => {
+                 'within_feature' => 0
+               },
+  'label' => 'sequence variant',
+  'rank' => '41',
+  'tier' => '4'
 }
 ),
 );

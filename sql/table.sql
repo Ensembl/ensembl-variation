@@ -1413,7 +1413,7 @@ CREATE TABLE IF NOT EXISTS variation_set_structural_variation (
 */
 
 CREATE TABLE transcript_variation (
-    transcript_variation_id             INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+    transcript_variation_id             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     variation_feature_id                INT(11) UNSIGNED NOT NULL,
     feature_stable_id                   VARCHAR(128) DEFAULT NULL,
     allele_string                       TEXT,
@@ -1450,9 +1450,9 @@ CREATE TABLE transcript_variation (
                                             'feature_truncation',
                                             'protein_altering_variant',
                                             'start_retained_variant',
-										'splice_donor_5th_base_variant',
-										'splice_donor_region_variant',
-										'splice_polypyrimidine_tract_variant'
+                                            'splice_donor_5th_base_variant',
+                                            'splice_donor_region_variant',
+                                            'splice_polypyrimidine_tract_variant'
                                         ),
     cds_start                           INT(11) UNSIGNED,
     cds_end                             INT(11) UNSIGNED,
@@ -1835,13 +1835,11 @@ CREATE TABLE meta (
 
 
 # Add schema type and schema version to the meta table.
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type', 'variation'), (NULL, 'schema_version', '110');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type', 'variation'), (NULL, 'schema_version', '112');
 
 
 # Patch IDs for new release
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_109_110_a.sql|schema version');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_109_110_b.sql|Add DDG2P data_source_attrib to variation_citation');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_109_110_c.sql|Add new clinical_significance values to variation, variation_feature and structural_variation');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_111_112_a.sql|schema version');
 
 /**
 @header  Failed tables

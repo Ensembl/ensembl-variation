@@ -60,7 +60,7 @@ sub default_options {
         split_slice                     => 1,
         split_slice_length              => 5e6,
         only_update_vf                  => 0,
-        update_vf                       => 1,
+
         # if set to 1 this option tells the transcript_effect analysis to disambiguate
         # ambiguity codes in single nucleotide alleles, so e.g. an allele string like
         # 'T/M' will be treated as if it were 'T/A/C' (this was a request from ensembl
@@ -104,7 +104,6 @@ sub pipeline_wide_parameters {
         disambiguate_single_nucleotide_alleles => $self->o('disambiguate_single_nucleotide_alleles'),
         ensembl_registry                       => $self->o('registry_file'),
         only_update_vf                         => $self->o('only_update_vf'),
-        update_vf                              => $self->o('update_vf'),
         species                                => $self->o('species'),
         debug                                  => $self->o('debug'),
         split_slice                            => $self->o('split_slice'),

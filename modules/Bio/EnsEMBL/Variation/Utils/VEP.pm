@@ -113,6 +113,8 @@ use vars qw(@ISA @EXPORT_OK);
 @ISA = qw(Exporter);
 
 @EXPORT_OK = qw(
+    &_valid_region_regex
+    &check_format
     &detect_format
     &parse_line
     &vf_to_consequences
@@ -382,57 +384,76 @@ sub parse_line {
     return $vfs;
 }
 
+sub _valid_region_regex {
+  return qr/^([^:]+):(\d+)-(\d+)(:[-\+]?1)?[\/:]([a-z]{3,}|[ACGTN-]+)$/i;
+}
+
+# sub-routine to check format of string
+sub check_format {
+    my @line = @_;
+    my $format;
+
+    # any changes here must be copied to the JavaScript file to run instant VEP:
+    # public-plugins/tools/htdocs/components/20_VEPForm.js
+
+    # region: chr21:10-10:1/A
+    if ( scalar @line == 1 && $line[0] =~ &_valid_region_regex() ) {
+        $format = 'region';
+    }
+
+    # SPDI: NC_000016.10:68684738:G:A
+    elsif ( scalar @line == 1 && $line[0] =~ /^(.*?\:){2}([^\:]+|)$/i ) {
+        $format = 'spdi';
+    }
+
+    # CAID: CA9985736
+    elsif ( scalar @line == 1 && $line[0] =~ /^CA\d{1,}$/i ) {
+        $format = 'caid';
+    }
+
+    # HGVS: ENST00000285667.3:c.1047_1048insC
+    elsif (
+        scalar @line == 1 &&
+        $line[0] =~ /^([^\:]+)\:.*?([cgmrp]?)\.?([\*\-0-9]+.*)$/i
+    ) {
+        $format = 'hgvs';
+    }
+
+    # variant identifier: rs123456
+    elsif ( scalar @line == 1 ) {
+        $format = 'id';
+    }
+
+    # VCF: 20  14370  rs6054257  G  A  29  0  NS=58;DP=258;AF=0.786;DB;H2  GT:GQ:DP:HQ
+    elsif (
+        $line[0] =~ /(chr)?\w+/ &&
+        $line[1] =~ /^\d+$/ &&
+        $line[3] && $line[3] =~ /^[ACGTN\-\.]+$/i &&
+        $line[4]
+    ) {
+        $format = 'vcf';
+    }
+
+    # ensembl: 20  14370  14370  A/G  +
+    elsif (
+        $line[0] =~ /\w+/ &&
+        $line[1] =~ /^\d+$/ &&
+        $line[2] && $line[2] =~ /^\d+$/ &&
+        $line[3] && $line[3] =~ /([a-z]{2,})|([ACGTN-]+\/[ACGTN-]+)/i
+    ) {
+        $format = 'ensembl';
+    }
+    return $format;
+}
+
 # sub-routine to detect format of input
 sub detect_format {
     my $line = shift;
     my @data = split /\s+/, $line;
 
-    # SPDI: NC_000016.10:68684738:G:A
-    if (
-      scalar @data == 1 &&
-      $data[0] =~ /^(.*?\:){2}([^\:]+|)$/i
-    ) {
-      return 'spdi';
-    }
-
-    # HGVS: ENST00000285667.3:c.1047_1048insC
-    elsif (
-        scalar @data == 1 &&
-        $data[0] =~ /^([^\:]+)\:.*?([cgmrp]?)\.?([\*\-0-9]+.*)$/i
-    ) {
-        return 'hgvs';
-    }
-
-    # variant identifier: rs123456
-    elsif (
-        scalar @data == 1
-    ) {
-        return 'id';
-    }
-
-    # VCF: 20  14370  rs6054257  G  A  29  0  NS=58;DP=258;AF=0.786;DB;H2  GT:GQ:DP:HQ
-    elsif (
-        $data[0] =~ /(chr)?\w+/ &&
-        $data[1] =~ /^\d+$/ &&
-        $data[3] =~ /^[ACGTN\-\.]+$/i &&
-        $data[4] && $data[4] =~ /^([\.ACGTN\-\*]+\,?)+$|^(\<[\w]+\>)$/i
-    ) {
-        return 'vcf';
-    }
-
-    # ensembl: 20  14370  14370  A/G  +
-    elsif (
-        $data[0] =~ /\w+/ &&
-        $data[1] =~ /^\d+$/ &&
-        $data[2] =~ /^\d+$/ &&
-        $data[3] =~ /(ins|dup|del)|([ACGTN-]+\/[ACGTN-]+)/i
-    ) {
-        return 'ensembl';
-    }
-
-    else {
-        die("ERROR: Could not detect input file format\n");
-    }
+    my $format = &check_format(@data);
+    die "ERROR: Could not detect input file format\n" unless $format;
+    return $format;
 }
 
 # parse a line of Ensembl format input into a variation feature object
