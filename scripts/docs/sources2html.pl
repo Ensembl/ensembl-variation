@@ -141,7 +141,7 @@ my %data_type_example = (
                              'sql'       => qq{SELECT variation_name FROM structural_variation WHERE is_evidence=0 AND somatic=0 AND structural_variation_id NOT IN 
                                            (SELECT structural_variation_id FROM failed_structural_variation) AND source_id=? LIMIT 1},
                              'count_spe' => qq{SELECT source_id, COUNT(structural_variation_id) FROM structural_variation WHERE is_evidence=0 GROUP BY source_id},            
-                             'url'       => 'StructuralVariation/Explore?v='
+                             'url'       => 'StructuralVariation/Explore?sv='
                             },
   'phenotype_feature'    => {
                              'sql'       => qq{SELECT object_id, type, phenotype_id FROM phenotype_feature WHERE source_id=? AND is_significant=1 AND type!="SupportingStructuralVariation" LIMIT 1},
