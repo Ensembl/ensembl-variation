@@ -123,8 +123,14 @@ my %data_type_example = (
                              'sql'       => qq{SELECT name FROM variation WHERE somatic=0 AND variation_id NOT IN (SELECT variation_id FROM failed_variation) AND source_id=? LIMIT 1},
                              'sql_som'   => qq{SELECT name FROM variation WHERE variation_id NOT IN (SELECT variation_id FROM failed_variation) AND source_id=? LIMIT 1},
                              'count_spe' => qq{SELECT source_id, COUNT(variation_id) FROM variation GROUP BY source_id},
+                             'url'       => 'Variation/Explore?v=',
+                            },
+  'variation_vcf'        => {
                              'url'       => 'Variation/Explore?v='
-                             },
+                            },
+  'variation_feature_vcf'=> {
+                             'url'       => 'Variation/Explore?vf='
+                            },
   'variation_synonym'    => {
                              'sql'       => qq{SELECT v.name FROM variation v, variation_synonym s WHERE v.variation_id=s.variation_id AND 
                                            s.source_id= ? AND v.variation_id NOT IN (SELECT variation_id FROM failed_variation) LIMIT 1},
@@ -135,7 +141,7 @@ my %data_type_example = (
                              'sql'       => qq{SELECT variation_name FROM structural_variation WHERE is_evidence=0 AND somatic=0 AND structural_variation_id NOT IN 
                                            (SELECT structural_variation_id FROM failed_structural_variation) AND source_id=? LIMIT 1},
                              'count_spe' => qq{SELECT source_id, COUNT(structural_variation_id) FROM structural_variation WHERE is_evidence=0 GROUP BY source_id},            
-                             'url'       => 'StructuralVariation/Explore?sv='
+                             'url'       => 'StructuralVariation/Explore?v='
                             },
   'phenotype_feature'    => {
                              'sql'       => qq{SELECT object_id, type, phenotype_id FROM phenotype_feature WHERE source_id=? AND is_significant=1 AND type!="SupportingStructuralVariation" LIMIT 1},
@@ -143,7 +149,7 @@ my %data_type_example = (
                              'types'     => qq{SELECT source_id, GROUP_CONCAT(DISTINCT type ORDER BY type ASC SEPARATOR ', ')
                                                FROM phenotype_feature WHERE type!="SupportingStructuralVariation" GROUP BY source_id},
                              'Variation'           => 'Variation/Phenotype?v=',
-                             'StructuralVariation' => 'StructuralVariation/Phenotype?v=',
+                             'StructuralVariation' => 'StructuralVariation/Phenotype?sv=',
                              'Gene'                => 'Gene/Phenotype?g=',
                              'QTL'                 => 'Phenotype/Locations?ph='
                             },
@@ -533,25 +539,15 @@ sub source_table {
         $count = ($count_var && $count_var > 0) ? get_count($count_var) : '';
 
         # Set example url
-        # VCF file of eva study don't generally have rsIDs and above process takes a long time.
-        # Maybe we can generate exmaple url using region.
-        my $url = $data_type_example{'variation'}{'url'};
-
-        my $file = get_random_file($project);
-        my $file_full_path = $file;
-        if ($project->{type} eq "local"){
-          $file_full_path = $data_dir . $file_full_path;
-        }
-        my $example = `bcftools query -f "%ID\n" $file_full_path -e '%ID="."' | head -n 1`;
-        
-        $example_url = ($example && ($example =~ /^(rs)[0-9]+$/) ) ? "/$s_name/$url$example" : '';
-        $example_url = qq{<a href="$example_url" target="_blank" title="See a variantion example"><img src="$internal_link" alt="Link"/></a>} unless $example_url eq '';
+        my $file_full_path = get_random_file($project);
+        $file_full_path = $data_dir . $file_full_path if $project->{type} eq "local";
+        my $example = get_example('variation_vcf', $source_name, $s_name, $file_full_path);
         
         # Configure the part showed under Data Type(s) column
         my $data_type_string .= qq{\n$spaces<div class="$dt_class">};
         $data_type_string .= qq{\n$spaces  <div class="$type_class"><span class="_ht ht" title="Variant dynamically loaded from VCF file">$info</span></div>};
         $data_type_string .= qq{\n$spaces  <div class="$count_class">$count</div>};
-        $data_type_string .= qq{\n$spaces  <div class="$eg_class">$example_url</div>};
+        $data_type_string .= qq{\n$spaces  <div class="$eg_class">$example</div>};
         $data_type_string .= qq{\n$spaces  <div style="clear:both"></div>\n$spaces</div>};
 
         # Set a row for this vcf file
@@ -1262,33 +1258,50 @@ sub get_example {
   my $data_type  = shift;
   my $param      = shift;
   my $species    = shift;
-  my $database   = shift;
+  my $data       = shift;
   my $hostname   = shift;
   my $is_somatic = shift;
 
   return '' if (!$data_type_example{$data_type});
 
-  my $sql_query = ($is_somatic) ? 'sql_som' : 'sql';
-  my $sql = $data_type_example{$data_type}{$sql_query};
+  my $example;
   my $url = $data_type_example{$data_type}{'url'};
 
-  my $sth = get_connection_and_query($database, $hostname, $sql, [$param]);
+  my $sql_query = ($is_somatic) ? 'sql_som' : 'sql';
+  my $sql = $data_type_example{$data_type}{$sql_query};
+  if ($sql) {
+    # Features from database
+    my $database  = $data;
+    my $sth = get_connection_and_query($database, $hostname, $sql, [$param]);
+    if ($sth) {
+      my @result  = $sth->fetchrow_array;
+      $example = ($result[1] eq 'QTL') ? $result[2] : $result[0];
+      if ($result[1] && $data_type_example{$data_type}{$result[1]}) {
+        $url = $data_type_example{$data_type}{$result[1]};
+      }
+      else {
+        $url = $data_type_example{$data_type}{'url'};
+      }
+    }
+  } else {
+    # Features from VCF
+    my $file_full_path = $data;
+    my $source_name    = $param;
 
-  if ($sth) {
-    my @result  = $sth->fetchrow_array;
-    my $example = ($result[1] eq 'QTL') ? $result[2] : $result[0];
-    my $url;
-    if ($result[1] && $data_type_example{$data_type}{$result[1]}) {
-      $url = $data_type_example{$data_type}{$result[1]};
+    $example = `bcftools query -f "%ID\n" $file_full_path -e '%ID="."' | head -n 1`;
+    if ($example && $example !~ /^(rs)[0-9]+$/) {
+      # if not rsID, we will create a variation feature string instead
+      $example = `bcftools query -f "%CHROM:%POS:%REF-%ALT\n" $file_full_path | head -n 1`;
+      $example =~ s/\n/:$source_name/;
+      $example =~ s/-/_/;
+      $url = $data_type_example{'variation_feature_vcf'}{'url'};
     }
-    else {
-      $url = $data_type_example{$data_type}{'url'};
-    }
-    if ($example && $url) {
-      $data_type =~ s/_/ /g;
-      my $example_url = "/$species/$url$example";
-      return qq{<a href="$example_url" target="_blank" title="See a $data_type example"><img src="$internal_link" alt="Link"/></a>};
-    }
+  }
+
+  if ($example && $url) {
+    $data_type =~ s/_/ /g;
+    my $example_url = "/$species/$url$example";
+    return qq{<a href="$example_url" target="_blank" title="See a $data_type example"><img src="$internal_link" alt="Link"/></a>};
   }
   return '';
 }
