@@ -143,9 +143,9 @@ sub default_options {
         default_slurm_options      => '--partition=standard --time=1:30:00 --mem=2G',
         default_long_slurm_options => '--partition=standard --time=6:00:00 --mem=2G',
         medmem_slurm_options       => '--partition=standard --time=6:00:00 --mem=8G',
-        medmem_long_slurm_options  => '--partition=standard --time=45:00:00 --mem=8G',
+        medmem_long_slurm_options  => '--partition=standard --time=24:00:00 --mem=8G',
         highmem_slurm_options      => '--partition=standard --time=2:30:00 --mem=24G',
-        highmem_med_slurm_options  => '--partition=standard --time=40:00:00 --mem=24G',
+        highmem_med_slurm_options  => '--partition=standard --time=24:00:00 --mem=24G',
         highmem_long_slurm_options => '--partition=standard --time=120:00:00 --mem=24G',
 
         # Polyphen specific parameters
@@ -337,7 +337,7 @@ sub pipeline_analyses {
             -max_retry_count => 0,
             -input_ids      => [],
             -hive_capacity  => $self->o('pph_max_workers'),
-            -rc_name        => 'highmem_long',
+            -rc_name        => 'highmem_med',
             -flow_into      => {
                 2   => [ 'run_weka' ],
             },
@@ -389,7 +389,7 @@ sub pipeline_analyses {
                 @common_params,
             },
             -input_ids      => [],
-            -rc_name        => 'highmem_med',
+            -rc_name        => 'highmem',
         },
 
         {   -logic_name     => 'run_dbnsfp',
