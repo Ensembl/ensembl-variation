@@ -210,10 +210,15 @@ sub run {
           
           # Check species
           my $species = $self->param('species');
-          # MANE is only available for human
+          # MANE is only available for human grch38
           my $is_human = $species =~ /homo_sapiens|human/ ? 1 : 0;
-          my $write_mtmp = ($is_human && ($is_mane || $is_canonical)) || !$is_human ? 1 : 0;
-          
+          my $write_mtmp = ($is_human && $is_mane) || !$is_human ? 1 : 0;
+
+          # Human grch37 has canonical transcripts
+          if($is_human && lc $self->param('assembly') =~ /37|grch37/ && $is_canonical) {
+	    $write_mtmp = 1;
+	  }
+
           unless($biotypes_to_skip{$biotype} || !$write_mtmp){
             print $mtmp_fh join("\t", map {defined($_) ? $_ : '\N'} @$_)."\n" for @$mtmp_data;
           }

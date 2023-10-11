@@ -345,6 +345,7 @@ sub pipeline_analyses {
               disambiguate_single_nucleotide_alleles => $self->o('disambiguate_single_nucleotide_alleles'),
               prevent_shifting => $self->o('prevent_shifting'),
               update_diff => $self->o('update_diff'),
+              assembly => $self->o('assembly'),
               @common_params,
             },
             -rc_name   => 'medmem',
