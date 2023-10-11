@@ -126,9 +126,6 @@ my %data_type_example = (
                              'url'       => 'Variation/Explore?v=',
                             },
   'variation_vcf'        => {
-                             'url'       => 'Variation/Explore?v='
-                            },
-  'variation_feature_vcf'=> {
                              'url'       => 'Variation/Explore?vf='
                             },
   'variation_synonym'    => {
@@ -1289,14 +1286,10 @@ sub get_example {
     my $file_full_path = $data;
     my $source_name    = $param;
 
-    $example = `bcftools query -f "%ID\n" $file_full_path -e '%ID="."' | head -n 1`;
-    if ($example && $example !~ /^(rs)[0-9]+$/) {
-      # if not rsID, we will create a variation feature string instead
-      $example = `bcftools query -f "%CHROM:%POS:%REF-%ALT\n" $file_full_path | head -n 1`;
-      $example =~ s/\n/:$source_name/;
-      $example =~ s/-/_/;
-      $url = $data_type_example{'variation_feature_vcf'}{'url'};
-    }
+    # create a variation feature string
+    $example = `bcftools query -f "%CHROM:%POS:%REF-%ALT\n" $file_full_path | head -n 1`;
+    $example =~ s/-/_/;
+    $example =~ s/\n/:$source_name/;
   }
 
   if ($example && $url) {
