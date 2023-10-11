@@ -475,7 +475,7 @@ sub source_table {
     foreach my $project (@{ $vcf_config->{'collections'} }) {
       next if $project->{annotation_type} eq 'cadd' || $project->{annotation_type} eq 'gerp';
 
-      if ($project->{species} eq $name) {
+      if ($project->{species} =~ /^$name$/i) {
         my ($source, $version, $description, $info, $count, $example_url);
 
         # determine type of data the file has
