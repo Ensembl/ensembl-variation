@@ -360,11 +360,11 @@ foreach my $display_name (sort { $top_display{$a} cmp $top_display{$b} || $a cmp
   }
     
   # Display the species at the top of the list
+  my $data = source_table($s_name,$display_name,$sth2,$sth2b,$is_new_species,$db_vcf,$dbname,$hostname,\%p_list,\%p_set_list);
   if ($top_species{$s_name}) {
-    $html_top_content .= source_table($s_name,$display_name,$sth2,$sth2b,$is_new_species,$db_vcf,$dbname,$hostname,\%p_list,\%p_set_list);
-  }
-  else {
-    $html_content .= source_table($s_name,$display_name,$sth2,$sth2b,$is_new_species,$db_vcf,$dbname,$hostname,\%p_list,\%p_set_list);
+    $html_top_content .= $data;
+  } else {
+    $html_content .= $data;
   }
   print STDERR " done\n";
 }
