@@ -1147,6 +1147,7 @@ sub get_species_count {
   my %count_by_type;
   
   foreach my $type (keys(%$data_types)) {
+    next if $type =~ /vcf$/; # ignore VCF data types
     next if ($type eq 'variation_set');
     my $sql = $data_types->{$type}{'count_spe'};
 
