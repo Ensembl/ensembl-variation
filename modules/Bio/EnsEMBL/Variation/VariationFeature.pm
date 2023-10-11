@@ -1935,7 +1935,6 @@ sub hgvs_genomic {
     my $offset = 0;
     my $var_class  =  $self->var_class();
     $var_class  =~ s/somatic_//;
-    # my $dup_lookup_direction = 1;
 
     ##  only check insertions & deletions & don't move beyond transcript
     if(
