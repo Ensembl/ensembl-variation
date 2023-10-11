@@ -105,16 +105,16 @@ sub default_options {
         # reflect their usage, but you may want to change the details (memory
         # requirements, queue parameters etc.) to suit your own data
         
-        default_lsf_options => '-qproduction -R"select[mem>2000] rusage[mem=2000]" -M2000',
-        medmem_lsf_options  => '-qproduction -R"select[mem>5000] rusage[mem=5000]" -M5000',
-        highmem_lsf_options => '-qproduction -R"select[mem>15000] rusage[mem=15000] span[hosts=1]" -M15000 -n4', # this is LSF speak for "give me 15GB of memory"
+        default_lsf_options => '-qproduction -R"select[mem>8000] rusage[mem=8000]" -M8000',
+        medmem_lsf_options  => '-qproduction -R"select[mem>10000] rusage[mem=10000]" -M10000',
+        highmem_lsf_options => '-qproduction -R"select[mem>20000] rusage[mem=20000] span[hosts=1]" -M20000 -n4', # this is LSF speak for "give me 15GB of memory"
 
-        default_slurm_options      => '--partition=standard --time=24:00:00 --mem=2G',
-        default_long_slurm_options => '--partition=standard --time=140:00:00 --mem=2G',
-        medmem_slurm_options       => '--partition=standard --time=24:00:00 --mem=5G',
-        medmem_long_slurm_options  => '--partition=standard --time=140:00:00 --mem=5G',
-        highmem_slurm_options      => '--partition=standard --time=24:00:00 --mem=15G',
-        highmem_long_slurm_options => '--partition=standard --time=140:00:00 --mem=15G',
+        default_slurm_options      => '--partition=standard --time=24:00:00 --mem=8G',
+        default_long_slurm_options => '--partition=standard --time=140:00:00 --mem=8G',
+        medmem_slurm_options       => '--partition=standard --time=24:00:00 --mem=10G',
+        medmem_long_slurm_options  => '--partition=standard --time=140:00:00 --mem=10G',
+        highmem_slurm_options      => '--partition=standard --time=24:00:00 --mem=20G',
+        highmem_long_slurm_options => '--partition=standard --time=140:00:00 --mem=20G',
 
         # options controlling the number of workers used for the parallelisable analyses
         # these default values seem to work for most species

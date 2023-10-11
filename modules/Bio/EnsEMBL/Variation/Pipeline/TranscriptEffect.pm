@@ -155,7 +155,8 @@ sub run {
   for my $transcript (@transcripts) {
     
     my $biotype = $transcript->biotype;
-    my $is_mane = $transcript->is_mane();
+    my $is_mane = $transcript->is_mane(); # grch38
+    my $is_canonical = $transcript->is_canonical(); # grch37
     my $stable_id = $transcript->stable_id;
     my @vf_ids;
 
@@ -211,7 +212,7 @@ sub run {
           my $species = $self->param('species');
           # MANE is only available for human
           my $is_human = $species =~ /homo_sapiens|human/ ? 1 : 0;
-          my $write_mtmp = ($is_human && $is_mane) || !$is_human ? 1 : 0;
+          my $write_mtmp = ($is_human && ($is_mane || $is_canonical)) || !$is_human ? 1 : 0;
           
           unless($biotypes_to_skip{$biotype} || !$write_mtmp){
             print $mtmp_fh join("\t", map {defined($_) ? $_ : '\N'} @$_)."\n" for @$mtmp_data;
