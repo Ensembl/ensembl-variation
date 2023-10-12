@@ -1,4 +1,4 @@
-# Ensembl Variation API 
+# Ensembl Variation API
 
 [![GitHub](https://img.shields.io/github/license/Ensembl/ensembl-variation.svg)](https://github.com/Ensembl/ensembl-variation/blob/main/LICENSE)
 [![Build Status](https://travis-ci.org/Ensembl/ensembl-variation.png?branch=main)](https://travis-ci.org/Ensembl/ensembl-variation)
