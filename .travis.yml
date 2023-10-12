@@ -4,7 +4,7 @@ os:
   - linux
 
 dist:
-  - focal
+  - trusty
 
 perl:
   - '5.14'
