@@ -207,7 +207,7 @@ foreach my $hostname (@hostnames) {
     next if ($dbname !~ /^[a-z][a-z_]*_[a-z]+_variation_\d+_\d+$/i);
     next if ($dbname =~ /^master_schema/ || $dbname =~ /^homo_sapiens_variation_\d+_37$/ || $dbname =~ /private/);
     $db_found ++;
-    print STDERR $dbname;
+    print $dbname;
     $dbname =~ /^(.+)_variation/;
     my $s_name = $1;
     
