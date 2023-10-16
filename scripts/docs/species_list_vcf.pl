@@ -27,12 +27,14 @@
 =cut
 
 use Bio::EnsEMBL::Registry;
+use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use DBI;
 use strict;
 use POSIX;
 use Getopt::Long;
 use JSON;
 use File::Basename;
+use Data::Dumper;
 
 ###############################################################
 ##########             CONFIGURE                        #######
@@ -59,27 +61,27 @@ GetOptions(
 );
 
 if (!$e_version) {
-  print "> Error! Please give an Ensembl version, using the option '-v' \n";
+  print STDERR "> Error! Please give an Ensembl version, using the option '-v' \n";
   usage();
 }
 if (!$html_file) {
-  print "> Error! Please give an output file using the option '-o'\n";
+  print STDERR "> Error! Please give an output file using the option '-o'\n";
   usage();
 }
 if (!$dump_file) {
-  print "> Error! Please give an dump file using the option '-dump'\n";
+  print STDERR "> Error! Please give an dump file using the option '-dump'\n";
   usage();
 }
 if (!$p_data) {
-  print "> Error! Please give the location of previous release data using the option '-p_data'\n";
+  print STDERR "> Error! Please give the location of previous release data using the option '-p_data'\n";
   usage();
 }
 if (!$hlist) {
-  print "> Error! Please give the list of host names where the new databases are stored using the option '-hlist'\n";
+  print STDERR "> Error! Please give the list of host names where the new databases are stored using the option '-hlist'\n";
   usage();
 }
 if (!$user) {
-  print "> Error! Please give user name using the option '-user'\n";
+  print STDERR "> Error! Please give user name using the option '-user'\n";
   usage();
 }
 
@@ -158,20 +160,23 @@ if ($p_data) {
 foreach my $project (@{ $vcf_config->{'collections'} }) {
   next if $project->{annotation_type} eq 'cadd' || $project->{annotation_type} eq 'gerp';
 
-  my $s_name = $project->{species};
+  my $s_name = lc $project->{species};
+  next if ($s_name =~ /^(drosophila|saccharomyces|ciona)/);
+  
+  print STDERR $project->{id}, "\n";
 
   if ($etype) { # EG site - need to filter out species
     my $img_thumb = sprintf qq{eg-plugins/%s/htdocs/img/species/thumb_%s.png}, $etype, ucfirst($s_name);
-    #  print "- checking for $img_thumb ... ";
+    #  print STDERR "- checking for $img_thumb ... ";
     if (! -e $img_thumb) {
-      print "\t... skipping \n";
+      print STDERR "\t... skipping \n";
       next;
     } 
   }
 
   # determine type of data the file has
   my @types = get_vcf_content_types($project);
-    
+
   # We are only interested with species which are vcf-only for now
   if ( grep /^source$/, @types){
     # Count the number of variations if the vcf file is used as source
@@ -179,6 +184,7 @@ foreach my $project (@{ $vcf_config->{'collections'} }) {
     if ($count_var && $count_var > 0){
       $species_list{$s_name}{count} = round_count($count_var);
     }
+    
 
     # Check if the file have genotype data and being showed
     if ( grep /^genotype$/, @types){
@@ -187,7 +193,7 @@ foreach my $project (@{ $vcf_config->{'collections'} }) {
         $species_list{$s_name}{genotype} = 1;
       }
     }
-
+    
     # Get the species labels
     my $label_name = ucfirst($s_name);
         $label_name =~ s/_gca[0-9]{9}[v0-9]*+$//g;	# remove any gca from name 
@@ -319,7 +325,7 @@ print HTML $html_legend;
 close HTML;
 
 # Dump the data object - to be stored in repo and used in next release
-my $data_dump = JSON->new->encode(\%species_list) or throw("ERROR: Failed to encode data file for dumping\n");
+my $data_dump = JSON->new->pretty->encode(\%species_list) or throw("ERROR: Failed to encode data file for dumping\n");
 open DATA_DUMP, "> $dump_file";
 print DATA_DUMP $data_dump;
 close DATA_DUMP;
@@ -350,7 +356,10 @@ sub get_connection_and_query {
 sub get_vcf_content_types {
   my ($project) = @_;
   my @types;
-
+  
+  # this ignores the false positive sigpipe error from tabix command 
+  $SIG{PIPE} = 'DEFAULT';
+  
   # add if the vcf collection mentions annotation type
   push @types, $project->{annotation_type} if $project->{annotation_type};
 
@@ -359,22 +368,22 @@ sub get_vcf_content_types {
 
   # check FORMAT field of the vcf file to see if it has genotype
   my $file = get_random_file($project);
-
+  
   my $file_full_path = $file;
   if ($project->{type} eq "local"){
     $file_full_path = $data_dir . $file_full_path;
   }
 
-  my $genotypes = `tabix $file_full_path -H | grep '##FORMAT' | grep 'ID=GT'`;
+  my $genotypes = `tabix -D $file_full_path -H | grep '##FORMAT' | grep 'ID=GT'`;
   push @types, "genotype" if $genotypes;
   
   # check in a actual line for FORMAT field if not exist in header
   unless ($genotypes){
-    my $chr = `tabix $file_full_path -l | head -n 1`;
+    my $chr = `tabix -D $file_full_path -l | head -n 1`;
     chop $chr;
-    
-    my $line = `tabix $file_full_path $chr | head -n 1`;
-
+  
+    my $line = `tabix -D $file_full_path $chr | head -n 1`;
+  
     my $format_field = (split /\t/, $line)[8];
     
     push @types, "genotype" if $format_field;
@@ -434,7 +443,7 @@ sub get_variant_count {
         $count = `bgzip -d -c vcf.gz | grep -v '^#' | wc -l`;
         `rm vcf.gz`;
       }
-      # If file is local no need for downloadin; just count line number 
+      # If file is local no need for downloading; just count line number 
       else{
         $count = `bgzip -d -c $file | grep -v '^#' | wc -l`;
       }
