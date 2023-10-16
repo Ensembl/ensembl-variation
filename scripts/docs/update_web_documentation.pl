@@ -493,7 +493,7 @@ sub usage {
     -d_dir          The directory location of where the local vcf files are stored. By default it looks in - 
                     /nfs/production/flicek/ensembl/production/ensemblftp/data_files/vertebrates 
     -p_data         Location of the json file that contain result of the previous release for comparison.
-    -sections       a comma-separated list of sections to run. If this options is not provided all if them will be run.
+    -sections       Comma-separated list of sections of this script to run. If this options is not provided, all sections are run.
   } . "\n";
   exit(0);
 }
