@@ -267,10 +267,10 @@ foreach my $hostname (@hostnames) {
   # loop over databases
   while (my ($dbname) = $sth->fetchrow_array) {
     next if ($dbname !~ /^[a-z][a-z_]*_[a-z0-9]+_variation_\d+_\d+$/i);
-    next if ($dbname =~ /^(master_schema|drosophila|saccharomyces)/ || $dbname =~ /^homo_sapiens_variation_\d+_37$/ || $dbname =~ /private/);
+    next if ($dbname =~ /^(master_schema|drosophila|saccharomyces|ciona)/ || $dbname =~ /^homo_sapiens_variation_\d+_37$/ || $dbname =~ /private/);
 
     $db_found ++;
-    print STDERR $dbname;
+    print STDERR "${dbname}\n";
     $dbname =~ /^(.+)_variation/;
     my $s_name = $1;
     
@@ -475,7 +475,7 @@ sub source_table {
     foreach my $project (@{ $vcf_config->{'collections'} }) {
       next if $project->{annotation_type} eq 'cadd' || $project->{annotation_type} eq 'gerp';
 
-      if ($project->{species} =~ /^$name$/i) {
+      if (lc( $project->{species} ) eq $name) {
         my ($source, $version, $description, $info, $count, $example_url);
 
         # determine type of data the file has
@@ -1304,6 +1304,9 @@ sub get_example {
 sub get_vcf_content_types {
   my ($project) = @_;
   my @types;
+  
+  # this ignores the false positive sigpipe error from tabix command 
+  $SIG{PIPE} = 'DEFAULT';
 
   # add if the vcf collection mentions annotation type
   push @types, $project->{annotation_type} if $project->{annotation_type};
