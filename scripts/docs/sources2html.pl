@@ -1287,8 +1287,7 @@ sub get_example {
     my $source_name    = $param;
 
     # create a variation feature string
-    $example = `bcftools query -f "%CHROM:%POS:%REF-%ALT\n" $file_full_path | head -n 1`;
-    $example =~ s/-/_/;
+    $example = `bcftools query -f "%CHROM:%POS:%REF\_%ALT\n" $file_full_path | head -n 1`;
     $example =~ s/\n/:$source_name/;
   }
 
