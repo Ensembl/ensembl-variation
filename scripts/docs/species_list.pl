@@ -89,7 +89,8 @@ my $detailed_counts = 'species_detailed_counts.html';
 
 my $html;
    
-my %colours = ( 'hundred_million' => { 'order' => 5, 'colour' => 'vdoc_million_0', 'legend' => 'From 100 million'},
+my %colours = ( 'few_billion'     => { 'order' => 6, 'colour' => 'vdoc_billion_2', 'legend' => 'From 1 billion to 9,9 billion'},
+                'hundred_million' => { 'order' => 5, 'colour' => 'vdoc_million_0', 'legend' => 'From 100 million to 999,9 million'},
                 'lot_million'     => { 'order' => 4, 'colour' => 'vdoc_million_1', 'legend' => 'From 10 million to 99,9 million'},
                 'few_million'     => { 'order' => 3, 'colour' => 'vdoc_million_2', 'legend' => 'From 1 million to 9,9 million'},
                 'thousand'        => { 'order' => 2, 'colour' => 'vdoc_thousand',  'legend' => 'From 1,000 to 999,999'},
@@ -360,13 +361,21 @@ sub round_count {
     $count_display = $count;
     $bg_class = $colours{'lot_million'}{'colour'};
   }
-  # From 100 million
-  elsif ($count =~ /^(\d{3}\d*)\d{6}$/) {
+  # From 100 million to 999.9 million
+  elsif ($count =~ /^(\d{3})\d{6}$/) {
     my $number = $1;
     $count = "$number M";
     $count_label = "Over $number million $type";
     $count_display = $count;
     $bg_class = $colours{'hundred_million'}{'colour'};
+  }
+  # From 1 to 9.9 billion
+  elsif ($count =~ /^(\d)(\d)\d{8}$/) {
+    my $number = ($2!=0) ? "$1.$2" : $1;
+    $count = "$number B";
+    $count_label = "Over $number billion $type";
+    $count_display = $count;
+    $bg_class = $colours{'few_billion'}{'colour'};
   }
   # From 1,000 to 999,999
   elsif ($count =~ /^(\d+)\d{3}$/) {
