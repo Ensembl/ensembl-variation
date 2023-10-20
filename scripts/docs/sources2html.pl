@@ -269,7 +269,7 @@ foreach my $hostname (@hostnames) {
   while (my ($dbname) = $sth->fetchrow_array) {
     next if ($dbname !~ /^[a-z][a-z_]*_[a-z0-9]+_variation_\d+_\d+$/i);
     next if ($dbname =~ /^(master_schema|drosophila|saccharomyces|ciona)/ || $dbname =~ /^homo_sapiens_variation_\d+_37$/ || $dbname =~ /private/);
-
+    
     $db_found ++;
     print STDERR "${dbname}\n";
     $dbname =~ /^(.+)_variation/;
@@ -476,17 +476,18 @@ sub source_table {
     foreach my $project (@{ $vcf_config->{'collections'} }) {
       next if $project->{annotation_type} eq 'cadd' || $project->{annotation_type} eq 'gerp';
 
-      if ($project->{species} =~ /^$name$/i) {
-        my ($source, $version, $description, $info, $count, $example_url);
+      if (lc( $project->{species} ) eq $name) {
+        my ($source, $source_url, $version, $description, $info, $count, $example_url);
 
         # determine type of data the file has
         my @types = get_vcf_content_types($project);
 
-        my $source_name = $project->{source} ? $project->{source} : 'EVA';
-        my $source_url = $eva_url;
+        my $source_name = $project->{source_name} ? $project->{source_name} : 'EVA';
 
         # Assuming only one config will have use_as_source set per species
-        if ( grep /^source$/, @types){
+        if ( grep(/^source$/, @types) && $source_name eq "EVA" ){
+          $source_url = $eva_url;
+
           # Get the version from filename template
           my $filename_template = $project->{filename_template};
           my @eva_release = grep {/release_/} (split /\//, $filename_template);
@@ -499,30 +500,17 @@ sub source_table {
               $version = "-";
           }
 
-          # Set description
           $description = "Variants imported from EVA";
         }
 
-        # Assuming only one config will have use_as_source set per species
-        if ( grep /^genotype$/, @types){
-          # Update source name and url to study id if possible
-          if ($source_name =~ /^(?!PRJ)/){
-            # Try getting the study id from database if not in vcf collection
-            my $sth3 = get_connection_and_query($db_name, $hostname, $sql_display_group);
-            my $source_name_from_db = $sth3->fetchrow_array;
+        # Assuming the EVA release VCF file will not have genotypes
+        if ( (grep(/^genotype$/, @types) || grep(/^frequency$/, @types)) && $source_name =~ /^(PRJ)/ ){
+          # Set source url using study id
+          $source_url = $eva_study_url;
+          $source_url =~ s/###ID###/$source_name/g;
 
-            if ($source_name_from_db) {
-              $source_name = $source_name_from_db;
-
-              $source_url = $eva_study_url;
-              $source_url =~ s/###ID###/$source_name/g;
-            }
-          }
-
-          # Get the version from filename template
           $version = "-";
 
-          # Set description
           $description = "Variants with genotypes imported from EVA";
         }
 
@@ -1340,16 +1328,19 @@ sub get_vcf_content_types {
   my $genotypes = `tabix $file_full_path -H | grep '##FORMAT' | grep 'ID=GT'`;
   push @types, "genotype" if $genotypes;
   
+  my $chr = `tabix $file_full_path -l | head -n 1`;
+  chop $chr;
+  my $line = `tabix $file_full_path $chr | head -n 1`;
+
   # check in a actual line for FORMAT field if not exist in header
   unless ($genotypes){
-    my $chr = `tabix $file_full_path -l | head -n 1`;
-    chop $chr;
-    
-    my $line = `tabix $file_full_path $chr | head -n 1`;
-
     my $format_field = (split /\t/, $line)[8];
-    
     push @types, "genotype" if $format_field;
+  }
+
+  my $info_field = (split /\t/, $line)[7];
+  if ( ($info_field =~ /AF=/) || ($info_field =~ /AC=/ && $info_field =~ /AN=/) ) {
+    push @types, "frequency";
   }
   
   return @types;
