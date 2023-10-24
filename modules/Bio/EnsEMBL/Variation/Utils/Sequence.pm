@@ -590,7 +590,7 @@ sub hgvs_variant_notation {
     $lookup_direction *= -1;
 
     # Get the same number of nucleotides preceding the insertion as the length of the insertion
-    my $prev_str = $lookup_direction == 1 ? 
+    $prev_str = $lookup_direction == 1 ? 
       substr($ref_sequence,$ref_end,$alt_length) : 
       substr($ref_sequence,($ref_end-$alt_length),$alt_length);
 
