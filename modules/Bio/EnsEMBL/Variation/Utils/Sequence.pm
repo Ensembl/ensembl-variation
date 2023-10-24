@@ -498,10 +498,14 @@ sub hgvs_variant_notation {
   my $display_start = shift;
   my $display_end = shift;
   my $var_name  = shift;
+  my $lookup_order = shift;
 
   # If display_start and display_end were not specified, use ref_start and ref_end
   $display_start ||= $ref_start;
   $display_end ||= $ref_end;
+
+  # the order of lookup direction for checking dup - if 1 it means first check at 5' direction and then 3'
+  $lookup_order ||= 1;
   
   #Throw an exception if the lengths of the display interval and reference interval are different
   throw("The coordinate interval for display is of different length than for the reference allele") if (($display_end - $display_start) != ($ref_end - $ref_start));
@@ -565,26 +569,38 @@ sub hgvs_variant_notation {
   # If this is an insertion, we should check if the preceeding reference nucleotides match the insertion. In that case it should be annotated as a multiplication.
   if (!$ref_length) {
   
+    # lookup_direction 1 means look at 5' direction for ref string and -1 means the look at 3' direction
+    my $lookup_direction = $lookup_order == 1 ? 1 : -1;
+
     # Get the same number of nucleotides preceding the insertion as the length of the insertion
-    my $prev_str = substr($ref_sequence,$ref_end,$alt_length);
+    my $prev_str = $lookup_direction == 1 ? 
+      substr($ref_sequence,$ref_end,$alt_length) : 
+      substr($ref_sequence,($ref_end-$alt_length),$alt_length);
 
     # If they match, this is a duplication
     if ($prev_str eq $alt_allele) {
-      $notation{'end'} = $display_start + $alt_length - 1;
+      $notation{'end'} = $display_start + $alt_length - 1 if $lookup_direction == 1;
+      $notation{'start'} = ($display_end - $alt_length + 1) if $lookup_direction == -1;
       $notation{'type'} = 'dup';
       
       return \%notation;
     }
-    else {
-      # if does not match look at the reverse direction
-      $prev_str = substr($ref_sequence,($ref_end-$alt_length),$alt_length);
-      
-      if ($prev_str eq $alt_allele) {
-        $notation{'start'} = ($display_end - $alt_length + 1);
-        $notation{'type'} = 'dup';
 
-        return \%notation;
-      }
+    # change lookup direction and look again
+    $lookup_direction *= -1;
+
+    # Get the same number of nucleotides preceding the insertion as the length of the insertion
+    my $prev_str = $lookup_direction == 1 ? 
+      substr($ref_sequence,$ref_end,$alt_length) : 
+      substr($ref_sequence,($ref_end-$alt_length),$alt_length);
+
+    # If they match, this is a duplication
+    if ($prev_str eq $alt_allele) {
+      $notation{'end'} = $display_start + $alt_length - 1 if $lookup_direction == 1;
+      $notation{'start'} = ($display_end - $alt_length + 1) if $lookup_direction == -1;
+      $notation{'type'} = 'dup';
+      
+      return \%notation;
     }
 
     # If they didn't match it's a plain insertion
