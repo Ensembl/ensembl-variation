@@ -95,11 +95,11 @@ sub resource_classes {
     return {
         %{$self->SUPER::resource_classes},
         'default' => { 'LSF'   => '-q production -R"select[mem>2000] rusage[mem=2000]" -M2000',
-                       'SLURM' => '--partition=standard --time=1:00:00 --mem=2G'},
+                       'SLURM' => '--partition=production --time=1:00:00 --mem=2G'},
         'medium'  => { 'LSF' => '-q production -R"select[mem>5000] rusage[mem=5000]" -M5000',
-                       'SLURM' => '--partition=standard --time=2:00:00 --mem=5G'},
+                       'SLURM' => '--partition=production --time=2:00:00 --mem=5G'},
         'high'    => { 'LSF' => '-q production -R"select[mem>10000] rusage[mem=10000]" -M10000',
-                       'SLURM' => '--partition=standard --time=2:00:00 --mem=10G'},
+                       'SLURM' => '--partition=production --time=2:00:00 --mem=10G'},
     };
 }
 

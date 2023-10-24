@@ -104,7 +104,7 @@ sub pipeline_analyses {
       -flow_into => { 
         '2->A' => ['run_mapping'],
         'A->1' => ['init_parse_mapping']
-      },		
+      },
     },
     {
       -logic_name => 'run_mapping',

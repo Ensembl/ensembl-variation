@@ -89,11 +89,11 @@ sub resource_classes {
 
     return {
       'default' => { 'LSF' => '-qproduction -R"select[mem>2000] rusage[mem=2000]" -M2000',
-                     'SLURM' => "--partition=standard --time=4:00:00 --mem=2G" },
+                     'SLURM' => "--partition=production --time=4:00:00 --mem=2G" },
       'highmem' => { 'LSF' => '-qproduction -R"select[mem>15000] rusage[mem=15000]" -M15000',
-                     'SLURM' => "--partition=standard --time=28:00:00 --mem=15G"},
+                     'SLURM' => "--partition=production --time=28:00:00 --mem=15G"},
       'long'    => { 'LSF' => '-qproduction -R"select[mem>2000] rusage[mem=2000]" -M2000',
-                     'SLURM' => "--partition=standard --time=28:00:00 --mem=2G"},
+                     'SLURM' => "--partition=production --time=28:00:00 --mem=2G"},
     };
 }
 

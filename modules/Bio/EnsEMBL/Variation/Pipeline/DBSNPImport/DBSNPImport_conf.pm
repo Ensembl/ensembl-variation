@@ -102,13 +102,13 @@ sub resource_classes {
     return {
         %{$self->SUPER::resource_classes},  # inherit 'default' from the parent class
             'default_mem'      => { 'LSF' => '-qproduction -R"select[mem>1000] rusage[mem=1000]" -M1000',
-                                    'SLURM' => '--partition=standard --time=1:00:00 --mem=1G'},
+                                    'SLURM' => '--partition=production --time=1:00:00 --mem=1G'},
             'default_mem_long' => { 'LSF' => '-qproduction -R"select[mem>1000] rusage[mem=1000]" -M1000',
-                                    'SLURM' => '--partition=standard --time=24:00:00 --mem=1G'},
+                                    'SLURM' => '--partition=production --time=24:00:00 --mem=1G'},
             'medium_mem'       => { 'LSF' => '-qproduction -R"select[mem>4000] rusage[mem=4000]" -M4000',
-                                    'SLURM' => '--partition=standard --time=1:00:00 --mem=4G'},
+                                    'SLURM' => '--partition=production --time=1:00:00 --mem=4G'},
             'high_mem'         => { 'LSF' => '-qproduction -R"select[mem>8000] rusage[mem=8000]" -M8000',
-                                    'SLURM' => '--partition=standard --time=1:00:00 --mem=8G'},
+                                    'SLURM' => '--partition=production --time=1:00:00 --mem=8G'},
     };
 }
 

@@ -140,13 +140,13 @@ sub default_options {
         medmem_lsf_options  => '-qproduction -R"select[mem>8000] rusage[mem=8000]" -M8000',
         highmem_lsf_options => '-qproduction -R"select[mem>24000] rusage[mem=24000]" -M24000',
 
-        default_slurm_options      => '--partition=standard --time=1:30:00 --mem=2G',
-        default_long_slurm_options => '--partition=standard --time=6:00:00 --mem=2G',
-        medmem_slurm_options       => '--partition=standard --time=6:00:00 --mem=8G',
-        medmem_long_slurm_options  => '--partition=standard --time=24:00:00 --mem=8G',
-        highmem_slurm_options      => '--partition=standard --time=2:30:00 --mem=24G',
-        highmem_med_slurm_options  => '--partition=standard --time=24:00:00 --mem=24G',
-        highmem_long_slurm_options => '--partition=standard --time=120:00:00 --mem=24G',
+        default_slurm_options      => '--partition=production --time=1:30:00 --mem=2G',
+        default_long_slurm_options => '--partition=production --time=6:00:00 --mem=2G',
+        medmem_slurm_options       => '--partition=production --time=6:00:00 --mem=8G',
+        medmem_long_slurm_options  => '--partition=production --time=24:00:00 --mem=8G',
+        highmem_slurm_options      => '--partition=production --time=2:30:00 --mem=24G',
+        highmem_med_slurm_options  => '--partition=production --time=24:00:00 --mem=24G',
+        highmem_long_slurm_options => '--partition=production --time=120:00:00 --mem=24G',
 
         # Polyphen specific parameters
 

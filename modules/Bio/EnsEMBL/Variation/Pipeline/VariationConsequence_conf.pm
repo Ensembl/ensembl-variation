@@ -109,12 +109,12 @@ sub default_options {
         medmem_lsf_options  => '-qproduction -R"select[mem>10000] rusage[mem=10000]" -M10000',
         highmem_lsf_options => '-qproduction -R"select[mem>20000] rusage[mem=20000] span[hosts=1]" -M20000 -n4', # this is LSF speak for "give me 15GB of memory"
 
-        default_slurm_options      => '--partition=standard --time=24:00:00 --mem=8G',
-        default_long_slurm_options => '--partition=standard --time=140:00:00 --mem=8G',
-        medmem_slurm_options       => '--partition=standard --time=24:00:00 --mem=10G',
-        medmem_long_slurm_options  => '--partition=standard --time=140:00:00 --mem=10G',
-        highmem_slurm_options      => '--partition=standard --time=24:00:00 --mem=20G',
-        highmem_long_slurm_options => '--partition=standard --time=140:00:00 --mem=20G',
+        default_slurm_options      => '--partition=production --time=24:00:00 --mem=8G',
+        default_long_slurm_options => '--partition=production --time=140:00:00 --mem=8G',
+        medmem_slurm_options       => '--partition=production --time=24:00:00 --mem=10G',
+        medmem_long_slurm_options  => '--partition=production --time=140:00:00 --mem=10G',
+        highmem_slurm_options      => '--partition=production --time=24:00:00 --mem=20G',
+        highmem_long_slurm_options => '--partition=production --time=140:00:00 --mem=20G',
 
         # options controlling the number of workers used for the parallelisable analyses
         # these default values seem to work for most species

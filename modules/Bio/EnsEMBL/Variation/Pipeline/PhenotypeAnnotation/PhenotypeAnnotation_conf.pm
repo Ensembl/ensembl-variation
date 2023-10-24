@@ -146,9 +146,9 @@ sub default_options {
         highmem_lsf_options => '-qproduction -R"select[mem>15000] rusage[mem=15000] span[hosts=1]" -M15000 -n4',
         long_lsf_options    => '-qproduction -R"select[mem>2000] rusage[mem=2000]" -M2000',
 
-        default_slurm_options => '--partition=standard --time=12:00:00 --mem=2G',
-        highmem_slurm_options => '--partition=standard --time=12:00:00 --mem=15G',
-        long_slurm_options    => '--partition=standard --time=24:00:00 --mem=2G',
+        default_slurm_options => '--partition=production --time=12:00:00 --mem=2G',
+        highmem_slurm_options => '--partition=production --time=12:00:00 --mem=15G',
+        long_slurm_options    => '--partition=production --time=24:00:00 --mem=2G',
 
         # connection parameters for the hive database, you should supply the hive_db_password
         # option on the command line to init_pipeline.pl (parameters for the target database

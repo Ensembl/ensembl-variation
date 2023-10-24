@@ -82,8 +82,8 @@ sub default_options {
         default_lsf_options => '-q production -R"select[mem>2000] rusage[mem=2000]" -M2000',
         medmem_lsf_options  => '-q production -R"select[mem>5000] rusage[mem=5000]" -M5000',
 
-        default_slurm_options => '--partition=standard --time=12:00:00 --mem=2G',
-        medmem_slurm_options  => '--partition=standard --time=12:00:00 --mem=5G',
+        default_slurm_options => '--partition=production --time=12:00:00 --mem=2G',
+        medmem_slurm_options  => '--partition=production --time=12:00:00 --mem=5G',
 
         hive_db_host    => 'mysql-ens-var-prod-1',
         hive_db_port    => 4449,

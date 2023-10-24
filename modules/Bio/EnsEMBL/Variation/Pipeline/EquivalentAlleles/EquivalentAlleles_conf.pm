@@ -77,9 +77,9 @@ sub default_options {
     default_lsf_options => '-qproduction -R"select[mem>8000] rusage[mem=8000]" -M8000',
     medium_lsf_options  => '-qproduction -R"select[mem>16000] rusage[mem=16000]" -M16000',
 
-    default_slurm_options      => '--partition=standard --time=24:00:00 --mem=4G',
-    default_long_slurm_options => '--partition=standard --time=48:00:00 --mem=4G',
-    medium_slurm_options       => '--partition=standard --time=24:00:00 --mem=6G',
+    default_slurm_options      => '--partition=production --time=24:00:00 --mem=4G',
+    default_long_slurm_options => '--partition=production --time=48:00:00 --mem=4G',
+    medium_slurm_options       => '--partition=production --time=24:00:00 --mem=6G',
 
     # size of region to be checked in a single job
     region_size =>  1000000,
