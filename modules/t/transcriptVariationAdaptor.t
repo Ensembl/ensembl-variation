@@ -283,7 +283,7 @@ foreach my $trans_varns (@{$trans_vars_ns}){
   next unless $trans_varns->transcript->stable_id() eq $trans_name;
   my $tvas_ns = $trans_varns->get_all_alternate_TranscriptVariationAlleles(); 
 
-  ok( $tvas_ns->[0]->hgvs_transcript() eq 'ENST00000336617.2:c.615_616insG', 'HGVS for non-shifted location' );
+  ok( $tvas_ns->[0]->hgvs_transcript() eq 'ENST00000336617.2:c.616dup', 'HGVS for non-shifted location' );
   ok(scalar $tvas_ns->[0]->hgvs_offset() == 0, 'non shifted offset');
 }
 
@@ -314,7 +314,7 @@ foreach my $trans_varns (@{$trans_vars_ns2}){
   next unless $trans_varns->transcript->stable_id() eq $trans_name;
   my $tvas_ns = $trans_varns->get_all_alternate_TranscriptVariationAlleles();
 
-  ok( $tvas_ns->[0]->hgvs_transcript() eq 'ENST00000336617.2:c.615_616insG', 'HGVS for non-shifted location without adaptor' );
+  ok( $tvas_ns->[0]->hgvs_transcript() eq 'ENST00000336617.2:c.616dup', 'HGVS for non-shifted location without adaptor' );
   ok(scalar $tvas_ns->[0]->hgvs_offset() == 0, 'non shifted offset without adaptor');
 }
 

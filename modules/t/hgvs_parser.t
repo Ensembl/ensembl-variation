@@ -544,9 +544,9 @@ my %test_output_no_shift = (
            "ENSP00000435307.1:p.Arg151_Ser152insTer",
             "insertion, stop gained [-1]"
            ],
-     3 =>  ["NC_000013.10:g.51519667_51519668insG",    ##rs17857128
+     3 =>  ["NC_000013.10:g.51519668dup",    ##rs17857128
            "G",
-           "ENST00000336617.2:c.615_616insG",
+           "ENST00000336617.2:c.616dup",
            "G",
            "ENSP00000337623.2:p.Glu206GlyfsTer13",
            "insertion, frameshift",
@@ -566,9 +566,9 @@ my %test_output_no_shift = (
             "deletion, stop loss",
             "TAA"
           ],
-     6 => ["NC_000012.11:g.102061070_102061071insT",
+     6 => ["NC_000012.11:g.102061071dup",
            "T",
-           "ENST00000360610.2:c.2336-440_2336-439insT", 
+           "ENST00000360610.2:c.2336-439dup", 
            "T",
            "",
            "insertion, coding intron downstream"
