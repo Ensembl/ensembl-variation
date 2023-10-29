@@ -288,12 +288,19 @@ my %test_output = (
             "ENSP00000435307.1:p.Arg151Lys",
             "2 base sustitution, stop gained [-1]",
             ],
-      39 => ["NC_000011.9:g.8808422_8808423insTTC",
-            "TTC",
-            "ENST00000527725.1:n.63-179_63-178insTTC",
-            "TTC",
+      39 => ["NC_000011.9:g.8806701_8806704dup",
+            "AGGC",
+            "ENST00000532930.1:n.235-2_236dup",
+            "AGGC",
             "",
-            "3 base duplication, transcript in both strand",
+            "3 base duplication, transcript strand match",
+            ],
+      40 => ["NC_000011.9:g.8806701_8806704dup",
+            "AGGC",
+            "ENST00000532930.1:n.235-2_236dup",
+            "GCCT",
+            "",
+            "3 base duplication, transcript strand reverse",
             ],
 );
 
@@ -489,9 +496,11 @@ my %test_input = (
              "ENST00000530998.1:c.451_452delinsAA",
              "ENSP00000435307.1:p.Arg151Lys",
              ],
-      39 => ["NC_000011.9:g.8808422_8808423insTTC",
-             "ENST00000313726.6:c.-26+23643_-26+23644insAGA",
-             "ENST00000527725.1:n.63-179_63-178insTTC",
+      39 => ["NC_000011.9:g.8806701_8806704dup",
+             "ENST00000532930.1:n.235-2_236dup",
+             ],
+      40 => ["NC_000011.9:g.8806701_8806704dup",
+             "ENST00000313726.6:n.324+25360_324+25363dup",
              ],
 );
 
@@ -685,7 +694,6 @@ sub get_results{
  
   ## create variation feature from hgvs string
   my $variation_feature ;
-        
   eval{
     $variation_feature = $variationfeature_adaptor->fetch_by_hgvs_notation( $input );
   };
@@ -828,5 +836,50 @@ my $hgvs_ins_2 = "NC_000003.11:g.10191482_10191483ins56";
 dies_ok { $vf_adaptor->fetch_by_hgvs_notation( $hgvs_ins_2 ) } 'fetch_by_hgvs_notation Throw unsupported insertion: incomplete description';
 my $hgvs_u = "NC_000002.11:g.(?_46746507)(?46746514)del";
 dies_ok { $vf_adaptor->fetch_by_hgvs_notation( $hgvs_u ) } 'Throw on unsupported HGVS notation';
+
+{
+  # Test trimming of alleles in hgvs_genomic when type is delins
+  # Test delins that is trimmed to an insertion
+  my $vfa = $vdba->get_variationFeatureAdaptor();
+  my $sa = $cdba->get_SliceAdaptor();
+  my $slice = $sa->fetch_by_region('chromosome', 11);
+
+  my $new_vf = Bio::EnsEMBL::Variation::VariationFeature->new(
+   -start => 8806705,
+   -end   => 8806704,
+   -slice => $slice,
+   -allele_string => '-/GCCT',
+   -strand => -1,
+   -map_weight => 1,
+   -adaptor => $vfa,
+   -variation_name => 'newSNP'
+  );
+
+  my ($hgvs_expected, $hgvs_genomic);
+  
+  $hgvs_expected = 'NC_000011.9:g.8806701_8806704dup';
+  $hgvs_genomic = $new_vf->hgvs_genomic();
+
+  is( $hgvs_genomic->{'GCCT'}, $hgvs_expected, 'hgvs_genomic, vf reverse strand');
+
+  my $ta = $cdba->get_transcriptAdaptor;
+  
+  my $tr_forward = $ta->fetch_by_stable_id("ENST00000532930");
+  my $tr_reverse = $ta->fetch_by_stable_id("ENST00000313726");
+
+  my $tvs = $new_vf->get_all_TranscriptVariations([$tr_forward, $tr_reverse]);
+  foreach my $tv (@{$tvs}) {
+      my $tva = $tv->get_all_alternate_BaseVariationFeatureOverlapAlleles();
+      
+      if ($tv->transcript->stable_id eq "ENST00000532930") {
+            $hgvs_expected = "ENST00000532930.1:n.235-2_236dup";
+            is( $tva->[0]->hgvs_transcript, $hgvs_expected, 'hgvs_transcript, vf reverse strand, transcript forward strand');
+      }
+      else {
+            $hgvs_expected = "ENST00000313726.6:n.324+25360_324+25363dup";
+            is( $tva->[0]->hgvs_transcript, $hgvs_expected, 'hgvs_transcript, vf reverse strand, transcript reverse strand');
+      }
+  }
+}
 
 done_testing(); 
