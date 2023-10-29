@@ -288,7 +288,13 @@ my %test_output = (
             "ENSP00000435307.1:p.Arg151Lys",
             "2 base sustitution, stop gained [-1]",
             ],
-
+      39 => ["NC_000011.9:g.8808422_8808423insTTC",
+            "TTC",
+            "ENST00000527725.1:n.63-179_63-178insTTC",
+            "TTC",
+            "",
+            "3 base duplication, transcript in both strand",
+            ],
 );
 
 my %test_output_shifted = (   
@@ -482,6 +488,10 @@ my %test_input = (
       38 => ["NC_000011.9:g.32417913_32417914delinsTT",
              "ENST00000530998.1:c.451_452delinsAA",
              "ENSP00000435307.1:p.Arg151Lys",
+             ],
+      39 => ["NC_000011.9:g.8808422_8808423insTTC",
+             "ENST00000313726.6:c.-26+23643_-26+23644insAGA",
+             "ENST00000527725.1:n.63-179_63-178insTTC",
              ],
 );
 
