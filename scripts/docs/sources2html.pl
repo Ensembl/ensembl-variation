@@ -941,7 +941,7 @@ sub create_menu {
           <td style="padding-top:4px;text-align:center">
             <span class="vdoc_count_legend $fb_colour"></span>
           </td>
-          <td style="padding-top:4px">from 1 billion to 9.9 billion</td>
+          <td style="padding-top:4px">greater than 1 billion</td>
         </tr>
         <tr>
           <td style="padding-top:4px;text-align:center">
@@ -1231,7 +1231,7 @@ sub get_count {
     $bg_class = $colour_class{'hundred_million'};
   }
   # From 1 billion to 9.9 billion
-  elsif ($count =~ /^(\d)(\d)\d{8}$/) {
+  elsif ($count =~ /^(\d+)(\d)\d{8}$/) {
     my $number = ($2!=0) ? "$1.$2" : $1;
     $count = "$number B";
     $count_label = "Over $number billion $end_label";
