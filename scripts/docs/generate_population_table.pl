@@ -379,6 +379,10 @@ sub get_vcf_content_types {
     if ( ($info_field =~ /AF=/) || ($info_field =~ /AC=/ && $info_field =~ /AN=/) ) {
       push @types, "frequency";
     }
+    # a hard-coded check for NCBI-ALPHA and TOPMED as they have very special field for frequency
+    if ( ($info_field =~ /AN_SAMN/) || ($info_field =~ /TOPMED=/) ) {
+      push @types, "frequency";
+    }
   }
   
   return @types;
