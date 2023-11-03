@@ -129,7 +129,7 @@ foreach my $hostname (@hostnames) {
     next if ($dbname !~ /^[a-z][a-z_]*_[a-z]+_$db_type\_$db_version\_\d+$/i);    
     next if ($dbname =~ /^(master_schema|drosophila|saccharomyces|ciona)/ || $dbname =~ /^homo_sapiens_$db_type\_\d+_37$/ || $dbname =~ /private/);
     
-    print $dbname;
+    print STDERR $dbname;
     $dbname =~ /^(.+)_$db_type/;
     my $s_name = $1;
     
