@@ -176,7 +176,7 @@ foreach my $cs_term (sort_clin_sign_terms(keys %clin_sign)) {
   }
   $html_content .= qq{  <tr$bg>$icon_col<td>$cs_term</td>$examples</tr>\n};
   $bg = set_bg();
-  print STDERR "Term "$cs_term" done ($count/$cs_term_count)\n";
+  print STDERR "Term '$cs_term' done ($count/$cs_term_count)\n";
 }
 
 # Four-star rating

@@ -181,7 +181,6 @@ my $html_pop = '';
 
 # Loop over the species (placing human first)
 foreach my $species (sort { ($a !~ /Homo/ cmp $b !~ /Homo/) || $a cmp $b } keys(%pops_list)) {
-
   next unless  %{ $pops_list{$species} };
 
   my $id_species = $species;
@@ -374,8 +373,16 @@ sub get_vcf_content_types {
     my $line = `tabix -D $file_full_path $chr | head -n 1`;
   
     my $format_field = (split /\t/, $line)[8];
-    
     push @types, "genotype" if $format_field;
+
+    my $info_field = (split /\t/, $line)[7];
+    if ( ($info_field =~ /AF=/) || ($info_field =~ /AC=/ && $info_field =~ /AN=/) ) {
+      push @types, "frequency";
+    }
+    # a hard-coded check for NCBI-ALPHA and TOPMED as they have very special field for frequency
+    if ( ($info_field =~ /AN_SAMN/) || ($info_field =~ /TOPMED=/) ) {
+      push @types, "frequency";
+    }
   }
   
   return @types;
@@ -496,10 +503,9 @@ sub get_sub_populations {
 sub get_project_populations {
 
   foreach my $project (@{$vcf_config->{'collections'}}) {
-    
     # Check if the file have genotype data and being showed
     my @types = get_vcf_content_types($project);
-    next unless grep /^genotype$/, @types;    
+    next unless ( grep(/^genotype$/, @types) || grep(/^frequency$/, @types) );
     
     my $project_id = $project->{'id'};
     next if ($project->{'assembly'} =~ /GRCh37/i || $project->{'annotation_type'} eq 'cadd' || $project->{'annotation_type'} eq 'gerp');
