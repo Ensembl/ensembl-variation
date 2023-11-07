@@ -107,7 +107,7 @@ sub default_options {
         
         default_lsf_options => '-qproduction -R"select[mem>8000] rusage[mem=8000]" -M8000',
         medmem_lsf_options  => '-qproduction -R"select[mem>10000] rusage[mem=10000]" -M10000',
-        highmem_lsf_options => '-qproduction -R"select[mem>20000] rusage[mem=20000] span[hosts=1]" -M20000 -n4', # this is LSF speak for "give me 15GB of memory"
+        highmem_lsf_options => '-qproduction -R"select[mem>20000] rusage[mem=20000] span[hosts=1]" -M20000 -n4',
 
         default_slurm_options      => '--partition=production --time=24:00:00 --mem=8G',
         default_long_slurm_options => '--partition=production --time=140:00:00 --mem=8G',
