@@ -294,11 +294,15 @@ sub parse_refsnp {
   # Data
   ($data->{'snp_support'}, $data->{'freq_support'})  = get_support($rs_json);
 
+  # get the correct seq_id version for each assembly
+  my $seq_ids = get_seq_ids($rs_json->{'primary_snapshot_data'});
+
   # 1000Genomes data
   # Do not add 1000Genomes data
   # $data->{'1000Genomes'} = get_study_frequency($rs_json, '1000Genomes');
-  if ($config->{'add_maf'}) {
-    $data->{'1000Genomes'} = get_study_frequency($rs_json, '1000Genomes');
+  # Skip indels - there are problem with the allele representation
+  if ($config->{'add_maf'} && $data->{'variant_type'} eq "snv") {
+    $data->{'1000Genomes'} = get_study_frequency($rs_json, '1000Genomes', $seq_ids);
   }
 
   # If: 
@@ -341,6 +345,36 @@ sub parse_refsnp {
   # Set the variant class
   return $data; 
 
+}
+
+# Fetches the correct sequence id for each assembly
+# Return example : { 'grch38' => 'NC0000021.9', 'grch37' => 'NC0000021.8' }
+sub get_seq_ids {
+  my $data_obj = shift;
+
+  my $list;
+
+  my $assembly = $config->{'assembly'};
+
+  for my $placement_allele (@{$data_obj->{'placements_with_allele'}}) {
+    # for each placement get
+    # the seq_id, is_ptlp, number of seq_id_trait_by_assemby,is_aln_opposite_orientation
+    my $seq_id = $placement_allele->{'seq_id'};
+
+    # Only process the NC
+    next if ($seq_id !~ /^NC/);
+
+    my $assembly = $placement_allele->{'placement_annot'}->{'seq_id_traits_by_assembly'}->[0]->{'assembly_name'};
+
+    if (defined $assembly && $assembly =~ /GRCh37/) {
+      $list->{'grch37'} = $seq_id;
+    }
+    if (defined $assembly && $assembly =~ /GRCh38/) {
+      $list->{'grch38'} = $seq_id;
+    }
+  }
+
+  return $list;
 }
 
 # Assigns ancestral allele for each variation feature
@@ -1890,7 +1924,7 @@ sub find_failed_variation_set_id {
 }
 
 sub get_study_frequency {
-  my ($data, $study) = @_;
+  my ($data, $study, $seq_ids) = @_;
 
   return if (! $study);
 
@@ -1898,8 +1932,8 @@ sub get_study_frequency {
   my $found = 0;
   my @alleles;
 
+  my $assembly = lc $config->{'assembly'};
   my $allele_annotations = $data->{'primary_snapshot_data'}->{'allele_annotations'};
-  #print "Number of allele_annotations = ", scalar(@$allele_annotations), "\n";
 
   # Assume allele_annotations exists
   # Is there frequency annotation ?
@@ -1907,22 +1941,25 @@ sub get_study_frequency {
 
   # Is there annotation for the study of interest.
   my $freqs = $allele_annotations->[0]->{'frequency'};
+
   for my $freq (@$freqs) {
-      #print Dumper($freq), "\n";
-      if ($freq->{'study_name'} eq $study) {
+      if ($freq->{'study_name'} eq $study && defined $seq_ids->{$assembly} && $seq_ids->{$assembly} eq $freq->{'observation'}->{'seq_id'}) {
         $found = 1;
         push @alleles, $freq;
       }
   }
+
   return if (! $found);
+
   for (my $i=1; $i<@$allele_annotations; $i++) {
       my $freqs = $allele_annotations->[$i]->{'frequency'};
       for my $freq (@$freqs) {
-        if ($freq->{'study_name'} eq $study) {
+        if ($freq->{'study_name'} eq $study && defined $seq_ids->{$assembly} && $seq_ids->{$assembly} eq $freq->{'observation'}->{'seq_id'}) {
           push @alleles, $freq;
         }
       }
   }
+
   # Check the alleles are consistent
   # Have the same seq_id, position, deleted_sequence. The alleles then become
   # the inserted_sequence
@@ -1943,27 +1980,32 @@ sub get_study_frequency {
       $allele_errors{3}++;
     }
   }
+
+  my $flag;
+
   if (%allele_errors) {
-    #print "There are allele errors not going to do MAF, minor_allele\n";
-  } else {
-    #print "Going to calculate MAF and minor_allele\n";
+    log_errors($config, "rs".$data->{'refsnp_id'}, "ERROR", "there are allele errors");
+    $flag = 1;
   }
-  $study_freq->{'alleles'} = [@alleles];
-  $study_freq->{'minor_allele'} = undef;
-  $study_freq->{'MAF'} = undef;
-  $study_freq->{'minor_allele_count'} = undef;
+  else {
+    $study_freq->{'alleles'} = [@alleles];
+    $study_freq->{'minor_allele'} = undef;
+    $study_freq->{'MAF'} = undef;
+    $study_freq->{'minor_allele_count'} = undef;
 
-  if (@{$study_freq->{'alleles'}} <= 1) {
-    $allele_errors{4}++;
-  } else {
-    my ($maf, $minor_allele, $minor_allele_count) = get_maf($study_freq->{'alleles'}, $data->{'refsnp_id'});
-    $study_freq->{'MAF'} = $maf;
-    $study_freq->{'minor_allele'} = $minor_allele;
-    $study_freq->{'minor_allele_count'} = $minor_allele_count;
+    if (@{$study_freq->{'alleles'}} <= 1) {
+      $allele_errors{4}++;
+    }
+    else {
+      my ($maf, $minor_allele, $minor_allele_count) = get_maf($study_freq->{'alleles'}, $data->{'refsnp_id'});
+      $study_freq->{'MAF'} = $maf;
+      $study_freq->{'minor_allele'} = $minor_allele;
+      $study_freq->{'minor_allele_count'} = $minor_allele_count;
+    }
+    $study_freq->{'allele_errors'} = {%allele_errors};
   }
-  $study_freq->{'allele_errors'} = {%allele_errors};
-  return $study_freq;
 
+  return $flag ? undef : $study_freq;
 }
 
 # Get alignment diff between GRCh37 and GRCh38
@@ -2038,13 +2080,13 @@ sub dump_file {
 sub get_maf {
   my ($alleles_ref, $rsid) = @_;
 
-  #print Dumper($alleles_ref);
   my @sorted_alleles = sort {
                             $b->{'allele_count'} <=> $a->{'allele_count'}
                                      or
                             $a->{'observation'}->{'inserted_sequence'} cmp $b->{'observation'}->{'inserted_sequence'}
 
                           } @$alleles_ref;
+
   my $maf = sprintf("%.6f", $sorted_alleles[1]->{'allele_count'}/$sorted_alleles[1]->{'total_count'});
   my $minor_allele = $sorted_alleles[1]->{'observation'}->{'inserted_sequence'};
   my $minor_allele_count = $sorted_alleles[1]->{'allele_count'};
@@ -2059,11 +2101,6 @@ sub get_maf {
     log_errors($config, $var_name, $msg, $info);
   }
 
-
-  #print "Minor Allele Frequence = ($maf)\n";
-  #print "Minor allelele = ($minor_allele)\n";
-  #print "Minor allele count = ($minor_allele_count)\n";
-  #print Dumper(\@sorted_alleles);
   return ($maf, $minor_allele, $minor_allele_count);
 }
 
