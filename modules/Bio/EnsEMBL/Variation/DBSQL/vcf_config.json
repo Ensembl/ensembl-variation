@@ -1286,10 +1286,10 @@
     },
     {
       "id": "91_mammals.gerp_conservation_score",
-      "species": "ovis_aries",
-      "assembly": "Oar_v3.1",
+      "species": "ovis_aries_rambouillet",
+      "assembly": "ARS-UI_Ramb_v2.0",
       "type": "remote",
-      "filename_template" : "https://ftp.ensembl.org/pub/release-110/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.ovis_aries.Oar_v3.1.bw",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.ovis_aries_rambouillet.ARS-UI_Ramb_v2.0.bw",
       "annotation_type": "gerp"
     },
     {
