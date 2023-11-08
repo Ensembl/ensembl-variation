@@ -1142,14 +1142,6 @@
     },
     {
       "id": "91_mammals.gerp_conservation_score",
-      "species": "canis_lupus_familiarisboxer",
-      "assembly": "Dog10K_Boxer_Tasha",
-      "type": "remote",
-      "filename_template" : "https://ftp.ensembl.org/pub/release-110/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.canis_lupus_familiarisboxer.Dog10K_Boxer_Tasha.bw",
-      "annotation_type": "gerp"
-    },
-    {
-      "id": "91_mammals.gerp_conservation_score",
       "species": "capra_hircus",
       "assembly": "ARS1",
       "type": "remote",
@@ -1298,14 +1290,6 @@
       "assembly": "Oar_v3.1",
       "type": "remote",
       "filename_template" : "https://ftp.ensembl.org/pub/release-110/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.ovis_aries.Oar_v3.1.bw",
-      "annotation_type": "gerp"
-    },
-    {
-      "id": "91_mammals.gerp_conservation_score",
-      "species": "ovis_aries_rambouillet",
-      "assembly": "ARS-UI_Ramb_v2.0",
-      "type": "remote",
-      "filename_template" : "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.ovis_aries_rambouillet.ARS-UI_Ramb_v2.0.bw",
       "annotation_type": "gerp"
     },
     {
