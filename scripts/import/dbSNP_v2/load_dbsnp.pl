@@ -302,7 +302,7 @@ sub parse_refsnp {
   # $data->{'1000Genomes'} = get_study_frequency($rs_json, '1000Genomes');
   # Skip indels - there are problem with the allele representation
   if ($config->{'add_maf'} && $data->{'variant_type'} eq "snv") {
-    $data->{'1000Genomes'} = get_study_frequency($rs_json, '1000Genomes', $seq_ids);
+    $data->{'1000Genomes'} = get_study_frequency($rs_json, '1000Genomes', $seq_ids, $data->{'variant_type'});
   }
 
   # If: 
@@ -1924,7 +1924,7 @@ sub find_failed_variation_set_id {
 }
 
 sub get_study_frequency {
-  my ($data, $study, $seq_ids) = @_;
+  my ($data, $study, $seq_ids, $var_type) = @_;
 
   return if (! $study);
 
@@ -1997,7 +1997,8 @@ sub get_study_frequency {
       $allele_errors{4}++;
     }
     else {
-      my ($maf, $minor_allele, $minor_allele_count) = get_maf($study_freq->{'alleles'}, $data->{'refsnp_id'});
+      my ($maf, $minor_allele, $minor_allele_count, $error) = get_maf($study_freq->{'alleles'}, $data->{'refsnp_id'}, $var_type);
+      $flag = $error if($error);
       $study_freq->{'MAF'} = $maf;
       $study_freq->{'minor_allele'} = $minor_allele;
       $study_freq->{'minor_allele_count'} = $minor_allele_count;
@@ -2078,7 +2079,7 @@ sub dump_file {
 }
 
 sub get_maf {
-  my ($alleles_ref, $rsid) = @_;
+  my ($alleles_ref, $rsid, $var_type) = @_;
 
   my @sorted_alleles = sort {
                             $b->{'allele_count'} <=> $a->{'allele_count'}
@@ -2093,6 +2094,12 @@ sub get_maf {
 
   my $var_name = "rs$rsid";
 
+  my $error;
+
+  if(length($minor_allele) != 1 && $var_type eq "snv") {
+    $error = 1;
+  }
+
   if (length($minor_allele) > 50) {
     my $msg = 'truncated_minor_allele';
     my $info = join(";", 'rsid='. $var_name,
@@ -2101,7 +2108,7 @@ sub get_maf {
     log_errors($config, $var_name, $msg, $info);
   }
 
-  return ($maf, $minor_allele, $minor_allele_count);
+  return ($maf, $minor_allele, $minor_allele_count, $error);
 }
 
 # Sets the class_attrib_id for variation and variation_features
