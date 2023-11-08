@@ -1169,7 +1169,7 @@
       "species": "danio_rerio",
       "assembly": "GRCz11",
       "type": "remote",
-      "filename_template" : "https://ftp.ensembl.org/pub/release-111c/compara/conservation_scores/65_fish.gerp_conservation_score/gerp_conservation_scores.danio_rerio.GRCz11.bw",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/65_fish.gerp_conservation_score/gerp_conservation_scores.danio_rerio.GRCz11.bw",
       "annotation_type": "gerp"
     },
     {
