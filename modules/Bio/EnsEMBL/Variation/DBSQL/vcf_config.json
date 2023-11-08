@@ -1361,7 +1361,7 @@
       "species": "taeniopygia_guttata",
       "assembly": "bTaeGut1_v1.p",
       "type": "remote",
-      "filename_template" : "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/63_amniotes.gerp_conservation_score/gerp_conservation_scores.taeniopygia_guttata.bTaeGut1_v1.p.bwc",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/63_amniotes.gerp_conservation_score/gerp_conservation_scores.taeniopygia_guttata.bTaeGut1_v1.p.bw",
       "annotation_type": "gerp"
     },
     {
