@@ -254,7 +254,7 @@ sub parse_input_file {
         push @phenotypes, {
           'id' => $gene->stable_id,
           'description' => $phen,
-          'MIM' => $id,
+          'external_id' => $id,
           'seq_region_id' => $gene->slice->get_seq_region_id,
           'seq_region_start' => $gene->seq_region_start,
           'seq_region_end' => $gene->seq_region_end,
