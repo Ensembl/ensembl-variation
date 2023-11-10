@@ -1729,6 +1729,7 @@ sub hgvs_protein {
   $hgvs_notation  = $self->_get_hgvs_protein_type($hgvs_notation);
   return undef unless defined $hgvs_notation->{type}; 
 
+  $convert_to_three_letter = 1 unless defined $convert_to_three_letter;
   ##### Convert ref & alt peptides taking into account HGVS rules
   $hgvs_notation = $self->_get_hgvs_peptides($hgvs_notation, $convert_to_three_letter);
   unless($hgvs_notation) {
@@ -2064,7 +2065,6 @@ sub _get_hgvs_peptides {
   }
 
   ### Convert peptide to 3 letter code as used in HGVS
-  $convert_to_three_letter = 1 unless defined $convert_to_three_letter;
   if ( $convert_to_three_letter ){
       $hgvs_notation->{ref}  = Bio::SeqUtils->seq3(Bio::PrimarySeq->new(-seq => $hgvs_notation->{ref}, -id => 'ref',  -alphabet => 'protein')) || "" unless ($hgvs_notation->{ref} eq "-");
       $hgvs_notation->{alt}  = Bio::SeqUtils->seq3(Bio::PrimarySeq->new(-seq => $hgvs_notation->{alt}, -id => 'ref',  -alphabet => 'protein')) || "" unless ($hgvs_notation->{alt} eq "-");
