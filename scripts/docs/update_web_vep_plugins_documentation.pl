@@ -253,7 +253,7 @@ sub read_plugin_file {
     }
     
     # Contact/developper information
-    if ($line =~ /=head1 CONTACT/ && scalar(@developer) == 0) {
+    if ($line =~ /=head1 CONTACT/) {
       my $contact_flag = 1;
       while ($contact_flag != 0) {
         $line = <F>;
@@ -263,7 +263,10 @@ sub read_plugin_file {
         }
         else {
           $line =~ s/^\s+//;
-          push(@developer, $1) if ($line =~ /(.+)\s+</);
+          if ($line =~ /(.+)\s+</) {
+            # some plugin had old-style Ensembl contact info with lots of text
+            push @developer, $1 if $1 ne "developers list at"; 
+          }
         }
       }
     }
