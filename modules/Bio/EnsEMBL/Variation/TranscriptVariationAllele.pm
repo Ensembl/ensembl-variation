@@ -1580,7 +1580,7 @@ sub hgvs_protein {
   my $notation = shift;
   my $prediction_format = shift;
   my $convert_to_three_letter = shift;
-  my $hgvs_notation;
+  my $hgvs_notation; 
 
   if($DEBUG == 1){
     print "\nStarting hgvs_protein with "; 
@@ -1729,6 +1729,7 @@ sub hgvs_protein {
   $hgvs_notation  = $self->_get_hgvs_protein_type($hgvs_notation);
   return undef unless defined $hgvs_notation->{type}; 
 
+  $convert_to_three_letter = 1 unless defined $convert_to_three_letter;
   ##### Convert ref & alt peptides taking into account HGVS rules
   $hgvs_notation = $self->_get_hgvs_peptides($hgvs_notation, $convert_to_three_letter);
   unless($hgvs_notation) {
@@ -1737,7 +1738,7 @@ sub hgvs_protein {
   }
 
   ##### String formatting
-  return $self->_get_hgvs_protein_format($hgvs_notation, $prediction_format);
+  return $self->_get_hgvs_protein_format($hgvs_notation, $prediction_format, $convert_to_three_letter);
 }
 
 
@@ -1818,6 +1819,7 @@ sub _get_hgvs_protein_format {
   my $self          = shift;
   my $hgvs_notation = shift;
   my $prediction_format = shift;
+  my $convert_to_three_letter = shift;
 
   ### all start with refseq name & numbering type
   $hgvs_notation->{'hgvs'} = $hgvs_notation->{'ref_name'} . ":" . $hgvs_notation->{'numbering'} . ".";
@@ -1834,7 +1836,7 @@ sub _get_hgvs_protein_format {
   elsif(stop_lost($self) && ($hgvs_notation->{type} eq "del" || $hgvs_notation->{type} eq ">" )) {
     ### if deletion of stop add extTer and number of new aa to alt
 
-    $hgvs_notation->{alt} = substr($hgvs_notation->{alt}, 0, 3);
+    $hgvs_notation->{alt} = $convert_to_three_letter ? substr($hgvs_notation->{alt}, 0, 3) : substr($hgvs_notation->{alt}, 0, 1);
     print "stop loss check req for $hgvs_notation->{type}\n" if $DEBUG ==1;
 
     my $aa_til_stop =  $self->_stop_loss_extra_AA($hgvs_notation->{start}-1 );
@@ -1844,23 +1846,21 @@ sub _get_hgvs_protein_format {
     $hgvs_notation->{alt} .=  "extTer" . $aa_til_stop;
 
     # 2020-07-14
-    if( length($hgvs_notation->{ref}) >3 && $hgvs_notation->{type} eq "del" ) {
-      my $ref_pep_first = substr($hgvs_notation->{ref}, 0, 3);
-      my $ref_pep_last  = substr($hgvs_notation->{ref}, -3, 3);
+    if($convert_to_three_letter && length($hgvs_notation->{ref}) >3 && $hgvs_notation->{type} eq "del" ) {
+      my $ref_pep_first = $convert_to_three_letter ? substr($hgvs_notation->{ref}, 0, 3) : substr($hgvs_notation->{ref}, 0, 1);
+      my $ref_pep_last  = $convert_to_three_letter ? substr($hgvs_notation->{ref}, -3, 3) : substr($hgvs_notation->{ref}, -1, 1);
       $hgvs_notation->{'hgvs'} .=  $ref_pep_first . $hgvs_notation->{start} .  "_" .  $ref_pep_last . $hgvs_notation->{end} .$hgvs_notation->{alt} ;
     }
     else{
       $hgvs_notation->{'hgvs'} .=  $hgvs_notation->{ref} . $hgvs_notation->{start} .  $hgvs_notation->{alt} ;
     }
-
-  } 
+  }
 
   elsif( $hgvs_notation->{type} eq "dup"){
-
     if($hgvs_notation->{start} < $hgvs_notation->{end}){
       ### list only first and last peptides in long duplicated string
-      my $ref_pep_first = substr($hgvs_notation->{alt}, 0, 3);
-      my $ref_pep_last  = substr($hgvs_notation->{alt}, -3, 3);
+      my $ref_pep_first = $convert_to_three_letter ? substr($hgvs_notation->{alt}, 0, 3) : substr($hgvs_notation->{ref}, 0, 1);
+      my $ref_pep_last  = $convert_to_three_letter ? substr($hgvs_notation->{alt}, -3, 3) : substr($hgvs_notation->{ref}, -1, 1);
       $hgvs_notation->{'hgvs'} .=  $ref_pep_first . $hgvs_notation->{start} .  "_" .  $ref_pep_last . $hgvs_notation->{end} ."dup";
     }
     else{
@@ -1881,13 +1881,13 @@ sub _get_hgvs_protein_format {
     $hgvs_notation->{alt} =~ s/Ter\w+/Ter/ ;
 
     #### list first and last aa in reference only
-    my $ref_pep_first = substr($hgvs_notation->{ref}, 0, 3);
+    my $ref_pep_first = $convert_to_three_letter ? substr($hgvs_notation->{ref}, 0, 3) : substr($hgvs_notation->{ref}, 0, 1);
     my $ref_pep_last;
     if(substr($hgvs_notation->{ref}, -1, 1) eq "X"){
       $ref_pep_last ="Ter";
     }
     else{
-      $ref_pep_last  = substr($hgvs_notation->{ref}, -3, 3);
+      $ref_pep_last  = $convert_to_three_letter ? substr($hgvs_notation->{ref}, -3, 3) : substr($hgvs_notation->{ref}, -1, 1);
     }
 
     if($hgvs_notation->{ref} =~ /X$/) {
@@ -1902,9 +1902,9 @@ sub _get_hgvs_protein_format {
     if($hgvs_notation->{start} == $hgvs_notation->{end} && $hgvs_notation->{type} eq "delins"){       
        $hgvs_notation->{'hgvs'} .= $ref_pep_first . $hgvs_notation->{start}  . $hgvs_notation->{type} . $hgvs_notation->{alt} ;
     }
-    else{        
+    else{
       ### correct ordering if needed
-      if($hgvs_notation->{start} > $hgvs_notation->{end}){       
+      if($hgvs_notation->{start} > $hgvs_notation->{end}){
         ( $hgvs_notation->{start}, $hgvs_notation->{end}) = ($hgvs_notation->{end}, $hgvs_notation->{start} );
       }
 
@@ -1932,8 +1932,8 @@ sub _get_hgvs_protein_format {
   elsif( $hgvs_notation->{type} eq "del"){
     $hgvs_notation->{alt} =  "del"; 
     if( length($hgvs_notation->{ref}) >3 ){
-      my $ref_pep_first = substr($hgvs_notation->{ref}, 0, 3);
-      my $ref_pep_last  = substr($hgvs_notation->{ref}, -3, 3);
+      my $ref_pep_first = $convert_to_three_letter ? substr($hgvs_notation->{ref}, 0, 3) : substr($hgvs_notation->{ref}, 0, 1);
+      my $ref_pep_last  = $convert_to_three_letter ? substr($hgvs_notation->{ref}, -3, 3) : substr($hgvs_notation->{ref}, -1, 1);
       $hgvs_notation->{'hgvs'} .=  $ref_pep_first . $hgvs_notation->{start} .  "_" .  $ref_pep_last . $hgvs_notation->{end} .$hgvs_notation->{alt} ;
     }
     else{
@@ -2065,7 +2065,6 @@ sub _get_hgvs_peptides {
   }
 
   ### Convert peptide to 3 letter code as used in HGVS
-  $convert_to_three_letter = 1 unless defined $convert_to_three_letter;
   if ( $convert_to_three_letter ){
       $hgvs_notation->{ref}  = Bio::SeqUtils->seq3(Bio::PrimarySeq->new(-seq => $hgvs_notation->{ref}, -id => 'ref',  -alphabet => 'protein')) || "" unless ($hgvs_notation->{ref} eq "-");
       $hgvs_notation->{alt}  = Bio::SeqUtils->seq3(Bio::PrimarySeq->new(-seq => $hgvs_notation->{alt}, -id => 'ref',  -alphabet => 'protein')) || "" unless ($hgvs_notation->{alt} eq "-");
@@ -2095,7 +2094,6 @@ sub _get_hgvs_peptides {
   ### 2012-08-31  - Ter now recommended in HGVS
   if(defined $hgvs_notation->{ref}){ $hgvs_notation->{ref} =~ s/Xaa/Ter/g; }
   if(defined $hgvs_notation->{alt}){ $hgvs_notation->{alt} =~ s/Xaa/Ter/g; }
-
 
   return ($hgvs_notation);           
 }
