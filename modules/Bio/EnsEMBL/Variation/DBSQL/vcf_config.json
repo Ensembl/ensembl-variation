@@ -645,9 +645,9 @@
     {
       "id": "nextgen_sheep_rambouillet_mooa",
       "species": "ovis_aries_rambouillet",
-      "assembly": "Oar_rambouillet_v1.0",
+      "assembly": "ARS-UI_Ramb_v2.0",
       "type": "remote",
-      "filename_template": "https://ftp.ensembl.org/pub/data_files/ovis_aries_rambouillet/Oar_rambouillet_v1.0/variation_genotype/MOOA.population_sites.Oar_rambouillet_v1_0.20140328.vcf.gz",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/ovis_aries_rambouillet/ARS-UI_Ramb_v2.0/variation_genotype/MOOA.population_sites.ARS-UI_Ramb_v2_0.20140328.vcf.gz",
       "chromosomes": [
         "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
         "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "X"
