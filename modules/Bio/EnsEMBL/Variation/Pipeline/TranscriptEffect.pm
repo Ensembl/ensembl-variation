@@ -216,8 +216,8 @@ sub run {
 
           # Human grch37 has canonical transcripts
           if($is_human && lc $self->param('assembly') =~ /37|grch37/ && $is_canonical) {
-	    $write_mtmp = 1;
-	  }
+            $write_mtmp = 1;
+          }
 
           unless($biotypes_to_skip{$biotype} || !$write_mtmp){
             print $mtmp_fh join("\t", map {defined($_) ? $_ : '\N'} @$_)."\n" for @$mtmp_data;
