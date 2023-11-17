@@ -265,7 +265,7 @@ sub read_plugin_file {
           $line =~ s/^\s+//;
           if ($line =~ /(.+)\s+</) {
             # some plugin had old-style Ensembl contact info with lots of text
-            push @developer, $1 if $1 ne "developers list at"; 
+            push @developer, $1 unless (grep /^$1$/, @developer || $1 eq "developers list at");
           }
         }
       }
