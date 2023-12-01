@@ -74,10 +74,12 @@ sub default_options {
     # configuration for the various resource options used in the pipeline
     # EBI farm users should either change these here, or override them on the
     # command line to suit the EBI farm.
-        
     default_lsf_options => '-qproduction -R"select[mem>8000] rusage[mem=8000]" -M8000',
     medium_lsf_options  => '-qproduction -R"select[mem>16000] rusage[mem=16000]" -M16000',
 
+    default_slurm_options      => '--partition=production --time=24:00:00 --mem=4G',
+    default_long_slurm_options => '--partition=production --time=48:00:00 --mem=4G',
+    medium_slurm_options       => '--partition=production --time=24:00:00 --mem=6G',
 
     # size of region to be checked in a single job
     region_size =>  1000000,
@@ -118,8 +120,12 @@ sub default_options {
 sub resource_classes {
   my ($self) = @_;
   return {
-      'default' => { 'LSF' => $self->o('default_lsf_options') },
-      'medium'  => { 'LSF' => $self->o('medium_lsf_options')  },
+      'default'      => { 'LSF' => $self->o('default_lsf_options'),
+                          'SLURM' => $self->o('default_slurm_options') },
+      'default_long' => { 'LSF' => $self->o('default_lsf_options'),
+                          'SLURM' => $self->o('default_long_slurm_options') },
+      'medium'       => { 'LSF' => $self->o('medium_lsf_options'),
+                          'SLURM' => $self->o('medium_slurm_options')  },
   };
 }
 
@@ -162,7 +168,7 @@ sub pipeline_analyses {
        -input_ids        => [],
        -hive_capacity    => $self->o('capacity'),
        -max_retry_count  => 0,
-       -rc_name          => 'default',
+       -rc_name          => 'default_long',
        -wait_for         => [ 'init_equivalent_alleles' ],
        -flow_into        => {},
     },

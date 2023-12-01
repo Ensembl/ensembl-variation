@@ -99,12 +99,12 @@ sub pipeline_analyses {
     {   
       -logic_name        => 'init_mapping', 
       -module            => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::InitVariationFeatureMapping',
-      -rc_name           => 'default_mem',
+      -rc_name           => 'default_mem_long',
       -analysis_capacity => 5,
       -flow_into => { 
         '2->A' => ['run_mapping'],
         'A->1' => ['init_parse_mapping']
-      },		
+      },
     },
     {
       -logic_name => 'run_mapping',
@@ -180,7 +180,7 @@ sub pipeline_analyses {
       -logic_name => 'finish_variant_qc',
       -module     => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::FinishVariationFeatureQC',
       -max_retry_count => 0,
-      -rc_name    => 'high_mem',
+      -rc_name    => 'high_mem_long',
        -flow_into => {
         1 => ['compare_prev_assembly'],
       },
@@ -203,4 +203,3 @@ sub pipeline_analyses {
 }
 
 1;
-

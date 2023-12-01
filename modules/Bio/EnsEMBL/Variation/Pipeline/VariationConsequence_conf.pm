@@ -96,7 +96,7 @@ sub default_options {
         disambiguate_single_nucleotide_alleles => 0,
 
         # shifting variants within repeated regions in the 3' direction is switched off by default.
-	
+
         prevent_shifting => 1,
 
         # configuration for the various resource options used in the pipeline
@@ -105,15 +105,22 @@ sub default_options {
         # reflect their usage, but you may want to change the details (memory
         # requirements, queue parameters etc.) to suit your own data
         
-        default_lsf_options => '-qproduction -R"select[mem>2000] rusage[mem=2000]" -M2000',
-        medmem_lsf_options  => '-qproduction -R"select[mem>5000] rusage[mem=5000]" -M5000',
-        highmem_lsf_options => '-qproduction -R"select[mem>15000] rusage[mem=15000] span[hosts=1]" -M15000 -n4', # this is LSF speak for "give me 15GB of memory"
+        default_lsf_options => '-qproduction -R"select[mem>8000] rusage[mem=8000]" -M8000',
+        medmem_lsf_options  => '-qproduction -R"select[mem>10000] rusage[mem=10000]" -M10000',
+        highmem_lsf_options => '-qproduction -R"select[mem>20000] rusage[mem=20000] span[hosts=1]" -M20000 -n4',
+
+        default_slurm_options      => '--partition=production --time=24:00:00 --mem=8G',
+        default_long_slurm_options => '--partition=production --time=140:00:00 --mem=8G',
+        medmem_slurm_options       => '--partition=production --time=24:00:00 --mem=10G',
+        medmem_long_slurm_options  => '--partition=production --time=140:00:00 --mem=10G',
+        highmem_slurm_options      => '--partition=production --time=24:00:00 --mem=20G',
+        highmem_long_slurm_options => '--partition=production --time=140:00:00 --mem=20G',
 
         # options controlling the number of workers used for the parallelisable analyses
         # these default values seem to work for most species
 
         set_variation_class_capacity    => 10,
-        
+
         # set this flag to 1 to include LRG transcripts in the transcript effect analysis
 
         include_lrg => 1, 
@@ -150,7 +157,7 @@ sub default_options {
 
         # Human runs switch off run_var_class and set max_distance to 0 by default. To override
         # this behaviour, set this flag to 1
-        human_default_override		=> 0,
+        human_default_override  => 0,
 
         # connection parameters for the hive database, you should supply the hive_db_password
         # option on the command line to init_pipeline.pl (parameters for the target database
@@ -192,7 +199,7 @@ sub default_options {
             -host   => $self->o('hive_db_host'),
             -port   => $self->o('hive_db_port'),
             -user   => $self->o('hive_db_user'),
-            -pass   => $self->o('hive_db_password'),            
+            -pass   => $self->o('hive_db_password'),
             -dbname => $self->o('hive_db_name'),
             -driver => 'mysql',
             -reconnect_when_lost => 1
@@ -212,9 +219,16 @@ sub pipeline_wide_parameters {  # these parameter values are visible to all anal
 sub resource_classes {
     my ($self) = @_;
     return {
-          'default' => { 'LSF' => $self->o('default_lsf_options') },
-          'highmem' => { 'LSF' => $self->o('highmem_lsf_options') },
-          'medmem'  => { 'LSF' => $self->o('medmem_lsf_options') },
+          'default' => { 'LSF'   => $self->o('default_lsf_options'),
+                         'SLURM' => $self->o('default_slurm_options') },
+          'default_long' => { 'LSF'   => $self->o('default_lsf_options'),
+                              'SLURM' => $self->o('default_long_slurm_options') },
+          'highmem'      => { 'LSF'   => $self->o('highmem_lsf_options'),
+                              'SLURM' => $self->o('highmem_slurm_options') },
+          'highmem_long' => { 'LSF'   => $self->o('highmem_lsf_options'),
+                              'SLURM' => $self->o('highmem_long_slurm_options') },
+          'medmem'       => { 'LSF'   => $self->o('medmem_lsf_options'),
+                              'SLURM' => $self->o('medmem_slurm_options') },
     };
 }
 
@@ -318,7 +332,7 @@ sub pipeline_analyses {
               update_diff => $self->o('update_diff'),
               @common_params,
             },
-            -rc_name   => 'default',
+            -rc_name   => ($self->o('species') !~ /homo_sapiens|human/) ? 'default' : 'default_long',
           },
           { -logic_name => 'transcript_effect',
             -module => 'Bio::EnsEMBL::Variation::Pipeline::TranscriptEffect',
@@ -331,6 +345,7 @@ sub pipeline_analyses {
               disambiguate_single_nucleotide_alleles => $self->o('disambiguate_single_nucleotide_alleles'),
               prevent_shifting => $self->o('prevent_shifting'),
               update_diff => $self->o('update_diff'),
+              assembly => $self->o('assembly'),
               @common_params,
             },
             -rc_name   => 'medmem',
@@ -366,14 +381,14 @@ sub pipeline_analyses {
               update_diff => $self->o('update_diff'),
               @common_params,
             },
-            -rc_name   => 'default',
+            -rc_name   => ($self->o('species') !~ /homo_sapiens|human/) ? 'default' : 'default_long',
           },
           { -logic_name => 'rebuild_tv_indexes',
             -module => 'Bio::EnsEMBL::Variation::Pipeline::RebuildIndexes',
             -parameters => {
               @common_params,
             },
-            -rc_name   => 'default',
+            -rc_name   => ($self->o('species') !~ /homo_sapiens|human/) ? 'default' : 'default_long',
             -wait_for => 'web_index_load',
             -flow_into => {
               1 => ['update_variation_feature'],
@@ -385,7 +400,7 @@ sub pipeline_analyses {
             -parameters => {
               @common_params,
             },
-            -rc_name   => 'highmem',
+            -rc_name   => ($self->o('species') !~ /homo_sapiens|human/) ? 'highmem' : 'highmem_long',
             -flow_into => {
               1 => ['check_transcript_variation']
             },
@@ -451,7 +466,7 @@ sub pipeline_analyses {
                 },
                 -input_ids      => [],
                 -hive_capacity  => 1,
-                -rc_name        => 'default',
+                -rc_name        => ($self->o('species') !~ /homo_sapiens|human/) ? 'default' : 'default_long',
                 -wait_for       => [ 'set_variation_class' ],
                 -flow_into      => {},
             },
