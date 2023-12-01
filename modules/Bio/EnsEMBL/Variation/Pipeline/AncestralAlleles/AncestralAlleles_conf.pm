@@ -82,6 +82,9 @@ sub default_options {
         default_lsf_options => '-q production -R"select[mem>2000] rusage[mem=2000]" -M2000',
         medmem_lsf_options  => '-q production -R"select[mem>5000] rusage[mem=5000]" -M5000',
 
+        default_slurm_options => '--partition=production --time=12:00:00 --mem=2G',
+        medmem_slurm_options  => '--partition=production --time=12:00:00 --mem=5G',
+
         hive_db_host    => 'mysql-ens-var-prod-1',
         hive_db_port    => 4449,
         hive_db_user    => 'ensadmin',
@@ -101,8 +104,10 @@ sub default_options {
 sub resource_classes {
     my ($self) = @_;
     return {
-          'default' => { 'LSF' => $self->o('default_lsf_options') },
-          'medmem'  => { 'LSF' => $self->o('medmem_lsf_options') },
+          'default' => { 'LSF' => $self->o('default_lsf_options'),
+                         'SLURM' => $self->o('default_slurm_options') },
+          'medmem'  => { 'LSF' => $self->o('medmem_lsf_options'),
+                         'SLURM' => $self->o('medmem_slurm_options') },
     };
 }
 
@@ -157,4 +162,3 @@ sub pipeline_analyses {
 }
 
 1;
-

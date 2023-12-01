@@ -138,9 +138,15 @@ sub default_options {
         
         default_lsf_options => '-qproduction -R"select[mem>2000] rusage[mem=2000]" -M2000',
         medmem_lsf_options  => '-qproduction -R"select[mem>8000] rusage[mem=8000]" -M8000',
-        urgent_lsf_options  => '-qproduction -R"select[mem>2000] rusage[mem=2000]" -M2000',
         highmem_lsf_options => '-qproduction -R"select[mem>24000] rusage[mem=24000]" -M24000',
-        long_lsf_options    => '-qproduction -R"select[mem>2000] rusage[mem=2000]" -M2000',
+
+        default_slurm_options      => '--partition=production --time=1:30:00 --mem=2G',
+        default_long_slurm_options => '--partition=production --time=6:00:00 --mem=2G',
+        medmem_slurm_options       => '--partition=production --time=6:00:00 --mem=8G',
+        medmem_long_slurm_options  => '--partition=production --time=24:00:00 --mem=8G',
+        highmem_slurm_options      => '--partition=production --time=2:30:00 --mem=24G',
+        highmem_med_slurm_options  => '--partition=production --time=24:00:00 --mem=24G',
+        highmem_long_slurm_options => '--partition=production --time=120:00:00 --mem=24G',
 
         # Polyphen specific parameters
 
@@ -251,11 +257,20 @@ sub pipeline_create_commands {
 sub resource_classes {
     my ($self) = @_;
     return {
-          'default' => { 'LSF' => $self->o('default_lsf_options') },
-          'medmem'  => { 'LSF' => $self->o('medmem_lsf_options')  },
-          'urgent'  => { 'LSF' => $self->o('urgent_lsf_options')  },
-          'highmem' => { 'LSF' => $self->o('highmem_lsf_options') },
-          'long'    => { 'LSF' => $self->o('long_lsf_options')    },
+          'default'      => { 'LSF' => $self->o('default_lsf_options'),
+                              'SLURM' => $self->o('default_slurm_options') },
+          'default_long' => { 'LSF' => $self->o('default_lsf_options'),
+                              'SLURM' => $self->o('default_long_slurm_options') },
+          'medmem'       => { 'LSF' => $self->o('medmem_lsf_options'),
+                              'SLURM' => $self->o('medmem_slurm_options')  },
+          'medmem_long'  => { 'LSF' => $self->o('medmem_lsf_options'),
+                              'SLURM' => $self->o('medmem_long_slurm_options')  },
+          'highmem'      => { 'LSF' => $self->o('highmem_lsf_options'),
+                              'SLURM' => $self->o('highmem_slurm_options') },
+          'highmem_med'  => { 'LSF' => $self->o('highmem_lsf_options'),
+                              'SLURM' => $self->o('highmem_med_slurm_options') },
+          'highmem_long' => { 'LSF' => $self->o('highmem_lsf_options'),
+                              'SLURM' => $self->o('highmem_long_slurm_options') },
     };
 }
 
@@ -322,7 +337,7 @@ sub pipeline_analyses {
             -max_retry_count => 0,
             -input_ids      => [],
             -hive_capacity  => $self->o('pph_max_workers'),
-            -rc_name        => 'highmem',
+            -rc_name        => 'highmem_med',
             -flow_into      => {
                 2   => [ 'run_weka' ],
             },
@@ -357,7 +372,7 @@ sub pipeline_analyses {
             -max_retry_count => 0,
             -input_ids      => [],
             -hive_capacity  => $self->o('sift_max_workers'),
-            -rc_name        => 'medmem',
+            -rc_name        => 'medmem_long',
             -flow_into      => {
                 -1 => ['run_sift_highmem']
             }
@@ -421,7 +436,7 @@ sub pipeline_analyses {
             -input_ids            => [], #default
             -hive_capacity        => 1,
             -analysis_capacity    => 1,
-            -rc_name              => 'default',
+            -rc_name              => 'default_long',
             -failed_job_tolerance => 0,
             -max_retry_count      => 0,
         },
@@ -430,4 +445,3 @@ sub pipeline_analyses {
 }
 
 1;
-
