@@ -1,1494 +1,1400 @@
 {
-    "collections": [
-        {
-            "id": "1000genomes_phase3_GRCh37",
-            "species": "homo_sapiens",
-            "assembly": "GRCh37",
-            "type": "remote",
-            "strict_name_match": 1,
-            "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh37/variation_genotype/ALL.chr###CHR###.phase3_shapeit2_mvncall_integrated_v3plus_nounphased.rsID.genotypes.vcf.gz",
-            "chromosomes": [
-                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", 
-                "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y" 
-            ],
-            "sample_prefix": "1000GENOMES:phase_3:"
-        },
-        {
-            "id": "1000genomes_phase3_GRCh38",
-            "species": "homo_sapiens",
-            "assembly": "GRCh38",
-            "type": "remote",
-            "strict_name_match": 1,
-            "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_genotype/ALL.chr###CHR###_GRCh38.genotypes.20170504.vcf.gz",
-            "chromosomes": [
-                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", 
-                "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y" 
-            ],
-            "sample_prefix": "1000GENOMES:phase_3:"
-        },
-        {
-            "id": "gnomADg_GRCh37",
-            "description": "Genome Aggregation Database genomes r2.1",
-            "species": "homo_sapiens",
-            "assembly": "GRCh37",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh37/variation_genotype/gnomad/r2.1/genomes/gnomad.genomes.r2.1.sites.chr###CHR###_noVEP.vcf.gz",
-            "chromosomes": [
-                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", 
-                "15", "16", "17", "18", "19", "20", "21", "22", "X" 
-            ],
-            "population_prefix": "gnomADg:",
-            "population_display_group": {
-                "display_group_name": "gnomAD genomes",
-                "display_group_priority": 1.5
-            },
-            "populations": {
-                "9900000": {
-                    "name": "gnomADg:ALL",
-                    "_raw_name": "",
-                    "description": "All gnomAD genomes individuals"
-                },
-                "9900001": {
-                    "name": "afr",
-                    "description": "African/African American"
-                },
-                "9900002": {
-                    "name": "amr",
-                    "description": "Latino"
-                },
-                "9900003": {
-                    "name": "asj",
-                    "description": "Ashkenazi Jewish"
-                },
-                "9900004": {
-                    "name": "eas",
-                    "description": "East Asian"
-                },
-                "9900005": {
-                    "name": "fin",
-                    "description": "Finnish"
-                },
-                "9900006": {
-                    "name": "nfe",
-                    "description": "Non-Finnish European"
-                },
-                "9900007": {
-                    "name": "oth",
-                    "description": "Other"
-                }
-            }
-        },
-        {
-            "id": "gnomADe_GRCh37",
-            "description": "Genome Aggregation Database exomes r2.1",
-            "species": "homo_sapiens",
-            "assembly": "GRCh37",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh37/variation_genotype/gnomad/r2.1/exomes/gnomad.exomes.r2.1.sites.chr###CHR###_noVEP.vcf.gz",
-            "chromosomes": [
-                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", 
-                "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y" 
-            ],
-            "population_prefix": "gnomADe:",
-            "population_display_group": {
-                "display_group_name": "gnomAD exomes",
-                "display_group_priority": 1.4
-            },
-            "populations": {
-                "9900010": {
-                    "name": "gnomADe:ALL",
-                    "_raw_name": "",
-                    "description": "All gnomAD exomes individuals"
-                },
-                "9900011": {
-                    "name": "afr",
-                    "description": "African/African American"
-                },
-                "9900012": {
-                    "name": "amr",
-                    "description": "Latino"
-                },
-                "9900013": {
-                    "name": "asj",
-                    "description": "Ashkenazi Jewish"
-                },
-                "9900014": {
-                    "name": "eas",
-                    "description": "East Asian"
-                },
-                "9900015": {
-                    "name": "fin",
-                    "description": "Finnish"
-                },
-                "9900016": {
-                    "name": "nfe",
-                    "description": "Non-Finnish European"
-                },
-                "9900017": {
-                    "name": "oth",
-                    "description": "Other"
-                },
-                "9900018": {
-                    "name": "sas",
-                    "description": "South Asian"
-                }
-            }
-        },
-        {
-            "id": "gnomADg_v3.1.2_GRCh38",
-            "description": "Genome Aggregation Database genomes v3.1.2",
-            "species": "homo_sapiens",
-            "assembly": "GRCh38",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_genotype/gnomad/v3.1.2/gnomad.genomes.v3.1.2.sites.chr###CHR###_trimmed_info.vcf.bgz",
-            "chromosomes": [
-                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", 
-                "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y" 
-            ],
-            "use_seq_region_synonyms": 1,
-            "population_prefix": "gnomADg:",
-            "population_display_group": {
-                "display_group_name": "gnomAD genomes v3.1.2",
-                "display_group_priority": 1.6
-            },
-            "populations": {
-                "9900028": {
-                    "name": "gnomADg:ALL",
-                    "_raw_name": "",
-                    "description": "All gnomAD genomes individuals"
-                },
-                "9900029": {
-                    "name": "afr",
-                    "description": "African/African American"
-                },
-                "9900030": {
-                    "name": "ami",
-                    "description": "Amish"
-                },
-                "9900031": {
-                    "name": "amr",
-                    "description": "Latino/Admixed American"
-                },
-                "9900032": {
-                    "name": "asj",
-                    "description": "Ashkenazi Jewish"
-                },
-                "9900033": {
-                    "name": "eas",
-                    "description": "East Asian"
-                },
-                "9900034": {
-                    "name": "fin",
-                    "description": "Finnish"
-                },
-                "9900035": {
-                    "name": "nfe",
-                    "description": "Non-Finnish European"
-                },
-                "9900036": {
-                    "name": "sas",
-                    "description": "South Asian"
-                },
-                "9900037": {
-                    "name": "oth",
-                    "description": "Other"
-                },
-                "9900038": {
-                    "name": "mid",
-                    "description": "Middle Eastern"
-                }
-            }
-        },
-        {
-            "id": "gnomADe_r2.1.1_GRCh38",
-            "description": "Genome Aggregation Database exomes r2.1.1",
-            "species": "homo_sapiens",
-            "assembly": "GRCh38",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_genotype/gnomad/r2.1.1/exomes/gnomad.exomes.r2.1.1.sites.###CHR###.liftover_grch38_no_VEP.vcf.gz",
-            "chromosomes": [
-                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", 
-                "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y" 
-            ],
-            "population_prefix": "gnomADe:",
-            "population_display_group": {
-                "display_group_name": "gnomAD exomes r2.1.1",
-                "display_group_priority": 1.4
-            },
-            "populations": {
-                "9900010": {
-                    "name": "gnomADe:ALL",
-                    "_raw_name": "",
-                    "description": "All gnomAD exomes individuals"
-                },
-                "9900011": {
-                    "name": "afr",
-                    "description": "African/African American"
-                },
-                "9900012": {
-                    "name": "amr",
-                    "description": "Latino"
-                },
-                "9900013": {
-                    "name": "asj",
-                    "description": "Ashkenazi Jewish"
-                },
-                "9900014": {
-                    "name": "eas",
-                    "description": "East Asian"
-                },
-                "9900015": {
-                    "name": "fin",
-                    "description": "Finnish"
-                },
-                "9900016": {
-                    "name": "nfe",
-                    "description": "Non-Finnish European"
-                },
-                "9900017": {
-                    "name": "oth",
-                    "description": "Other"
-                },
-                "9900018": {
-                    "name": "sas",
-                    "description": "South Asian"
-                }
-            }
-        },
-        {
-            "id": "ALFA_GRCh38",
-            "description": "NCBI ALFA (Allele Frequency Aggregator)",
-            "species": "homo_sapiens",
-            "assembly": "GRCh38",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_genotype/dbSNP154_ALFA_GRCh38_20210727.vcf.gz",
-            "chromosomes": [
-                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", 
-                "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y", "MT" 
-            ],
-            "use_seq_region_synonyms": 1,
-            "population_prefix": "ALFA:",
-            "population_display_group": {
-                "display_group_name": "NCBI ALFA",
-                "display_group_priority": 1.8
-            },
-            "populations": {
-                "9980010": {
-                    "name": "SAMN10492705",
-                    "description": "Total"
-                },
-                "9980011": {
-                    "name": "SAMN10492695",
-                    "description": "European"
-                },
-                "9980012": {
-                    "name": "SAMN10492698",
-                    "description": "African American"
-                },
-                "9980013": {
-                    "name": "SAMN10492696",
-                    "description": "African Others"
-                },
-                "9980014": {
-                    "name": "SAMN10492703",
-                    "description": "African"
-                },
-                "9980015": {
-                    "name": "SAMN10492697",
-                    "description": "East Asian"
-                },
-                "9980016": {
-                    "name": "SAMN10492702",
-                    "description": "South Asian"
-                },
-                "9980017": {
-                    "name": "SAMN10492701",
-                    "description": "Other Asian"
-                },
-                "9980018": {
-                    "name": "SAMN10492704",
-                    "description": "Asian"
-                },
-                "9980019": {
-                    "name": "SAMN10492699",
-                    "description": "Latin American 1"
-                },
-                "9980020": {
-                    "name": "SAMN10492700",
-                    "description": "Latin American 2"
-                },
-                "9980021": {
-                    "name": "SAMN11605645",
-                    "description": "Other"
-                }
-            }
-        },
-        {
-            "id": "GEM-J_GRCh38",
-            "species": "homo_sapiens",
-            "assembly": "GRCh38",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_genotype/gem_j/v1/BBJ_RIKEN_TMM_20200309.grch38.chr###CHR###.vqsr_99.5_99.0.region_flag.genotype_filtering.hwe_flag.noANN.vcf.gz",
-            "chromosomes": [
-                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", 
-                "15", "16", "17", "18", "19", "20", "21", "22", "X" 
-            ],
-            "strict_name_match": 0,
-            "source_name": "GEM-J",
-            "population_display_group": {
-                "display_group_name": "GEM-J",
-                "display_group_priority": 2.0
-            },
-            "populations": {
-                "9970000": {
-                    "name": "GEM-J",
-                    "_raw_name": "",
-                    "description": "GEM Japan Whole Genome Aggregation (GEM-J WGA) Panel"
-                }
-            }
-        },
-        {
-            "id": "GEM-J_GRCh37",
-            "species": "homo_sapiens",
-            "assembly": "GRCh37",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh37/variation_genotype/gem_j/v1/BBJ_RIKEN_TMM_20200309.chr###CHR###.vqsr_99.5_99.0.region_flag.genotype_filtering.hwe_flag.noANN.vcf.gz",
-            "chromosomes": [
-                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", 
-                "15", "16", "17", "18", "19", "20", "21", "22", "X" 
-            ],
-            "strict_name_match": 0,
-            "source_name": "GEM-J",
-            "population_display_group": {
-                "display_group_name": "GEM-J",
-                "display_group_priority": 2.0
-            },
-            "populations": {
-                "9970000": {
-                    "name": "GEM-J",
-                    "_raw_name": "",
-                    "description": "GEM Japan Whole Genome Aggregation (GEM-J WGA) Panel"
-                }
-            }
-        },
-        {
-            "id": "gambian_genome_variation_project_GRCh38",
-            "species": "homo_sapiens",
-            "assembly": "GRCh38",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_genotype/ggvp/ALL_GGVP.chr###CHR###.shapeit2_integrated_snvindels_v1b_20200120.GRCh38.phased.vcf.gz",
-            "sample_prefix": "GGVP:",
-            "chromosomes": [
-                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", 
-                "15", "16", "17", "18", "19", "20", "21", "22", "X" 
-            ]
-        },
-        {
-            "id": "topmed_GRCh37",
-            "species": "homo_sapiens",
-            "assembly": "GRCh37",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh37/variation_genotype/TOPMED_GRCh37.vcf.gz",
-            "chromosomes": [
-                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", 
-                "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y" 
-            ],
-            "source_name": "TOPMed",
-            "population_display_group": {
-                "display_group_name": "TOPMed",
-                "display_group_priority": 2.5
-            },
-            "populations": {
-                "9990000": {
-                    "name": "TOPMed",
-                    "_raw_name": "TOPMed",
-                    "_af": "TOPMED",
-                    "description": "Trans-Omics for Precision Medicine (TOPMed) Program"
-                }
-            }
-        },
-        {
-            "id": "topmed_GRCh38",
-            "species": "homo_sapiens",
-            "assembly": "GRCh38",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_genotype/TOPMED_GRCh38_20180418.vcf.gz",
-            "chromosomes": [
-                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", 
-                "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y" 
-            ],
-            "source_name": "TOPMed",
-            "population_display_group": {
-                "display_group_name": "TOPMed",
-                "display_group_priority": 2.5
-            },
-            "populations": {
-                "9990000": {
-                    "name": "TOPMed",
-                    "_raw_name": "TOPMed",
-                    "_af": "TOPMED",
-                    "description": "Trans-Omics for Precision Medicine (TOPMed) Program"
-                }
-            }
-        },
-        {
-            "id": "uk10k_GRCh37",
-            "species": "homo_sapiens",
-            "assembly": "GRCh37",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh37/variation_genotype/UK10K_COHORT.20160215.sites.vcf.gz",
-            "chromosomes": [
-                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", 
-                "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y" 
-            ],
-            "source_name": "UK10K",
-            "population_prefix": "UK10K:",
-            "population_display_group": {
-                "display_group_name": "UK10K",
-                "display_group_priority": 2.6
-            },
-            "populations": {
-                "9999000": {
-                    "name": "ALSPAC",
-                    "_raw_name": "ALSPAC",
-                    "description": "ALSPAC cohort"
-                },
-                "9999001": {
-                    "name": "TWINSUK",
-                    "_raw_name": "TWINSUK_NODUP",
-                    "description": "TWINSUK cohort excluding 67 samples where a monozygotic or dyzygotic twin was included in the release"
-                }
-            }
-        },
-        {
-            "id": "uk10k_GRCh38",
-            "species": "homo_sapiens",
-            "assembly": "GRCh38",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_genotype/UK10K_COHORT.20160215.sites.GRCh38.vcf.gz",
-            "chromosomes": [
-                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", 
-                "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y" 
-            ],
-            "source_name": "UK10K",
-            "population_prefix": "UK10K:",
-            "population_display_group": {
-                "display_group_name": "UK10K",
-                "display_group_priority": 2.6
-            },
-            "populations": {
-                "9999000": {
-                    "name": "ALSPAC",
-                    "_raw_name": "ALSPAC",
-                    "description": "ALSPAC cohort"
-                },
-                "9999001": {
-                    "name": "TWINSUK",
-                    "_raw_name": "TWINSUK_NODUP",
-                    "description": "TWINSUK cohort excluding 67 samples where a monozygotic or dyzygotic twin was included in the release"
-                }
-            }
-        },
-        {
-            "id": "esp_GRCh37",
-            "species": "homo_sapiens",
-            "assembly": "GRCh37",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh37/variation_genotype/ESP6500SI-V2-SSA137.vcf.gz",
-            "chromosomes": [
-                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", 
-                "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y" 
-            ],
-            "source_name": "NHLBI Exome Sequencing Project",
-            "population_display_group": {
-                "display_group_name": "NHLBI Exome Sequencing Project",
-                "display_group_priority": 2.7
-            },
-            "population_prefix": "ESP6500:",
-            "populations": {
-                "9910000": {
-                    "name": "AA",
-                    "description": "African American",
-                    "_ac": "AA_AC"
-                },
-                "9910001": {
-                    "name": "EA",
-                    "description": "European American",
-                    "_ac": "EA_AC"
-                }
-            }
-        },
-        {
-            "id": "esp_GRCh38",
-            "species": "homo_sapiens",
-            "assembly": "GRCh38",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_genotype/ESP6500SI-V2-SSA137_GRCh38.vcf.gz",
-            "chromosomes": [
-                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", 
-                "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y" 
-            ],
-            "source_name": "NHLBI Exome Sequencing Project",
-            "population_display_group": {
-                "display_group_name": "NHLBI Exome Sequencing Project",
-                "display_group_priority": 2.7
-            },
-            "population_prefix": "ESP6500:",
-            "populations": {
-                "9910000": {
-                    "name": "AA",
-                    "description": "African American",
-                    "_ac": "AA_AC"
-                },
-                "9910001": {
-                    "name": "EA",
-                    "description": "European American",
-                    "_ac": "EA_AC"
-                }
-            }
-        },
-        {
-            "id": "nextgen_cow_irbt",
-            "species": "bos_taurus",
-            "assembly": "ARS-UCD1.3",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/data_files/bos_taurus/ARS-UCD1.3/variation_genotype/IRBT_ARS-UCD1_3.vcf.gz",
-            "chromosomes": [
-                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", 
-                "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", 
-                "29", "X" 
-            ],
-            "population_prefix": "NextGen:"
-        },
-        {
-            "id": "gallus_gallus_EVA_PRJEB44919",
-            "source_name": "PRJEB44919",
-            "description": "Variants from EVA study PRJEB44919",
-            "species": "gallus_gallus",
-            "assembly": "bGalGal1.mat.broiler.GRCg7b",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/data_files/gallus_gallus/bGalGal1.mat.broiler.GRCg7b/variation_genotype/cohort188.ALL.1-28.fixed_remap7b.vcf.gz",
-            "use_as_source": 0,
-            "strict_name_match": 0
-        },
-        {
-            "id": "dog_boxer_EVA_PRJEB24066",
-            "species": "canis_lupus_familiarisboxer",
-            "source_name": "PRJEB24066",
-            "description": "Variants remmaped from EVA study PRJEB24066",
-            "assembly": "Dog10K_Boxer_Tasha",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/data_files/canis_lupus_familiarisboxer/Dog10K_Boxer_Tasha/variation_genotype/Dog10K_Boxer_Tasha_remap_PRJEB24066.vcf.gz",
-            "chromosomes": [
-                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", 
-                "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", 
-                "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "X" 
-            ]
-        },
-        {
-            "id": "dog_EVA_PRJEB24066",
-            "species": "canis_lupus_familiaris",
-            "source_name": "PRJEB24066",
-            "description": "Variants remapped from EVA study PRJEB24066",
-            "assembly": "ROS_Cfam_1.0",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/data_files/canis_lupus_familiaris/ROS_Cfam_1.0/variation_genotype/ROS_Cfam_1.0_remap_PRJEB24066.vcf.gz",
-            "chromosomes": [
-                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", 
-                "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", 
-                "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "X", "Y" 
-            ]
-        },
-        {
-            "id": "nextgen_sheep_iroa",
-            "species": "ovis_aries",
-            "assembly": "Oar_v3.1",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/data_files/ovis_aries/Oar_v3.1/variation_genotype/IROA.population_sites.OARv3_1.20140307.vcf.gz",
-            "chromosomes": [
-                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", 
-                "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "X" 
-            ],
-            "population_prefix": "NextGen:"
-        },
-        {
-            "id": "nextgen_sheep_mooa",
-            "species": "ovis_aries",
-            "assembly": "Oar_v3.1",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/data_files/ovis_aries/Oar_v3.1/variation_genotype/MOOA.population_sites.OARv3_1.20140328.vcf.gz",
-            "chromosomes": [
-                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", 
-                "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "X" 
-            ],
-            "population_prefix": "NextGen:"
-        },
-        {
-            "id": "sheep_genome_consortium",
-            "species": "ovis_aries",
-            "assembly": "Oar_v3.1",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/data_files/ovis_aries/Oar_v3.1/variation_genotype/###CHR###.filtered_intersect.vcf.gz",
-            "chromosomes": [
-                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", 
-                "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "X", "MT" 
-            ],
-            "population_prefix": "ISGC:",
-            "sample_prefix": "ISGC:"
-        },
-        {
-            "id": "nextgen_sheep_rambouillet_iroa",
-            "species": "ovis_aries_rambouillet",
-            "assembly": "ARS-UI_Ramb_v2.0",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/data_files/ovis_aries_rambouillet/ARS-UI_Ramb_v2.0/variation_genotype/IROA.population_sites.ARS_UI_Ramb_v2_0.20140307.vcf.gz",
-            "chromosomes": [
-                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", 
-                "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "X" 
-            ],
-            "population_prefix": "NextGen:"
-        },
-        {
-            "id": "nextgen_sheep_rambouillet_mooa",
-            "species": "ovis_aries_rambouillet",
-            "assembly": "ARS-UI_Ramb_v2.0",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/data_files/ovis_aries_rambouillet/ARS-UI_Ramb_v2.0/variation_genotype/MOOA.population_sites.ARS-UI_Ramb_v2_0.20140328.vcf.gz",
-            "chromosomes": [
-                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", 
-                "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "X" 
-            ],
-            "population_prefix": "NextGen:"
-        },
-        {
-            "id": "sheep_rambouillet_genome_consortium",
-            "species": "ovis_aries_rambouillet",
-            "assembly": "ARS-UI_Ramb_v2.0",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/data_files/ovis_aries_rambouillet/ARS-UI_Ramb_v2.0/variation_genotype/###CHR###.filtered_ARS-UI_Ramb_v2.0_intersect.vcf.gz",
-            "chromosomes": [
-                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", 
-                "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "X", "MT" 
-            ],
-            "population_prefix": "ISGC:",
-            "sample_prefix": "ISGC:"
-        },
-        {
-            "id": "nextgen_goat",
-            "species": "capra_hircus",
-            "assembly": "ARS1",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/data_files/capra_hircus/ARS1/variation_genotype/NextGenCapraHircusRemappedARS1.vcf.gz",
-            "chromosomes": [
-                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", 
-                "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", 
-                "29" 
-            ],
-            "population_prefix": "NextGen:",
-            "sample_prefix": "NextGen:"
-        },
-        {
-            "id": "mouse_genome_project_snp",
-            "species": "mus_musculus",
-            "assembly": "GRCm38",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/data_files/mus_musculus/GRCm38/variation_genotype/mgp.v3.snps.sorted.rsIDdbSNPv137.vcf.gz",
-            "chromosomes": [
-                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", 
-                "15", "16", "17", "18", "19", "X", "Y" 
-            ],
-            "sample_prefix": "MGP:"
-        },
-        {
-            "id": "mouse_genome_project_indel",
-            "species": "mus_musculus",
-            "assembly": "GRCm38",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/data_files/mus_musculus/GRCm38/variation_genotype/mgp.v3.indels.sorted.rsIDdbSNPv137.vcf.gz",
-            "chromosomes": [
-                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", 
-                "15", "16", "17", "18", "19", "X", "Y" 
-            ],
-            "sample_prefix": "MGP:"
-        },
-        {
-            "id": "mouse_genome_project_snp_grcm39",
-            "species": "mus_musculus",
-            "assembly": "GRCm39",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/data_files/mus_musculus/GRCm39/variation_genotype/mgp.v3.snps.sorted.rsIDdbSNPv137.GRCm39.vcf.gz",
-            "chromosomes": [
-                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", 
-                "15", "16", "17", "18", "19", "X", "Y" 
-            ],
-            "sample_prefix": "MGP:"
-        },
-        {
-            "id": "mouse_genome_project_indel_grcm39",
-            "species": "mus_musculus",
-            "assembly": "GRCm39",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/data_files/mus_musculus/GRCm39/variation_genotype/mgp.v3.indels.sorted.rsIDdbSNPv137.GRCm39.vcf.gz",
-            "chromosomes": [
-                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", 
-                "15", "16", "17", "18", "19", "X", "Y" 
-            ],
-            "sample_prefix": "MGP:"
-        },
-        {
-            "id": "horse_EVA_PRJEB9799",
-            "species": "equus_caballus",
-            "assembly": "EquCab3.0",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/data_files/equus_caballus/EquCab3.0/variation_genotype/PRJEB9799_EquCab3_0.vcf.gz",
-            "chromosomes": [
-                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", 
-                "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", 
-                "29", "30", "31", "X", "MT" 
-            ],
-            "sample_prefix": "PRJEB9799:"
-        },
-        {
-            "id": "atlantic_salmon_EVA_PRJEB34225",
-            "source_name": "PRJEB34225",
-            "description": "Variants from EVA study PRJEB34225",
-            "species": "salmo_salar",
-            "assembly": "Ssal_v3.1",
-            "type": "remote",
-            "use_as_source": 1,
-            "filename_template": "https://ftp.ensembl.org/pub/data_files/salmo_salar/Ssal_v3.1/variation_genotype/Salmon_SNP_80_samples_freebayes_EBI_noINFO_remap.vcf.gz",
-            "chromosomes": [
-                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", 
-                "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", 
-                "29" 
-            ]
-        },
-        {
-            "id": "vervet_EVA_PRJEB22989",
-            "source_name": "PRJEB22989",
-            "species": "chlorocebus_sabaeus",
-            "assembly": "ChlSab1.1",
-            "type": "remote",
-            "use_as_source": 1,
-            "strict_name_match": 0,
-            "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/PRJEB22988/Svardal_et_al_2017_vervet_monkey_SNPs_imputed_phased.vcf.gz"
-        },
-        {
-            "id": "eva_microtus_ochrogaster_gca000317375v1",
-            "description": "Variants from EVA",
-            "species": "microtus_ochrogaster",
-            "assembly": "MicOch1.0",
-            "type": "remote",
-            "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_4/by_species/microtus_ochrogaster/GCA_000317375.1/GCA_000317375.1_current_ids.vcf.gz",
-            "use_as_source": 1,
-            "use_seq_region_synonyms": 0,
-            "strict_name_match": 0,
-            "source_name": "EVA",
-            "source_version": 4
-        },
-        {
-            "id": "eva_oreochromis_niloticus_gca001858045v3",
-            "description": "Variants from EVA",
-            "species": "Oreochromis_niloticus",
-            "assembly": "O_niloticus_UMD_NMBU",
-            "type": "remote",
-            "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_5/by_species/haplochromini/GCA_001858045.3/319058_GCA_001858045.3_current_ids.vcf.gz",
-            "use_as_source": 1,
-            "use_seq_region_synonyms": 1,
-            "strict_name_match": 0,
-            "source_name": "EVA",
-            "source_version": 5
-        },
-        {
-            "id": "nile_tilapia_EVA_PRJEB38548",
-            "source_name": "PRJEB38548",
-            "description": "Variants from EVA study PRJEB38548",
-            "species": "oreochromis_niloticus",
-            "assembly": "O_niloticus_UMD_NMBU",
-            "type": "remote",
-            "use_as_source": 1,
-            "use_seq_region_synonyms": 1,
-            "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/PRJEB38548/tilapia_snp_array.vcf.gz",
-            "chromosomes": [
-                "LG1", "LG2", "LG3", "LG4", "LG5", "LG6", "LG7", "LG8", "LG9", "LG10", "LG11", "LG12", "LG13", "LG14", 
-                "LG15", "LG16", "LG17", "LG18", "LG19", "LG20", "LG21", "LG22", "LG23" 
-            ],
-            "population_display_group": {
-                "display_group_name": "PRJEB38548",
-                "display_group_priority": "1"
-            },
-            "populations": {
-                "1": {
-                    "name": "PRJEB38548",
-                    "_af": "AF",
-                    "description": "Population from EVA study PRJEB38548"
-                }
-            }
-        },
-        {
-            "id": "american_mink_EVA_PRJEB26368",
-            "source_name": "PRJEB26368",
-            "description": "Variants from EVA study PRJEB26368",
-            "species": "neovison_vison",
-            "assembly": "NNQGG.v01",
-            "type": "remote",
-            "use_as_source": 1,
-            "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/PRJEB26368/GBS_mink_eva.vcf.gz",
-            "population_display_group": {
-                "display_group_name": "PRJEB26368",
-                "display_group_priority": "1"
-            },
-            "populations": {
-                "1": {
-                    "name": "PRJEB26368",
-                    "_af": "AF",
-                    "description": "Population from EVA study PRJEB26368"
-                }
-            }
-        },
-        {
-            "id": "rabbit_EVA_PRJEB27278",
-            "source_name": "PRJEB27278",
-            "description": "Variants from EVA study PRJEB27278",
-            "species": "oryctolagus_cuniculus",
-            "assembly": "OryCun2.0",
-            "type": "remote",
-            "use_as_source": 1,
-            "use_seq_region_synonyms": 1,
-            "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/PRJEB27278/Craniosnyostotic_Rabbit_Colony_eva08062018.vcf.gz",
-            "chromosomes": [
-                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", 
-                "15", "16", "17", "18", "19", "20", "21", "X" 
-            ]
-        },
-        {
-            "id": "eva_coturnix_japonica_gca001577835v1",
-            "description": "Variants from EVA",
-            "species": "Coturnix_japonica",
-            "assembly": "Coturnix_japonica_2.0",
-            "type": "remote",
-            "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_5/by_species/coturnix_japonica/GCA_001577835.1/93934_GCA_001577835.1_current_ids.vcf.gz",
-            "use_as_source": 1,
-            "use_seq_region_synonyms": 0,
-            "strict_name_match": 0,
-            "source_name": "EVA",
-            "source_version": 5
-        },
-        {
-            "id": "eva_parus_major_gca001522545v2",
-            "description": "Variants from EVA",
-            "species": "Parus_major",
-            "assembly": "Parus_major1.1",
-            "type": "remote",
-            "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_5/by_species/parus_major/GCA_001522545.2/9157_GCA_001522545.2_current_ids.vcf.gz",
-            "use_as_source": 1,
-            "use_seq_region_synonyms": 0,
-            "strict_name_match": 0,
-            "source_name": "EVA",
-            "source_version": 5
-        },
-        {
-            "id": "great_tit_EVA_PRJEB24964",
-            "source_name": "PRJEB24964",
-            "description": "Variants from EVA study PRJEB24964",
-            "species": "parus_major",
-            "assembly": "Parus_major1.1",
-            "type": "remote",
-            "use_as_source": 1,
-            "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/PRJEB24964/GreatTits_PolyMonoMinorHom1.10_NoUN_NoScaffolds.vcf.gz"
-        },
-        {
-            "id": "eva_macaca_fascicularis_gca011100615v1",
-            "description": "Variants from EVA",
-            "species": "Macaca_fascicularis",
-            "assembly": "Macaca_fascicularis_6.0",
-            "type": "remote",
-            "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_5/by_species/macaca_fascicularis/GCA_011100615.1/9541_GCA_011100615.1_current_ids.vcf.gz",
-            "use_as_source": 1,
-            "use_seq_region_synonyms": 1,
-            "strict_name_match": 0,
-            "source_name": "EVA",
-            "source_version": 5
-        },
-        {
-            "id": "eva_taeniopygia_guttata_gca003957565v2",
-            "description": "Variants from EVA",
-            "species": "Taeniopygia_guttata",
-            "assembly": "bTaeGut1_v1.p",
-            "type": "remote",
-            "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_5/by_species/taeniopygia_guttata/GCA_003957565.2/59729_GCA_003957565.2_current_ids.vcf.gz",
-            "use_as_source": 1,
-            "use_seq_region_synonyms": 1,
-            "strict_name_match": 0,
-            "source_name": "EVA",
-            "source_version": 5
-        },
-        {
-            "id": "eva_macaca_mulatta_gca003339765v3",
-            "description": "Variants from EVA",
-            "species": "Macaca_mulatta",
-            "assembly": "Mmul_10",
-            "type": "remote",
-            "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_5/by_species/macaca_mulatta/GCA_003339765.3/9544_GCA_003339765.3_current_ids.vcf.gz",
-            "use_as_source": 1,
-            "use_seq_region_synonyms": 1,
-            "strict_name_match": 0,
-            "source_name": "EVA",
-            "source_version": 5
-        },
-        {
-            "id": "eva_meleagris_gallopavo_gca000146605v4",
-            "description": "Variants from EVA",
-            "species": "Meleagris_gallopavo",
-            "assembly": "Turkey_5.1",
-            "type": "remote",
-            "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_5/by_species/meleagris_gallopavo/GCA_000146605.4/9103_GCA_000146605.4_current_ids.vcf.gz",
-            "use_as_source": 1,
-            "use_seq_region_synonyms": 1,
-            "strict_name_match": 0,
-            "source_name": "EVA",
-            "source_version": 5
-        },
-        {
-            "id": "eva_nomascus_leucogenys_gca000146795v3",
-            "description": "Variants from EVA",
-            "species": "nomascus_leucogenys",
-            "assembly": "Nleu_3.0",
-            "type": "remote",
-            "filename_template": "http://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_4/by_species/nomascus_leucogenys/GCA_000146795.3/GCA_000146795.3_current_ids.vcf.gz",
-            "use_as_source": 1,
-            "use_seq_region_synonyms": 0,
-            "source_name": "EVA",
-            "source_version": 4
-        },
-        {
-            "id": "eva_pan_troglodytes_gca000001515v5",
-            "description": "Variants from EVA",
-            "species": "Pan_troglodytes",
-            "assembly": "Pan_tro_3.0",
-            "type": "remote",
-            "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_5/by_species/pan_troglodytes/GCA_000001515.5/9598_GCA_000001515.5_current_ids.vcf.gz",
-            "use_as_source": 1,
-            "use_seq_region_synonyms": 1,
-            "strict_name_match": 0,
-            "source_name": "EVA",
-            "source_version": 5
-        },
-        {
-            "id": "eva_ficedula_albicollis_gca000247815v2",
-            "description": "Variants from EVA",
-            "species": "Ficedula_albicollis",
-            "assembly": "FicAlb1.5",
-            "type": "remote",
-            "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_5/by_species/ficedula_albicollis/GCA_000247815.2/59894_GCA_000247815.2_current_ids.vcf.gz",
-            "use_as_source": 1,
-            "use_seq_region_synonyms": 0,
-            "strict_name_match": 0,
-            "source_name": "EVA",
-            "source_version": 5
-        },
-        {
-            "id": "eva_sander_lucioperca_gca008315115v1",
-            "description": "Variants from EVA",
-            "species": "Sander_lucioperca",
-            "assembly": "SLUC_FBN_1",
-            "type": "remote",
-            "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_5/by_species/sander_lucioperca/GCA_008315115.1/283035_GCA_008315115.1_current_ids.vcf.gz",
-            "use_as_source": 1,
-            "use_seq_region_synonyms": 0,
-            "strict_name_match": 0,
-            "source_name": "EVA",
-            "source_version": 5
-        },
-        {
-            "id": "eva_anas_platyrhynchos_gca008746955v1",
-            "description": "Variants from EVA",
-            "species": "Anas_platyrhynchos",
-            "assembly": "ASM874695v1",
-            "type": "remote",
-            "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_5/by_species/anas_platyrhynchos/GCA_008746955.1/8839_GCA_008746955.1_current_ids.vcf.gz",
-            "use_as_source": 1,
-            "use_seq_region_synonyms": 1,
-            "strict_name_match": 0,
-            "source_name": "EVA",
-            "source_version": 5
-        },
-        {
-            "id": "eva_bos_grunniens_gca005887515v1",
-            "description": "Variants from EVA",
-            "species": "Bos_grunniens",
-            "assembly": "LU_Bosgru_v3.0",
-            "type": "remote",
-            "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_5/by_species/bos_grunniens/GCA_005887515.1/30521_GCA_005887515.1_current_ids.vcf.gz",
-            "use_as_source": 1,
-            "use_seq_region_synonyms": 1,
-            "strict_name_match": 0,
-            "source_name": "EVA",
-            "source_version": 5
-        },
-        {
-            "id": "eva_callithrix_jacchus_gca011100555v1",
-            "description": "Variants from EVA",
-            "species": "Callithrix_jacchus",
-            "assembly": "mCalJac1.pat.X",
-            "type": "remote",
-            "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_5/by_species/callithrix_jacchus/GCA_011100555.1/9483_GCA_011100555.1_current_ids.vcf.gz",
-            "use_as_source": 1,
-            "use_seq_region_synonyms": 1,
-            "strict_name_match": 0,
-            "source_name": "EVA",
-            "source_version": 5
-        },
-        {
-            "id": "eva_chlorocebus_sabaeus_gca000409795v2",
-            "description": "Variants from EVA",
-            "species": "Chlorocebus_sabaeus",
-            "assembly": "ChlSab1.1",
-            "type": "remote",
-            "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_5/by_species/chlorocebus_sabaeus/GCA_000409795.2/60711_GCA_000409795.2_current_ids.vcf.gz",
-            "use_as_source": 1,
-            "use_seq_region_synonyms": 0,
-            "strict_name_match": 0,
-            "source_name": "EVA",
-            "source_version": 5
-        },
-        {
-            "id": "eva_ciona_intestinalis_gca000224145v1",
-            "description": "Variants from EVA",
-            "species": "Ciona_intestinalis",
-            "assembly": "KH",
-            "type": "remote",
-            "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_5/by_species/ciona_intestinalis/GCA_000224145.1/7719_GCA_000224145.1_current_ids.vcf.gz",
-            "use_as_source": 1,
-            "use_seq_region_synonyms": 0,
-            "strict_name_match": 0,
-            "source_name": "EVA",
-            "source_version": 5
-        },
-        {
-            "id": "eva_drosophila_melanogaster_gca000001215v4",
-            "description": "Variants from EVA",
-            "species": "Drosophila_melanogaster",
-            "assembly": "BDGP6.46",
-            "type": "remote",
-            "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_5/by_species/drosophila_melanogaster/GCA_000001215.4/7227_GCA_000001215.4_current_ids.vcf.gz",
-            "use_as_source": 1,
-            "use_seq_region_synonyms": 0,
-            "strict_name_match": 0,
-            "source_name": "EVA",
-            "source_version": 5
-        },
-        {
-            "id": "eva_neovison_vison_gca900108605v1",
-            "description": "Variants from EVA",
-            "species": "Neovison_vison",
-            "assembly": "NNQGG.v01",
-            "type": "remote",
-            "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_5/by_species/neogale_vison/GCA_900108605.1/452646_GCA_900108605.1_current_ids.vcf.gz",
-            "use_as_source": 1,
-            "use_seq_region_synonyms": 0,
-            "strict_name_match": 0,
-            "source_name": "EVA",
-            "source_version": 5
-        },
-        {
-            "id": "eva_oncorhynchus_mykiss_gca013265735v3",
-            "description": "Variants from EVA",
-            "species": "Oncorhynchus_mykiss",
-            "assembly": "USDA_OmykA_1.1",
-            "type": "remote",
-            "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_5/by_species/oncorhynchus_mykiss/GCA_013265735.3/8022_GCA_013265735.3_current_ids.vcf.gz",
-            "use_as_source": 1,
-            "use_seq_region_synonyms": 1,
-            "strict_name_match": 0,
-            "source_name": "EVA",
-            "source_version": 5
-        },
-        {
-            "id": "eva_oryctolagus_cuniculus_gca000003625v1",
-            "description": "Variants from EVA",
-            "species": "Oryctolagus_cuniculus",
-            "assembly": "OryCun2.0",
-            "type": "remote",
-            "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_5/by_species/oryctolagus_cuniculus/GCA_000003625.1/9986_GCA_000003625.1_current_ids.vcf.gz",
-            "use_as_source": 1,
-            "use_seq_region_synonyms": 0,
-            "strict_name_match": 0,
-            "source_name": "EVA",
-            "source_version": 5
-        },
-        {
-            "id": "eva_pongo_abelii_gca002880775v3",
-            "description": "Variants from EVA",
-            "species": "Pongo_abelii",
-            "assembly": "Susie_PABv2",
-            "type": "remote",
-            "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_5/by_species/pongo_abelii/GCA_002880775.3/9601_GCA_002880775.3_current_ids.vcf.gz",
-            "use_as_source": 1,
-            "use_seq_region_synonyms": 1,
-            "strict_name_match": 0,
-            "source_name": "EVA",
-            "source_version": 5
-        },
-        {
-            "id": "eva_seriola_dumerili_gca002260705v1",
-            "description": "Variants from EVA",
-            "species": "Seriola_dumerili",
-            "assembly": "Sdu_1.0",
-            "type": "remote",
-            "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_5/by_species/seriola_dumerili/GCA_002260705.1/41447_GCA_002260705.1_current_ids.vcf.gz",
-            "use_as_source": 1,
-            "use_seq_region_synonyms": 0,
-            "strict_name_match": 0,
-            "source_name": "EVA",
-            "source_version": 5
-        },
-        {
-            "id": "91_mammals.gerp_conservation_score",
-            "species": "bos_taurus",
-            "assembly": "ARS-UCD1.3",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.bos_taurus.ARS-UCD1.3.bw",
-            "annotation_type": "gerp"
-        },
-        {
-            "id": "91_mammals.gerp_conservation_score",
-            "species": "canis_lupus_familiaris",
-            "assembly": "ROS_Cfam_1.0",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.canis_lupus_familiaris.ROS_Cfam_1.0.bw",
-            "annotation_type": "gerp"
-        },
-        {
-            "id": "91_mammals.gerp_conservation_score",
-            "species": "capra_hircus",
-            "assembly": "ARS1",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.capra_hircus.ARS1.bw",
-            "annotation_type": "gerp"
-        },
-        {
-            "id": "91_mammals.gerp_conservation_score",
-            "species": "chlorocebus_sabaeus",
-            "assembly": "ChlSab1.1",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.chlorocebus_sabaeus.ChlSab1.1.bw",
-            "annotation_type": "gerp"
-        },
-        {
-            "id": "65_fish.gerp_conservation_score",
-            "species": "danio_rerio",
-            "assembly": "GRCz11",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/65_fish.gerp_conservation_score/gerp_conservation_scores.danio_rerio.GRCz11.bw",
-            "annotation_type": "gerp"
-        },
-        {
-            "id": "91_mammals.gerp_conservation_score",
-            "species": "equus_caballus",
-            "assembly": "EquCab3.0",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.equus_caballus.EquCab3.0.bw",
-            "annotation_type": "gerp"
-        },
-        {
-            "id": "91_mammals.gerp_conservation_score",
-            "species": "felis_catus",
-            "assembly": "Felis_catus_9.0",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.felis_catus.Felis_catus_9.0.bw",
-            "annotation_type": "gerp"
-        },
-        {
-            "id": "27_sauropsids.gerp_conservation_score",
-            "species": "ficedula_albicollis",
-            "assembly": "FicAlb1.5",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/27_sauropsids.gerp_conservation_score/gerp_conservation_scores.ficedula_albicollis.FicAlb1.5.bw",
-            "annotation_type": "gerp"
-        },
-        {
-            "id": "63_amniotes.gerp_conservation_score",
-            "species": "gallus_gallus",
-            "assembly": "bGalGal1.mat.broiler.GRCg7b",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/63_amniotes.gerp_conservation_score/gerp_conservation_scores.gallus_gallus.bGalGal1.mat.broiler.GRCg7b.bw",
-            "annotation_type": "gerp"
-        },
-        {
-            "id": "37_mammals.gerp_conservation_score",
-            "species": "homo_sapiens",
-            "assembly": "GRCh37",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/grch37/release-96/compara/conservation_scores/37_mammals.gerp_conservation_score/gerp_conservation_scores.homo_sapiens.GRCh37.bw",
-            "annotation_type": "gerp"
-        },
-        {
-            "id": "91_mammals.gerp_conservation_score",
-            "species": "homo_sapiens",
-            "assembly": "GRCh38",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.homo_sapiens.GRCh38.bw",
-            "annotation_type": "gerp"
-        },
-        {
-            "id": "91_mammals.gerp_conservation_score",
-            "species": "macaca_fascicularis",
-            "assembly": "Macaca_fascicularis_6.0",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.macaca_fascicularis.Macaca_fascicularis_6.0.bw",
-            "annotation_type": "gerp"
-        },
-        {
-            "id": "91_mammals.gerp_conservation_score",
-            "species": "macaca_mulatta",
-            "assembly": "Mmul_10",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.macaca_mulatta.Mmul_10.bw",
-            "annotation_type": "gerp"
-        },
-        {
-            "id": "63_amniotes.gerp_conservation_score",
-            "species": "meleagris_gallopavo",
-            "assembly": "Turkey_5.1",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/63_amniotes.gerp_conservation_score/gerp_conservation_scores.meleagris_gallopavo.Turkey_5.1.bw",
-            "annotation_type": "gerp"
-        },
-        {
-            "id": "91_mammals.gerp_conservation_score",
-            "species": "microtus_ochrogaster",
-            "assembly": "MicOch1.0",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.microtus_ochrogaster.MicOch1.0.bw",
-            "annotation_type": "gerp"
-        },
-        {
-            "id": "91_mammals.gerp_conservation_score",
-            "species": "mus_musculus",
-            "assembly": "GRCm39",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.mus_musculus.GRCm39.bw",
-            "annotation_type": "gerp"
-        },
-        {
-            "id": "91_mammals.gerp_conservation_score",
-            "species": "neovison_vison",
-            "assembly": "NNQGG.v01",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.neovison_vison.NNQGG.v01.bw",
-            "annotation_type": "gerp"
-        },
-        {
-            "id": "91_mammals.gerp_conservation_score",
-            "species": "nomascus_leucogenys",
-            "assembly": "Nleu_3.0",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.nomascus_leucogenys.Nleu_3.0.bw",
-            "annotation_type": "gerp"
-        },
-        {
-            "id": "65_fish.gerp_conservation_score",
-            "species": "oreochromis_niloticus",
-            "assembly": "O_niloticus_UMD_NMBU",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/65_fish.gerp_conservation_score/gerp_conservation_scores.oreochromis_niloticus.O_niloticus_UMD_NMBU.bw",
-            "annotation_type": "gerp"
-        },
-        {
-            "id": "91_mammals.gerp_conservation_score",
-            "species": "oryctolagus_cuniculus",
-            "assembly": "OryCun2.0",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.oryctolagus_cuniculus.OryCun2.0.bw",
-            "annotation_type": "gerp"
-        },
-        {
-            "id": "91_mammals.gerp_conservation_score",
-            "species": "ovis_aries_rambouillet",
-            "assembly": "ARS-UI_Ramb_v2.0",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.ovis_aries_rambouillet.ARS-UI_Ramb_v2.0.bw",
-            "annotation_type": "gerp"
-        },
-        {
-            "id": "91_mammals.gerp_conservation_score",
-            "species": "pan_troglodytes",
-            "assembly": "Pan_tro_3.0",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.pan_troglodytes.Pan_tro_3.0.bw",
-            "annotation_type": "gerp"
-        },
-        {
-            "id": "27_sauropsids.gerp_conservation_score",
-            "species": "coturnix_japonica",
-            "assembly": "Coturnix_japonica_2.0",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/27_sauropsids.gerp_conservation_score/gerp_conservation_scores.coturnix_japonica.Coturnix_japonica_2.0.bw",
-            "annotation_type": "gerp"
-        },
-        {
-            "id": "63_amniotes.gerp_conservation_score",
-            "species": "parus_major",
-            "assembly": "Parus_major1.1",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/63_amniotes.gerp_conservation_score/gerp_conservation_scores.parus_major.Parus_major1.1.bw",
-            "annotation_type": "gerp"
-        },
-        {
-            "id": "91_mammals.gerp_conservation_score",
-            "species": "pongo_abelii",
-            "assembly": "Susie_PABv2",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.pongo_abelii.Susie_PABv2.bw",
-            "annotation_type": "gerp"
-        },
-        {
-            "id": "91_mammals.gerp_conservation_score",
-            "species": "rattus_norvegicus",
-            "assembly": "mRatBN7.2",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.rattus_norvegicus.mRatBN7.2.bw",
-            "annotation_type": "gerp"
-        },
-        {
-            "id": "91_mammals.gerp_conservation_score",
-            "species": "sus_scrofa",
-            "assembly": "Sscrofa11.1",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.sus_scrofa.Sscrofa11.1.bw",
-            "annotation_type": "gerp"
-        },
-        {
-            "id": "63_amniotes.gerp_conservation_score",
-            "species": "taeniopygia_guttata",
-            "assembly": "bTaeGut1_v1.p",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/63_amniotes.gerp_conservation_score/gerp_conservation_scores.taeniopygia_guttata.bTaeGut1_v1.p.bw",
-            "annotation_type": "gerp"
-        },
-        {
-            "id": "65_fish.gerp_conservation_score",
-            "species": "tetraodon_nigroviridis",
-            "assembly": "TETRAODON8",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/65_fish.gerp_conservation_score/gerp_conservation_scores.tetraodon_nigroviridis.TETRAODON8.bw",
-            "annotation_type": "gerp"
-        },
-        {
-            "id": "65_fish.gerp_conservation_score",
-            "species": "salmo_salar",
-            "assembly": "Ssal_v3.1",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/65_fish.gerp_conservation_score/gerp_conservation_scores.salmo_salar.Ssal_v3.1.bw",
-            "annotation_type": "gerp"
-        },
-        {
-            "id": "65_fish.gerp_conservation_score",
-            "species": "sander_lucioperca",
-            "assembly": "SLUC_FBN_1",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/65_fish.gerp_conservation_score/gerp_conservation_scores.sander_lucioperca.SLUC_FBN_1.bw",
-            "annotation_type": "gerp"
-        },
-        {
-            "id": "CADD_GRCh37_whole_genome_SNVs",
-            "species": "homo_sapiens",
-            "assembly": "GRCh37",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh37/variation_annotation/CADD_GRCh37_1.6_whole_genome_SNVs.tsv.gz",
-            "annotation_type": "cadd"
-        },
-        {
-            "id": "CADD_GRCh38_whole_genome_SNVs",
-            "species": "homo_sapiens",
-            "assembly": "GRCh38",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_annotation/CADD_GRCh38_1.6_whole_genome_SNVs.tsv.gz",
-            "annotation_type": "cadd"
-        },
-        {
-            "id": "eva_cavia_porcellus_gca000151735v1",
-            "description": "Variants from EVA",
-            "species": "Cavia_porcellus",
-            "assembly": "Cavpor3.0",
-            "type": "remote",
-            "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_5/by_species/cavia_porcellus/GCA_000151735.1/10141_GCA_000151735.1_current_ids.vcf.gz",
-            "use_as_source": 1,
-            "use_seq_region_synonyms": 1,
-            "source_name": "EVA",
-            "source_version": 5
-        },
-        {
-            "id": "eva_salmo_salar_gca905237065v2",
-            "description": "Variants from EVA",
-            "species": "Salmo_salar",
-            "assembly": "Ssal_v3.1",
-            "type": "remote",
-            "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_5/by_species/salmo_salar/GCA_905237065.2/8030_GCA_905237065.2_current_ids.vcf.gz",
-            "use_as_source": 1,
-            "use_seq_region_synonyms": 1,
-            "strict_name_match": 0,
-            "source_name": "EVA",
-            "source_version": 5
-        },
-        {
-            "id": "eva_dicentrarchus_labrax_gca905237075v1",
-            "description": "Variants from EVA",
-            "species": "Dicentrarchus_labrax",
-            "assembly": "dlabrax2021",
-            "type": "remote",
-            "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_5/by_species/dicentrarchus_labrax/GCA_905237075.1/13489_GCA_905237075.1_current_ids.vcf.gz",
-            "use_as_source": 1,
-            "use_seq_region_synonyms": 0,
-            "source_name": "EVA",
-            "source_version": 5
-        },
-        {
-            "id": "eva_microtus_ochrogaster_gca000317375v1",
-            "description": "Variants from EVA",
-            "species": "Microtus_ochrogaster",
-            "assembly": "MicOch1.0",
-            "type": "remote",
-            "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_5/by_species/microtus_ochrogaster/GCA_000317375.1/79684_GCA_000317375.1_current_ids.vcf.gz",
-            "use_as_source": 1,
-            "use_seq_region_synonyms": 0,
-            "strict_name_match": 0,
-            "source_name": "EVA",
-            "source_version": 5
-        },
-        {
-            "id": "eva_nomascus_leucogenys_gca000146795v3",
-            "description": "Variants from EVA",
-            "species": "Nomascus_leucogenys",
-            "assembly": "Nleu_3.0",
-            "type": "remote",
-            "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_5/by_species/nomascus_leucogenys/GCA_000146795.3/61853_GCA_000146795.3_current_ids.vcf.gz",
-            "use_as_source": 1,
-            "use_seq_region_synonyms": 0,
-            "strict_name_match": 0,
-            "source_name": "EVA",
-            "source_version": 5
-        },
-        {
-            "id": "eva_bison_bison_bison_gca000754665v1",
-            "description": "Variants from EVA",
-            "species": "Bison_bison_bison",
-            "assembly": "Bison_UMD1.0",
-            "type": "remote",
-            "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_5/by_species/bison_bison_bison/GCA_000754665.1/43346_GCA_000754665.1_current_ids.vcf.gz",
-            "use_as_source": 1,
-            "use_seq_region_synonyms": 1,
-            "source_name": "EVA",
-            "source_version": 5
-        },
-        {
-            "id": "CADD_Sscrofa11.1_whole_genome_SNVs",
-            "species": "sus_scrofa",
-            "assembly": "Sscrofa11.1",
-            "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/data_files/sus_scrofa/Sscrofa11.1/variation_annotation/ALL_pCADD-PHRED-scores.tsv.gz",
-            "annotation_type": "cadd"
+  "collections": [
+    {
+      "id": "1000genomes_phase3_GRCh37",
+      "species": "homo_sapiens",
+      "assembly": "GRCh37",
+      "type": "remote",
+      "strict_name_match": 1,
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh37/variation_genotype/ALL.chr###CHR###.phase3_shapeit2_mvncall_integrated_v3plus_nounphased.rsID.genotypes.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y"
+      ],
+      "sample_prefix": "1000GENOMES:phase_3:"
+    },
+    {
+      "id": "1000genomes_phase3_GRCh38",
+      "species": "homo_sapiens",
+      "assembly": "GRCh38",
+      "type": "remote",
+      "strict_name_match": 1,
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_genotype/ALL.chr###CHR###_GRCh38.genotypes.20170504.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y"
+      ],
+      "sample_prefix": "1000GENOMES:phase_3:"
+    },
+    {
+      "id": "gnomADg_GRCh37",
+      "description": "Genome Aggregation Database genomes r2.1",
+      "species": "homo_sapiens",
+      "assembly": "GRCh37",
+      "type": "remote",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh37/variation_genotype/gnomad/r2.1/genomes/gnomad.genomes.r2.1.sites.chr###CHR###_noVEP.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "20", "21", "22", "X"
+      ],
+      "population_prefix": "gnomADg:",
+      "population_display_group": {
+        "display_group_name": "gnomAD genomes",
+        "display_group_priority": 1.5
+      },
+      "populations": {
+        "9900000": {
+          "name": "gnomADg:ALL",
+          "_raw_name": "",
+          "description": "All gnomAD genomes individuals"
+        },
+        "9900001": {
+          "name": "afr",
+          "description": "African/African American"
+        },
+        "9900002": {
+          "name": "amr",
+          "description": "Latino"
+        },
+        "9900003": {
+          "name": "asj",
+          "description": "Ashkenazi Jewish"
+        },
+        "9900004": {
+          "name": "eas",
+          "description": "East Asian"
+        },
+        "9900005": {
+          "name": "fin",
+          "description": "Finnish"
+        },
+        "9900006": {
+          "name": "nfe",
+          "description": "Non-Finnish European"
+        },
+        "9900007": {
+          "name": "oth",
+          "description": "Other"
         }
-    ]
+      }
+    },
+    {
+      "id": "gnomADe_GRCh37",
+      "description": "Genome Aggregation Database exomes r2.1",
+      "species": "homo_sapiens",
+      "assembly": "GRCh37",
+      "type": "remote",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh37/variation_genotype/gnomad/r2.1/exomes/gnomad.exomes.r2.1.sites.chr###CHR###_noVEP.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y"
+      ],
+      "population_prefix": "gnomADe:",
+      "population_display_group": {
+        "display_group_name": "gnomAD exomes",
+        "display_group_priority": 1.4
+      },
+      "populations": {
+        "9900010": {
+          "name": "gnomADe:ALL",
+          "_raw_name": "",
+          "description": "All gnomAD exomes individuals"
+        },
+        "9900011": {
+          "name": "afr",
+          "description": "African/African American"
+        },
+        "9900012": {
+          "name": "amr",
+          "description": "Latino"
+        },
+        "9900013": {
+          "name": "asj",
+          "description": "Ashkenazi Jewish"
+        },
+        "9900014": {
+          "name": "eas",
+          "description": "East Asian"
+        },
+        "9900015": {
+          "name": "fin",
+          "description": "Finnish"
+        },
+        "9900016": {
+          "name": "nfe",
+          "description": "Non-Finnish European"
+        },
+        "9900017": {
+          "name": "oth",
+          "description": "Other"
+        },
+        "9900018": {
+          "name": "sas",
+          "description": "South Asian"
+        }
+      }
+    },
+    {
+      "id": "gnomADg_v3.1.2_GRCh38",
+      "description": "Genome Aggregation Database genomes v3.1.2",
+      "species": "homo_sapiens",
+      "assembly": "GRCh38",
+      "type": "remote",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_genotype/gnomad/v3.1.2/gnomad.genomes.v3.1.2.sites.chr###CHR###_trimmed_info.vcf.bgz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y"
+      ],
+      "use_seq_region_synonyms": 1,
+      "population_prefix": "gnomADg:",
+      "population_display_group": {
+        "display_group_name": "gnomAD genomes v3.1.2",
+        "display_group_priority": 1.6
+      },
+      "populations": {
+        "9900028": {
+          "name": "gnomADg:ALL",
+          "_raw_name": "",
+          "description": "All gnomAD genomes individuals"
+        },
+        "9900029": {
+          "name": "afr",
+          "description": "African/African American"
+        },
+        "9900030": {
+          "name": "ami",
+          "description": "Amish"
+        },
+        "9900031": {
+          "name": "amr",
+          "description": "Latino/Admixed American"
+        },
+        "9900032": {
+          "name": "asj",
+          "description": "Ashkenazi Jewish"
+        },
+        "9900033": {
+          "name": "eas",
+          "description": "East Asian"
+        },
+        "9900034": {
+          "name": "fin",
+          "description": "Finnish"
+        },
+        "9900035": {
+          "name": "nfe",
+          "description": "Non-Finnish European"
+        },
+        "9900036": {
+          "name": "sas",
+          "description": "South Asian"
+        },
+        "9900037": {
+          "name": "oth",
+          "description": "Other"
+        },
+        "9900038": {
+          "name": "mid",
+          "description": "Middle Eastern"
+        }
+      }
+    },
+    {
+      "id": "gnomADe_r2.1.1_GRCh38",
+      "description": "Genome Aggregation Database exomes r2.1.1",
+      "species": "homo_sapiens",
+      "assembly": "GRCh38",
+      "type": "remote",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_genotype/gnomad/r2.1.1/exomes/gnomad.exomes.r2.1.1.sites.###CHR###.liftover_grch38_no_VEP.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y"
+      ],
+      "population_prefix": "gnomADe:",
+      "population_display_group": {
+        "display_group_name": "gnomAD exomes r2.1.1",
+        "display_group_priority": 1.4
+      },
+      "populations": {
+        "9900010": {
+          "name": "gnomADe:ALL",
+          "_raw_name": "",
+          "description": "All gnomAD exomes individuals"
+        },
+        "9900011": {
+          "name": "afr",
+          "description": "African/African American"
+        },
+        "9900012": {
+          "name": "amr",
+          "description": "Latino"
+        },
+        "9900013": {
+          "name": "asj",
+          "description": "Ashkenazi Jewish"
+        },
+        "9900014": {
+          "name": "eas",
+          "description": "East Asian"
+        },
+        "9900015": {
+          "name": "fin",
+          "description": "Finnish"
+        },
+        "9900016": {
+          "name": "nfe",
+          "description": "Non-Finnish European"
+        },
+        "9900017": {
+          "name": "oth",
+          "description": "Other"
+        },
+        "9900018": {
+          "name": "sas",
+          "description": "South Asian"
+        }
+      }
+    },
+    { "id": "ALFA_GRCh38",
+      "description": "NCBI ALFA (Allele Frequency Aggregator)",
+      "species": "homo_sapiens",
+      "assembly": "GRCh38",
+      "type": "remote",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_genotype/dbSNP154_ALFA_GRCh38_20210727.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y", "MT"
+      ],
+      "use_seq_region_synonyms": 1,
+      "population_prefix": "ALFA:",
+      "population_display_group": {
+        "display_group_name": "NCBI ALFA",
+        "display_group_priority": 1.8
+      },
+      "populations": {
+        "9980010": {
+          "name": "SAMN10492705",
+          "description": "Total"
+        },
+        "9980011": {
+          "name": "SAMN10492695",
+          "description": "European"
+        },
+        "9980012": {
+          "name": "SAMN10492698",
+          "description": "African American"
+        },
+        "9980013": {
+          "name": "SAMN10492696",
+          "description": "African Others"
+        },
+        "9980014": {
+          "name": "SAMN10492703",
+          "description": "African"
+        },
+        "9980015": {
+          "name": "SAMN10492697",
+          "description": "East Asian"
+        },
+        "9980016": {
+          "name": "SAMN10492702",
+          "description": "South Asian"
+        },
+        "9980017": {
+          "name": "SAMN10492701",
+          "description": "Other Asian"
+        },
+        "9980018": {
+          "name": "SAMN10492704",
+          "description": "Asian"
+        },
+        "9980019": {
+          "name": "SAMN10492699",
+          "description": "Latin American 1"
+        },
+        "9980020": {
+          "name": "SAMN10492700",
+          "description": "Latin American 2"
+        },
+        "9980021": {
+        "name": "SAMN11605645",
+        "description": "Other"
+        }
+      }
+    },
+    {
+      "id": "GEM-J_GRCh38",
+      "species": "homo_sapiens",
+      "assembly": "GRCh38",
+      "type": "remote",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_genotype/gem_j/v1/BBJ_RIKEN_TMM_20200309.grch38.chr###CHR###.vqsr_99.5_99.0.region_flag.genotype_filtering.hwe_flag.noANN.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "20", "21", "22", "X"
+      ],
+      "strict_name_match": 0,
+      "source_name": "GEM-J",
+      "population_display_group": {
+        "display_group_name": "GEM-J",
+        "display_group_priority": 2.0
+      },
+      "populations": {
+        "9970000": {
+          "name" : "GEM-J",
+          "_raw_name" : "",
+          "description": "GEM Japan Whole Genome Aggregation (GEM-J WGA) Panel"
+        }
+      }
+    },
+    {
+      "id": "GEM-J_GRCh37",
+      "species": "homo_sapiens",
+      "assembly": "GRCh37",
+      "type": "remote",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh37/variation_genotype/gem_j/v1/BBJ_RIKEN_TMM_20200309.chr###CHR###.vqsr_99.5_99.0.region_flag.genotype_filtering.hwe_flag.noANN.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "20", "21", "22", "X"
+      ],
+      "strict_name_match": 0,
+      "source_name": "GEM-J",
+      "population_display_group": {
+        "display_group_name": "GEM-J",
+        "display_group_priority": 2.0
+      },
+      "populations": {
+        "9970000": {
+          "name" : "GEM-J",
+          "_raw_name" : "",
+          "description": "GEM Japan Whole Genome Aggregation (GEM-J WGA) Panel"
+        }
+      }
+    },
+    {
+      "id": "gambian_genome_variation_project_GRCh38",
+      "species": "homo_sapiens",
+      "assembly": "GRCh38",
+      "type": "remote",
+      "filename_template" : "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_genotype/ggvp/ALL_GGVP.chr###CHR###.shapeit2_integrated_snvindels_v1b_20200120.GRCh38.phased.vcf.gz",
+      "sample_prefix": "GGVP:",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "20", "21", "22", "X"
+      ]
+    },
+    {
+      "id": "topmed_GRCh37",
+      "species": "homo_sapiens",
+      "assembly": "GRCh37",
+      "type": "remote",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh37/variation_genotype/TOPMED_GRCh37.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y"
+      ],
+      "source_name": "TOPMed",
+      "population_display_group": {
+        "display_group_name": "TOPMed",
+        "display_group_priority": 2.5
+      },
+      "populations": {
+        "9990000": {
+          "name": "TOPMed",
+          "_raw_name": "TOPMed",
+          "_af": "TOPMED",
+          "description": "Trans-Omics for Precision Medicine (TOPMed) Program"
+        }
+      }
+    },
+    {
+      "id": "topmed_GRCh38",
+      "species": "homo_sapiens",
+      "assembly": "GRCh38",
+      "type": "remote",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_genotype/TOPMED_GRCh38_20180418.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y"
+      ],
+      "source_name": "TOPMed",
+      "population_display_group": {
+        "display_group_name": "TOPMed",
+        "display_group_priority": 2.5
+      },
+      "populations": {
+        "9990000": {
+          "name": "TOPMed",
+          "_raw_name": "TOPMed",
+          "_af": "TOPMED",
+          "description": "Trans-Omics for Precision Medicine (TOPMed) Program"
+        }
+      }
+    },
+    {
+      "id": "uk10k_GRCh37",
+      "species": "homo_sapiens",
+      "assembly": "GRCh37",
+      "type": "remote",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh37/variation_genotype/UK10K_COHORT.20160215.sites.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y"
+      ],
+      "source_name": "UK10K",
+      "population_prefix": "UK10K:",
+      "population_display_group": {
+        "display_group_name": "UK10K",
+        "display_group_priority": 2.6
+      },
+      "populations": {
+        "9999000": {
+          "name": "ALSPAC",
+          "_raw_name": "ALSPAC",
+          "description": "ALSPAC cohort"
+        },
+        "9999001": {
+          "name": "TWINSUK",
+          "_raw_name": "TWINSUK_NODUP",
+          "description": "TWINSUK cohort excluding 67 samples where a monozygotic or dyzygotic twin was included in the release"
+        }
+      }
+    },
+    {
+      "id": "uk10k_GRCh38",
+      "species": "homo_sapiens",
+      "assembly": "GRCh38",
+      "type": "remote",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_genotype/UK10K_COHORT.20160215.sites.GRCh38.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y"
+      ],
+      "source_name": "UK10K",
+      "population_prefix": "UK10K:",
+      "population_display_group": {
+        "display_group_name": "UK10K",
+        "display_group_priority": 2.6
+      },
+      "populations": {
+        "9999000": {
+          "name": "ALSPAC",
+          "_raw_name": "ALSPAC",
+          "description": "ALSPAC cohort"
+        },
+        "9999001": {
+          "name": "TWINSUK",
+          "_raw_name": "TWINSUK_NODUP",
+          "description": "TWINSUK cohort excluding 67 samples where a monozygotic or dyzygotic twin was included in the release"
+        }
+      }
+    },
+    { "id": "esp_GRCh37",
+      "species": "homo_sapiens",
+      "assembly": "GRCh37",
+      "type": "remote",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh37/variation_genotype/ESP6500SI-V2-SSA137.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y"
+      ],
+      "source_name": "NHLBI Exome Sequencing Project",
+      "population_display_group": {
+        "display_group_name": "NHLBI Exome Sequencing Project",
+        "display_group_priority": 2.7
+      },
+      "population_prefix": "ESP6500:",
+      "populations": {
+        "9910000": {
+          "name": "AA",
+          "description": "African American",
+          "_ac": "AA_AC"
+        },
+        "9910001": {
+          "name": "EA",
+          "description": "European American",
+          "_ac": "EA_AC"
+        }
+      }
+    },
+    { "id": "esp_GRCh38",
+      "species": "homo_sapiens",
+      "assembly": "GRCh38",
+      "type": "remote",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_genotype/ESP6500SI-V2-SSA137_GRCh38.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y"
+      ],
+      "source_name": "NHLBI Exome Sequencing Project",
+      "population_display_group": {
+        "display_group_name": "NHLBI Exome Sequencing Project",
+        "display_group_priority": 2.7
+      },
+      "population_prefix": "ESP6500:",
+      "populations": {
+        "9910000": {
+          "name": "AA",
+          "description": "African American",
+          "_ac": "AA_AC"
+        },
+        "9910001": {
+          "name": "EA",
+          "description": "European American",
+          "_ac": "EA_AC"
+        }
+      }
+    },
+    {
+      "id": "nextgen_cow_irbt",
+      "species": "bos_taurus",
+      "assembly": "ARS-UCD1.3",
+      "type": "remote",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/bos_taurus/ARS-UCD1.3/variation_genotype/IRBT_ARS-UCD1_3.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "X"
+      ],
+      "population_prefix": "NextGen:"
+    },
+    {
+      "id": "gallus_gallus_EVA_PRJEB44919",
+      "source_name": "PRJEB44919",
+      "description": "Variants from EVA study PRJEB44919",
+      "species": "gallus_gallus",
+      "assembly": "bGalGal1.mat.broiler.GRCg7b",
+      "type": "remote",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/gallus_gallus/bGalGal1.mat.broiler.GRCg7b/variation_genotype/cohort188.ALL.1-28.fixed_remap7b.vcf.gz",
+      "use_as_source": 0,
+      "strict_name_match": 0
+    },
+    {
+      "id": "dog_boxer_EVA_PRJEB24066",
+      "species": "canis_lupus_familiarisboxer",
+      "source_name": "PRJEB24066",
+      "description": "Variants remmaped from EVA study PRJEB24066",
+      "assembly": "Dog10K_Boxer_Tasha",
+      "type": "remote",
+      "filename_template" : "https://ftp.ensembl.org/pub/data_files/canis_lupus_familiarisboxer/Dog10K_Boxer_Tasha/variation_genotype/Dog10K_Boxer_Tasha_remap_PRJEB24066.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21",
+        "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "X"
+      ]
+    },
+    {
+      "id": "dog_EVA_PRJEB24066",
+      "species": "canis_lupus_familiaris",
+      "source_name": "PRJEB24066",
+      "description": "Variants remapped from EVA study PRJEB24066",
+      "assembly": "ROS_Cfam_1.0",
+      "type": "remote",
+      "filename_template" : "https://ftp.ensembl.org/pub/data_files/canis_lupus_familiaris/ROS_Cfam_1.0/variation_genotype/ROS_Cfam_1.0_remap_PRJEB24066.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21",
+        "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "X", "Y"
+      ]
+    }, 
+    {
+      "id": "nextgen_sheep_iroa",
+      "species": "ovis_aries",
+      "assembly": "Oar_v3.1",
+      "type": "remote",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/ovis_aries/Oar_v3.1/variation_genotype/IROA.population_sites.OARv3_1.20140307.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "X"
+      ],
+      "population_prefix": "NextGen:"
+    },
+    {
+      "id": "nextgen_sheep_mooa",
+      "species": "ovis_aries",
+      "assembly": "Oar_v3.1",
+      "type": "remote",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/ovis_aries/Oar_v3.1/variation_genotype/MOOA.population_sites.OARv3_1.20140328.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "X"
+      ],
+      "population_prefix": "NextGen:"
+    },
+    {
+      "id": "sheep_genome_consortium",
+      "species": "ovis_aries",
+      "assembly": "Oar_v3.1",
+      "type": "remote",
+      "filename_template" : "https://ftp.ensembl.org/pub/data_files/ovis_aries/Oar_v3.1/variation_genotype/###CHR###.filtered_intersect.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "X", "MT"
+      ],
+      "population_prefix": "ISGC:",
+      "sample_prefix": "ISGC:"
+    },
+    {
+      "id": "nextgen_sheep_rambouillet_iroa",
+      "species": "ovis_aries_rambouillet",
+      "assembly": "ARS-UI_Ramb_v2.0",
+      "type": "remote",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/ovis_aries_rambouillet/ARS-UI_Ramb_v2.0/variation_genotype/IROA.population_sites.ARS_UI_Ramb_v2_0.20140307.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "X"
+      ],
+      "population_prefix": "NextGen:"
+    },
+    {
+      "id": "nextgen_sheep_rambouillet_mooa",
+      "species": "ovis_aries_rambouillet",
+      "assembly": "ARS-UI_Ramb_v2.0",
+      "type": "remote",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/ovis_aries_rambouillet/ARS-UI_Ramb_v2.0/variation_genotype/MOOA.population_sites.ARS-UI_Ramb_v2_0.20140328.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "X"
+      ],
+      "population_prefix": "NextGen:"
+    },
+    {
+      "id": "sheep_rambouillet_genome_consortium",
+      "species": "ovis_aries_rambouillet",
+      "assembly": "ARS-UI_Ramb_v2.0",
+      "type": "remote",
+      "filename_template" : "https://ftp.ensembl.org/pub/data_files/ovis_aries_rambouillet/ARS-UI_Ramb_v2.0/variation_genotype/###CHR###.filtered_ARS-UI_Ramb_v2.0_intersect.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "X", "MT"
+      ],
+      "population_prefix": "ISGC:",
+      "sample_prefix": "ISGC:"
+    },
+    {
+      "id": "nextgen_goat",
+      "species": "capra_hircus",
+      "assembly": "ARS1",
+      "type": "remote",
+      "filename_template" : "https://ftp.ensembl.org/pub/data_files/capra_hircus/ARS1/variation_genotype/NextGenCapraHircusRemappedARS1.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29"
+      ],
+      "population_prefix": "NextGen:",
+      "sample_prefix": "NextGen:"
+    },
+    {
+      "id": "mouse_genome_project_snp",
+      "species": "mus_musculus",
+      "assembly": "GRCm38",
+      "type": "remote",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/mus_musculus/GRCm38/variation_genotype/mgp.v3.snps.sorted.rsIDdbSNPv137.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "X", "Y"
+      ],
+      "sample_prefix": "MGP:"
+    },
+    {
+      "id": "mouse_genome_project_indel",
+      "species": "mus_musculus",
+      "assembly": "GRCm38",
+      "type": "remote",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/mus_musculus/GRCm38/variation_genotype/mgp.v3.indels.sorted.rsIDdbSNPv137.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "X", "Y"
+      ],
+      "sample_prefix": "MGP:"
+    },
+    {
+      "id": "mouse_genome_project_snp_grcm39",
+      "species": "mus_musculus",
+      "assembly": "GRCm39",
+      "type": "remote",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/mus_musculus/GRCm39/variation_genotype/mgp.v3.snps.sorted.rsIDdbSNPv137.GRCm39.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "X", "Y"
+      ],
+      "sample_prefix": "MGP:"
+    },
+    {
+      "id": "mouse_genome_project_indel_grcm39",
+      "species": "mus_musculus",
+      "assembly": "GRCm39",
+      "type": "remote",
+      "filename_template": "https://ftp.ensembl.org/pub/data_files/mus_musculus/GRCm39/variation_genotype/mgp.v3.indels.sorted.rsIDdbSNPv137.GRCm39.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+        "15", "16", "17", "18", "19", "X", "Y"
+      ],
+      "sample_prefix": "MGP:"
+    },
+    {
+      "id": "horse_EVA_PRJEB9799",
+      "species": "equus_caballus",
+      "assembly": "EquCab3.0",
+      "type": "remote",
+      "filename_template" : "https://ftp.ensembl.org/pub/data_files/equus_caballus/EquCab3.0/variation_genotype/PRJEB9799_EquCab3_0.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21",
+        "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "X", "MT"
+      ],
+      "sample_prefix": "PRJEB9799:"
+    },
+    {
+      "id": "atlantic_salmon_EVA_PRJEB34225",
+      "source_name": "PRJEB34225",
+      "description": "Variants from EVA study PRJEB34225",
+      "species": "salmo_salar",
+      "assembly": "Ssal_v3.1",
+      "type": "remote",
+      "use_as_source" : 1,
+      "filename_template" : "https://ftp.ensembl.org/pub/data_files/salmo_salar/Ssal_v3.1/variation_genotype/Salmon_SNP_80_samples_freebayes_EBI_noINFO_remap.vcf.gz",
+      "chromosomes": [
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29"
+      ]
+    },
+    {
+      "id": "vervet_EVA_PRJEB22989",
+      "source_name": "PRJEB22989",
+      "species": "chlorocebus_sabaeus",
+      "assembly": "ChlSab1.1",
+      "type": "remote",
+      "use_as_source" : 1,
+      "strict_name_match" : 0,
+      "filename_template" : "https://ftp.ebi.ac.uk/pub/databases/eva/PRJEB22988/Svardal_et_al_2017_vervet_monkey_SNPs_imputed_phased.vcf.gz"
+    },
+    {
+      "id": "eva_microtus_ochrogaster_gca000317375v1",
+      "description": "Variants from EVA",
+      "species": "microtus_ochrogaster",
+      "assembly": "MicOch1.0",
+      "type": "remote",
+      "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_4/by_species/microtus_ochrogaster/GCA_000317375.1/GCA_000317375.1_current_ids.vcf.gz",
+      "use_as_source" : 1,
+      "use_seq_region_synonyms": 0,
+      "strict_name_match": 0,
+      "source_name": "EVA",
+      "source_version": 4
+    },
+    {
+        "id": "eva_oreochromis_niloticus_gca001858045v3",
+        "description": "Variants from EVA",
+        "species": "Oreochromis_niloticus",
+        "assembly": "O_niloticus_UMD_NMBU",
+        "type": "remote",
+        "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_4/by_species/oreochromis_niloticus/GCA_001858045.3/GCA_001858045.3_current_ids.vcf.gz",
+        "use_as_source": 1,
+        "use_seq_region_synonyms": 1,
+        "strict_name_match": 0,
+        "source_name": "EVA",
+        "source_version": 4
+    },
+    {
+      "id": "nile_tilapia_EVA_PRJEB38548",
+      "source_name": "PRJEB38548",
+      "description": "Variants from EVA study PRJEB38548",
+      "species": "oreochromis_niloticus",
+      "assembly": "O_niloticus_UMD_NMBU",
+      "type": "remote",
+      "use_as_source" : 1,
+      "use_seq_region_synonyms": 1,
+      "filename_template" : "https://ftp.ebi.ac.uk/pub/databases/eva/PRJEB38548/tilapia_snp_array.vcf.gz",
+      "chromosomes": [
+        "LG1", "LG2","LG3","LG4","LG5","LG6","LG7","LG8","LG9","LG10","LG11","LG12","LG13","LG14","LG15","LG16","LG17","LG18","LG19","LG20","LG21","LG22","LG23"
+      ],
+      "population_display_group": {
+        "display_group_name": "PRJEB38548",
+        "display_group_priority": "1"
+      },
+      "populations": {
+        "1": {
+          "name": "PRJEB38548",
+          "_af": "AF",
+          "description": "Population from EVA study PRJEB38548"
+        }
+      }
+    },
+    {
+      "id": "american_mink_EVA_PRJEB26368",
+      "source_name": "PRJEB26368",
+      "description": "Variants from EVA study PRJEB26368",
+      "species": "neovison_vison",
+      "assembly": "NNQGG.v01",
+      "type": "remote",
+      "use_as_source" : 1,
+      "filename_template" : "https://ftp.ebi.ac.uk/pub/databases/eva/PRJEB26368/GBS_mink_eva.vcf.gz",
+      "population_display_group": {
+        "display_group_name": "PRJEB26368",
+        "display_group_priority": "1"
+      },
+      "populations": {
+        "1": {
+          "name": "PRJEB26368",
+          "_af": "AF",
+          "description": "Population from EVA study PRJEB26368"
+        }
+      }
+    },
+    {
+      "id": "rabbit_EVA_PRJEB27278",
+      "source_name": "PRJEB27278",
+      "description": "Variants from EVA study PRJEB27278",
+      "species": "oryctolagus_cuniculus",
+      "assembly": "OryCun2.0",
+      "type": "remote",
+      "use_as_source" : 1,
+      "use_seq_region_synonyms": 1,
+      "filename_template" : "https://ftp.ebi.ac.uk/pub/databases/eva/PRJEB27278/Craniosnyostotic_Rabbit_Colony_eva08062018.vcf.gz",
+      "chromosomes": [
+        "1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","X"
+      ]
+    },
+    {
+        "id": "eva_coturnix_japonica_gca001577835v1",
+        "description": "Variants from EVA",
+        "species": "Coturnix_japonica",
+        "assembly": "Coturnix_japonica_2.0",
+        "type": "remote",
+        "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_4/by_species/coturnix_japonica/GCA_001577835.1/GCA_001577835.1_current_ids.vcf.gz",
+        "use_as_source": 1,
+        "use_seq_region_synonyms": 0,
+        "strict_name_match": 0,
+        "source_name": "EVA",
+        "source_version": 4
+    },
+    {
+        "id": "eva_parus_major_gca001522545v2",
+        "description": "Variants from EVA",
+        "species": "Parus_major",
+        "assembly": "Parus_major1.1",
+        "type": "remote",
+        "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_4/by_species/parus_major/GCA_001522545.2/GCA_001522545.2_current_ids.vcf.gz",
+        "use_as_source": 1,
+        "use_seq_region_synonyms": 0,
+        "strict_name_match": 0,
+        "source_name": "EVA",
+        "source_version": 4
+    },
+    {
+      "id": "great_tit_EVA_PRJEB24964",
+      "source_name": "PRJEB24964",
+      "description": "Variants from EVA study PRJEB24964",
+      "species": "parus_major",
+      "assembly": "Parus_major1.1",
+      "type": "remote",
+      "use_as_source" : 1,
+      "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/PRJEB24964/GreatTits_PolyMonoMinorHom1.10_NoUN_NoScaffolds.vcf.gz"
+    },
+    {
+        "id": "eva_macaca_fascicularis_gca011100615v1",
+        "description": "Variants from EVA",
+        "species": "Macaca_fascicularis",
+        "assembly": "Macaca_fascicularis_6.0",
+        "type": "remote",
+        "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_4/by_species/macaca_fascicularis/GCA_011100615.1/GCA_011100615.1_current_ids.vcf.gz",
+        "use_as_source": 1,
+        "use_seq_region_synonyms": 1,
+        "strict_name_match": 0,
+        "source_name": "EVA",
+        "source_version": 4
+    },
+    {
+        "id": "eva_taeniopygia_guttata_gca003957565v2",
+        "description": "Variants from EVA",
+        "species": "Taeniopygia_guttata",
+        "assembly": "bTaeGut1_v1.p",
+        "type": "remote",
+        "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_4/by_species/taeniopygia_guttata/GCA_003957565.2/GCA_003957565.2_current_ids.vcf.gz",
+        "use_as_source": 1,
+        "use_seq_region_synonyms": 1,
+        "strict_name_match": 0,
+        "source_name": "EVA",
+        "source_version": 4
+    },
+    {
+        "id": "eva_macaca_mulatta_gca003339765v3",
+        "description": "Variants from EVA",
+        "species": "Macaca_mulatta",
+        "assembly": "Mmul_10",
+        "type": "remote",
+        "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_4/by_species/macaca_mulatta/GCA_003339765.3/GCA_003339765.3_current_ids.vcf.gz",
+        "use_as_source": 1,
+        "use_seq_region_synonyms": 1,
+        "strict_name_match": 0,
+        "source_name": "EVA",
+        "source_version": 4
+    },
+    {
+        "id": "eva_meleagris_gallopavo_gca000146605v4",
+        "description": "Variants from EVA",
+        "species": "Meleagris_gallopavo",
+        "assembly": "Turkey_5.1",
+        "type": "remote",
+        "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_4/by_species/meleagris_gallopavo/GCA_000146605.4/GCA_000146605.4_current_ids.vcf.gz",
+        "use_as_source": 1,
+        "use_seq_region_synonyms": 1,
+        "strict_name_match": 0,
+        "source_name": "EVA",
+        "source_version": 4
+    },
+    {
+      "id": "eva_nomascus_leucogenys_gca000146795v3",
+      "description": "Variants from EVA",
+      "species": "nomascus_leucogenys",
+      "assembly": "Nleu_3.0",
+      "type": "remote",
+      "filename_template": "http://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_4/by_species/nomascus_leucogenys/GCA_000146795.3/GCA_000146795.3_current_ids.vcf.gz",
+      "use_as_source": 1,
+      "use_seq_region_synonyms": 0,
+      "source_name": "EVA",
+      "source_version": 4
+    },
+    {
+      "id": "eva_pan_troglodytes_gca000001515v5",
+      "description": "Variants from EVA",
+      "species": "Pan_troglodytes",
+      "assembly": "Pan_tro_3.0",
+      "type": "remote",
+      "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_4/by_species/pan_troglodytes/GCA_000001515.5/GCA_000001515.5_current_ids.vcf.gz",
+      "use_as_source": 1,
+      "use_seq_region_synonyms": 1,
+      "source_name": "EVA",
+      "source_version": 4
+    },
+    {
+        "id": "eva_ficedula_albicollis_gca000247815v2",
+        "description": "Variants from EVA",
+        "species": "Ficedula_albicollis",
+        "assembly": "FicAlb1.5",
+        "type": "remote",
+        "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_4/by_species/ficedula_albicollis/GCA_000247815.2/GCA_000247815.2_current_ids.vcf.gz",
+        "use_as_source": 1,
+        "use_seq_region_synonyms": 0,
+        "strict_name_match": 0,
+        "source_name": "EVA",
+        "source_version": 4
+    },
+    {
+        "id": "eva_sander_lucioperca_gca008315115v1",
+        "description": "Variants from EVA",
+        "species": "Sander_lucioperca",
+        "assembly": "SLUC_FBN_1",
+        "type": "remote",
+        "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_4/by_species/sander_lucioperca/GCA_008315115.1/GCA_008315115.1_current_ids.vcf.gz",
+        "use_as_source": 1,
+        "use_seq_region_synonyms": 0,
+        "strict_name_match": 0,
+        "source_name": "EVA",
+        "source_version": 4
+    },
+    {
+        "id": "eva_anas_platyrhynchos_gca008746955v1",
+        "description": "Variants from EVA",
+        "species": "Anas_platyrhynchos",
+        "assembly": "ASM874695v1",
+        "type": "remote",
+        "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_4/by_species/anas_platyrhynchos/GCA_008746955.1/GCA_008746955.1_current_ids.vcf.gz",
+        "use_as_source": 1,
+        "use_seq_region_synonyms": 1,
+        "source_name": "EVA",
+        "source_version": 4
+    },
+    {
+        "id": "eva_bos_grunniens_gca005887515v1",
+        "description": "Variants from EVA",
+        "species": "Bos_grunniens",
+        "assembly": "LU_Bosgru_v3.0",
+        "type": "remote",
+        "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_4/by_species/bos_grunniens/GCA_005887515.1/GCA_005887515.1_current_ids.vcf.gz",
+        "use_as_source": 1,
+        "use_seq_region_synonyms": 1,
+        "source_name": "EVA",
+        "source_version": 4
+    },
+    {
+        "id": "eva_callithrix_jacchus_gca011100555v1",
+        "description": "Variants from EVA",
+        "species": "Callithrix_jacchus",
+        "assembly": "mCalJac1.pat.X",
+        "type": "remote",
+        "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_4/by_species/callithrix_jacchus/GCA_011100555.1/GCA_011100555.1_current_ids.vcf.gz",
+        "use_as_source": 1,
+        "use_seq_region_synonyms": 1,
+        "source_name": "EVA",
+        "source_version": 4
+    },
+    {
+        "id": "eva_chlorocebus_sabaeus_gca000409795v2",
+        "description": "Variants from EVA",
+        "species": "Chlorocebus_sabaeus",
+        "assembly": "ChlSab1.1",
+        "type": "remote",
+        "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_4/by_species/chlorocebus_sabaeus/GCA_000409795.2/GCA_000409795.2_current_ids.vcf.gz",
+        "use_as_source": 1,
+        "use_seq_region_synonyms": 0,
+        "strict_name_match": 0,
+        "source_name": "EVA",
+        "source_version": 4
+    },
+    {
+        "id": "eva_ciona_intestinalis_gca000224145v1",
+        "description": "Variants from EVA",
+        "species": "Ciona_intestinalis",
+        "assembly": "KH",
+        "type": "remote",
+        "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_4/by_species/ciona_intestinalis/GCA_000224145.1/GCA_000224145.1_current_ids.vcf.gz",
+        "use_as_source": 1,
+        "use_seq_region_synonyms": 0,
+        "source_name": "EVA",
+        "source_version": 4
+    },
+    {
+        "id": "eva_drosophila_melanogaster_gca000001215v4",
+        "description": "Variants from EVA",
+        "species": "Drosophila_melanogaster",
+        "assembly": "BDGP6.46",
+        "type": "remote",
+        "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_4/by_species/drosophila_melanogaster/GCA_000001215.4/GCA_000001215.4_current_ids.vcf.gz",
+        "use_as_source": 1,
+        "use_seq_region_synonyms": 0,
+        "source_name": "EVA",
+        "source_version": 4
+    },
+    {
+        "id": "eva_neovison_vison_gca900108605v1",
+        "description": "Variants from EVA",
+        "species": "Neovison_vison",
+        "assembly": "NNQGG.v01",
+        "type": "remote",
+        "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_4/by_species/neovison_vison/GCA_900108605.1/GCA_900108605.1_current_ids.vcf.gz",
+        "use_as_source": 1,
+        "use_seq_region_synonyms": 0,
+        "strict_name_match": 0,
+        "source_name": "EVA",
+        "source_version": 4
+    },
+    {
+        "id": "eva_oncorhynchus_mykiss_gca013265735v3",
+        "description": "Variants from EVA",
+        "species": "Oncorhynchus_mykiss",
+        "assembly": "USDA_OmykA_1.1",
+        "type": "remote",
+        "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_4/by_species/oncorhynchus_mykiss/GCA_013265735.3/GCA_013265735.3_current_ids.vcf.gz",
+        "use_as_source": 1,
+        "use_seq_region_synonyms": 1,
+        "source_name": "EVA",
+        "source_version": 4
+    },
+    {
+        "id": "eva_oryctolagus_cuniculus_gca000003625v1",
+        "description": "Variants from EVA",
+        "species": "Oryctolagus_cuniculus",
+        "assembly": "OryCun2.0",
+        "type": "remote",
+        "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_4/by_species/oryctolagus_cuniculus/GCA_000003625.1/GCA_000003625.1_current_ids.vcf.gz",
+        "use_as_source": 1,
+        "use_seq_region_synonyms": 0,
+        "strict_name_match": 0,
+        "source_name": "EVA",
+        "source_version": 4
+    },
+    {
+        "id": "eva_pongo_abelii_gca002880775v3",
+        "description": "Variants from EVA",
+        "species": "Pongo_abelii",
+        "assembly": "Susie_PABv2",
+        "type": "remote",
+        "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_4/by_species/pongo_abelii/GCA_002880775.3/GCA_002880775.3_current_ids.vcf.gz",
+        "use_as_source": 1,
+        "use_seq_region_synonyms": 1,
+        "strict_name_match": 1,
+        "source_name": "EVA",
+        "source_version": 4
+    },
+
+    {
+        "id": "eva_seriola_dumerili_gca002260705v1",
+        "description": "Variants from EVA",
+        "species": "Seriola_dumerili",
+        "assembly": "Sdu_1.0",
+        "type": "remote",
+        "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_4/by_species/seriola_dumerili/GCA_002260705.1/GCA_002260705.1_current_ids.vcf.gz",
+        "use_as_source": 1,
+        "use_seq_region_synonyms": 0,
+        "source_name": "EVA",
+        "source_version": 4
+    },
+    {
+      "id": "91_mammals.gerp_conservation_score",
+      "species": "bos_taurus",
+      "assembly": "ARS-UCD1.3",
+      "type": "remote",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.bos_taurus.ARS-UCD1.3.bw",
+      "annotation_type": "gerp"
+    },
+    {
+      "id": "91_mammals.gerp_conservation_score",
+      "species": "canis_lupus_familiaris",
+      "assembly": "ROS_Cfam_1.0",
+      "type": "remote",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.canis_lupus_familiaris.ROS_Cfam_1.0.bw",
+      "annotation_type": "gerp"
+    },
+    {
+      "id": "91_mammals.gerp_conservation_score",
+      "species": "capra_hircus",
+      "assembly": "ARS1",
+      "type": "remote",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.capra_hircus.ARS1.bw",
+      "annotation_type": "gerp"
+    },
+    {
+      "id": "91_mammals.gerp_conservation_score",
+      "species": "chlorocebus_sabaeus",
+      "assembly": "ChlSab1.1",
+      "type": "remote",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.chlorocebus_sabaeus.ChlSab1.1.bw",
+      "annotation_type": "gerp"
+    },
+    {
+      "id": "65_fish.gerp_conservation_score",
+      "species": "danio_rerio",
+      "assembly": "GRCz11",
+      "type": "remote",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/65_fish.gerp_conservation_score/gerp_conservation_scores.danio_rerio.GRCz11.bw",
+      "annotation_type": "gerp"
+    },
+    {
+      "id": "91_mammals.gerp_conservation_score",
+      "species": "equus_caballus",
+      "assembly": "EquCab3.0",
+      "type": "remote",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.equus_caballus.EquCab3.0.bw",
+      "annotation_type": "gerp"
+    },
+    {
+      "id": "91_mammals.gerp_conservation_score",
+      "species": "felis_catus",
+      "assembly": "Felis_catus_9.0",
+      "type": "remote",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.felis_catus.Felis_catus_9.0.bw",
+      "annotation_type": "gerp"
+    },
+    {
+      "id": "27_sauropsids.gerp_conservation_score",
+      "species": "ficedula_albicollis",
+      "assembly": "FicAlb1.5",
+      "type": "remote",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/27_sauropsids.gerp_conservation_score/gerp_conservation_scores.ficedula_albicollis.FicAlb1.5.bw",
+      "annotation_type": "gerp"
+    },
+    {
+      "id": "63_amniotes.gerp_conservation_score",
+      "species": "gallus_gallus",
+      "assembly": "bGalGal1.mat.broiler.GRCg7b",
+      "type": "remote",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/63_amniotes.gerp_conservation_score/gerp_conservation_scores.gallus_gallus.bGalGal1.mat.broiler.GRCg7b.bw",
+      "annotation_type": "gerp"
+    },
+    {
+      "id": "37_mammals.gerp_conservation_score",
+      "species": "homo_sapiens",
+      "assembly": "GRCh37",
+      "type": "remote",
+      "filename_template" : "https://ftp.ensembl.org/pub/grch37/release-96/compara/conservation_scores/37_mammals.gerp_conservation_score/gerp_conservation_scores.homo_sapiens.GRCh37.bw",
+      "annotation_type": "gerp"
+    },
+    {
+      "id": "91_mammals.gerp_conservation_score",
+      "species": "homo_sapiens",
+      "assembly": "GRCh38",
+      "type": "remote",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.homo_sapiens.GRCh38.bw",
+      "annotation_type": "gerp"
+    },
+    {
+      "id": "91_mammals.gerp_conservation_score",
+      "species": "macaca_fascicularis",
+      "assembly": "Macaca_fascicularis_6.0",
+      "type": "remote",
+      "filename_template": "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.macaca_fascicularis.Macaca_fascicularis_6.0.bw",
+      "annotation_type": "gerp"
+    },
+    {
+      "id": "91_mammals.gerp_conservation_score",
+      "species": "macaca_mulatta",
+      "assembly": "Mmul_10",
+      "type": "remote",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.macaca_mulatta.Mmul_10.bw",
+      "annotation_type": "gerp"
+    },
+    {
+      "id": "63_amniotes.gerp_conservation_score",
+      "species": "meleagris_gallopavo",
+      "assembly": "Turkey_5.1",
+      "type": "remote",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/63_amniotes.gerp_conservation_score/gerp_conservation_scores.meleagris_gallopavo.Turkey_5.1.bw",
+      "annotation_type": "gerp"
+    },
+    {
+      "id": "91_mammals.gerp_conservation_score",
+      "species": "microtus_ochrogaster",
+      "assembly": "MicOch1.0",
+      "type": "remote",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.microtus_ochrogaster.MicOch1.0.bw",
+      "annotation_type": "gerp"
+    },
+    {
+      "id": "91_mammals.gerp_conservation_score",
+      "species": "mus_musculus",
+      "assembly": "GRCm39",
+      "type": "remote",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.mus_musculus.GRCm39.bw",
+      "annotation_type": "gerp"
+    },
+    {
+      "id": "91_mammals.gerp_conservation_score",
+      "species": "neovison_vison",
+      "assembly": "NNQGG.v01",
+      "type": "remote",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.neovison_vison.NNQGG.v01.bw",
+      "annotation_type": "gerp"
+    },
+    {
+      "id": "91_mammals.gerp_conservation_score",
+      "species": "nomascus_leucogenys",
+      "assembly": "Nleu_3.0",
+      "type": "remote",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.nomascus_leucogenys.Nleu_3.0.bw",
+      "annotation_type": "gerp"
+    },
+    {
+      "id": "65_fish.gerp_conservation_score",
+      "species": "oreochromis_niloticus",
+      "assembly": "O_niloticus_UMD_NMBU",
+      "type": "remote",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/65_fish.gerp_conservation_score/gerp_conservation_scores.oreochromis_niloticus.O_niloticus_UMD_NMBU.bw",
+      "annotation_type": "gerp"
+    },
+    {
+      "id": "91_mammals.gerp_conservation_score",
+      "species": "oryctolagus_cuniculus",
+      "assembly": "OryCun2.0",
+      "type": "remote",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.oryctolagus_cuniculus.OryCun2.0.bw",
+      "annotation_type": "gerp"
+    },
+    {
+      "id": "91_mammals.gerp_conservation_score",
+      "species": "ovis_aries_rambouillet",
+      "assembly": "ARS-UI_Ramb_v2.0",
+      "type": "remote",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.ovis_aries_rambouillet.ARS-UI_Ramb_v2.0.bw",
+      "annotation_type": "gerp"
+    },
+    {
+      "id": "91_mammals.gerp_conservation_score",
+      "species": "pan_troglodytes",
+      "assembly": "Pan_tro_3.0",
+      "type": "remote",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.pan_troglodytes.Pan_tro_3.0.bw",
+      "annotation_type": "gerp"
+    },
+    {
+      "id": "27_sauropsids.gerp_conservation_score",
+      "species": "coturnix_japonica",
+      "assembly": "Coturnix_japonica_2.0",
+      "type": "remote",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/27_sauropsids.gerp_conservation_score/gerp_conservation_scores.coturnix_japonica.Coturnix_japonica_2.0.bw",
+      "annotation_type": "gerp"
+    },
+    {
+      "id": "63_amniotes.gerp_conservation_score",
+      "species": "parus_major",
+      "assembly": "Parus_major1.1",
+      "type": "remote",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/63_amniotes.gerp_conservation_score/gerp_conservation_scores.parus_major.Parus_major1.1.bw",
+      "annotation_type": "gerp"
+    },
+    {
+      "id": "91_mammals.gerp_conservation_score",
+      "species": "pongo_abelii",
+      "assembly": "Susie_PABv2",
+      "type": "remote",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.pongo_abelii.Susie_PABv2.bw",
+      "annotation_type": "gerp"
+    },
+    {
+      "id": "91_mammals.gerp_conservation_score",
+      "species": "rattus_norvegicus",
+      "assembly": "mRatBN7.2",
+      "type": "remote",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.rattus_norvegicus.mRatBN7.2.bw",
+      "annotation_type": "gerp"
+    },
+    {
+      "id": "91_mammals.gerp_conservation_score",
+      "species": "sus_scrofa",
+      "assembly": "Sscrofa11.1",
+      "type": "remote",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.sus_scrofa.Sscrofa11.1.bw",
+      "annotation_type": "gerp"
+    },
+    {
+      "id": "63_amniotes.gerp_conservation_score",
+      "species": "taeniopygia_guttata",
+      "assembly": "bTaeGut1_v1.p",
+      "type": "remote",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/63_amniotes.gerp_conservation_score/gerp_conservation_scores.taeniopygia_guttata.bTaeGut1_v1.p.bw",
+      "annotation_type": "gerp"
+    },
+    {
+      "id": "65_fish.gerp_conservation_score",
+      "species": "tetraodon_nigroviridis",
+      "assembly": "TETRAODON8",
+      "type": "remote",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/65_fish.gerp_conservation_score/gerp_conservation_scores.tetraodon_nigroviridis.TETRAODON8.bw",
+      "annotation_type": "gerp"
+    },
+    {
+      "id": "65_fish.gerp_conservation_score",
+      "species": "salmo_salar",
+      "assembly": "Ssal_v3.1",
+      "type": "remote",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/65_fish.gerp_conservation_score/gerp_conservation_scores.salmo_salar.Ssal_v3.1.bw",
+      "annotation_type": "gerp"
+    },
+    {
+      "id": "65_fish.gerp_conservation_score",
+      "species": "sander_lucioperca",
+      "assembly": "SLUC_FBN_1",
+      "type": "remote",
+      "filename_template" : "https://ftp.ensembl.org/pub/release-111/compara/conservation_scores/65_fish.gerp_conservation_score/gerp_conservation_scores.sander_lucioperca.SLUC_FBN_1.bw",
+      "annotation_type": "gerp"
+    },
+    {
+      "id": "CADD_GRCh37_whole_genome_SNVs",
+      "species": "homo_sapiens",
+      "assembly": "GRCh37",
+      "type": "remote",
+      "filename_template" : "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh37/variation_annotation/CADD_GRCh37_1.6_whole_genome_SNVs.tsv.gz",
+      "annotation_type": "cadd"
+    },
+    {
+      "id": "CADD_GRCh38_whole_genome_SNVs",
+      "species": "homo_sapiens",
+      "assembly": "GRCh38",
+      "type": "remote",
+      "filename_template" : "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_annotation/CADD_GRCh38_1.6_whole_genome_SNVs.tsv.gz",
+      "annotation_type": "cadd"
+    },
+    {
+      "id": "CADD_Sscrofa11.1_whole_genome_SNVs",
+      "species": "sus_scrofa",
+      "assembly": "Sscrofa11.1",
+      "type": "remote",
+      "filename_template" : "https://ftp.ensembl.org/pub/data_files/sus_scrofa/Sscrofa11.1/variation_annotation/ALL_pCADD-PHRED-scores.tsv.gz",
+      "annotation_type": "cadd"
+    }
+  ]
 }
