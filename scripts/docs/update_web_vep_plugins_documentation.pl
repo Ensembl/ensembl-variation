@@ -289,6 +289,11 @@ sub read_plugin_file {
       my $desc_flag = 1;
       my $code_block = 0;
       my $code_script = 0;
+
+      my $table = 0;
+      my $table_newline = 0; # prepare to ignore newlines
+      my $tr_class = '';
+
       my $cmds = join "|", qw( ./vep ./filter_vep awk bgzip cat cd chmod cp curl
                                echo exit grep gunzip gzip head ls less make mkdir
                                mysql mv perl rm sed sort paste pwd sudo tabix
@@ -303,6 +308,35 @@ sub read_plugin_file {
         }
         else {
           if ($desc ne '' || $line !~ /^\s+$/) {
+            if ($line =~ 'key=value') {
+              $line = '</td></tr></tbody></table>' . "\n" . $line if $table;
+              $table = 1;
+              $table_newline = 0;
+              chomp($line);
+              $line .=
+                '<table class="ss">'.
+                '<thead><tr><th>Argument</th><th>Description</th></tr></thead>'.
+                '<tbody>';
+            } elsif ($table) {
+              if ($line =~ ' : ') {
+                my ($arg, $description) = split(/ : /, $line);
+                $arg =~ s/^\s+|\s+$//g;
+                $description =~ s/^\s+|\s+$//g;
+                $tr_class = ($tr_class eq 'bg1') ? 'bg2' : 'bg1';
+                $line = join("",
+                  '<tr class="' . $tr_class . '">',
+                  '<td><pre>' . $arg . '</pre></td>',
+                  '<td>' . $description . ' ');
+                $table_newline = 0;
+              } elsif ($table_newline) {
+                $line = '</td></tr></tbody></table>' . "\n" . $line;
+                $table = 0;
+                $table_newline = 0;
+              } elsif ($line =~ '^\s+$') {
+                $table_newline = 1;
+              }
+            }
+             
             # Add code block -- three types of code blocks:
             #   1. to show a code script
             #        start: line starts with ##### or contains # BEGIN
@@ -336,7 +370,7 @@ sub read_plugin_file {
               $line = '<pre class="code sh_sh">' . $line unless $code_block;
               $code_block = 1;
             } else {
-              $line =~ s/^\s+// if $line =~ /\S+/;
+#              $line =~ s/^\s+// if $line =~ /\S+/;
               if ($code_block) {
                 # remove blank lines after code block (looks nicer)
                 $line = "" if $line =~ /^\s+$/;
@@ -346,12 +380,14 @@ sub read_plugin_file {
                 $code_block = 0;
               }
             }
+
             $desc .= $line;
             $line = '</pre>' . $line if $code_block;
           }
         }
         chomp($line);
       }
+      $desc .= '</td></tr></tbody></table>' if $table_newline;
     }
     
     # Get the non Ensembl Perl module dependencies
@@ -367,13 +403,12 @@ sub read_plugin_file {
   close(F);
 
   # Make URLs clickable
-  $desc =~ s|((http\|ftp)s?:\/\/(www\.)?[-a-zA-Z0-9\@:%._\+~#=]{1,256}\.[a-zA-Z0-9():]{0,6}\b([-a-zA-Z0-9()\@:%_\+.~#?&//=]*[^\)\.,;:\s]))|<a href="$1">$1</a>|g;
+  $desc =~ s|((http\|ftp)s?:\/\/(www\.)?[-a-zA-Z0-9\@:%._\+~#=]{1,256}\.[a-zA-Z0-9():]{0,6}\b([-a-zA-Z0-9()\@:%_\+.~#?&//=]*[^\)\.,;:\s\<]))|<a href="$1">$1</a>|g;
   
   # Postprocess the description content (reformatting)
   $desc = "<p>$desc</p>";
   $desc =~ s/\n\s*\n/<\/p><p>/g;
   $desc =~ s/<\/p><p><\/p>/<\/p>/g;
-  $desc =~ s/\n/<br \/>/g;
   $desc =~ s/<br \/><\/p>/<\/p>/g;
   if ($desc =~ /<\/p><p>/) {
     my $lc_name = lc($name);
