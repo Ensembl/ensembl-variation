@@ -289,9 +289,10 @@ sub read_plugin_file {
       my $desc_flag = 1;
       my $code_block = 0;
       my $code_script = 0;
-      my $cmds = join "|", qw( zcat zgrep cat wget rm gzip gunzip awk head
-                               sort sed bgzip unzip cd perl make tabix mysql
-                               echo tar ./filter_vep ./vep );
+      my $cmds = join "|", qw( ./vep ./filter_vep awk bgzip cat cd chmod cp curl
+                               echo exit grep gunzip gzip head ls less make mkdir
+                               mysql mv perl rm sed sort paste pwd sudo tabix
+                               tail tar touch unzip wget zcat zgrep zip );
       $cmds =~ s#(\.|/)#\\$1#g;
 
       while ($desc_flag != 0) {
