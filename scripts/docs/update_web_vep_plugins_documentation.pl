@@ -290,6 +290,11 @@ sub read_plugin_file {
       my $code_block = 0;
       my $code_script = 0;
 
+      my $ulist = 0;
+      my $ulist_newline = 0; # prepare to ignore newlines
+      my $olist = 0;
+      my $olist_newline = 0; # prepare to ignore newlines
+
       my $table = 0;
       my $table_newline = 0; # prepare to ignore newlines
       my $tr_class = '';
@@ -308,6 +313,21 @@ sub read_plugin_file {
         }
         else {
           if ($desc ne '' || $line !~ /^\s+$/) {
+            if ($line =~ /^\s+[-*+] (.*)/) {
+              $line = ($ulist ? '</li>' : '<ul>') . '<li>' . $1;
+              $ulist = 1;
+              $ulist_newline = 0;
+            } elsif ($ulist) {
+              if ($ulist_newline) {
+                $line = '</li></ul>' . $line;
+                $ulist = 0;
+              } elsif ($line =~ '^\s+$') {
+                $ulist_newline = 1;
+              } else {
+                $line = '&nbsp;' . $line;
+              }
+            }
+
             if ($line =~ 'key=value') {
               $line = '</td></tr></tbody></table>' . "\n" . $line if $table;
               $table = 1;
@@ -376,13 +396,28 @@ sub read_plugin_file {
                 $line = "" if $line =~ /^\s+$/;
 
                 # end code block (terminal commands)
-                $line = '</pre>' . $line;
+                $line = '</pre><p>' . $line . '</p>';
                 $code_block = 0;
               }
             }
 
+            if ($line =~ /^\s+\(?([0-9]+)[\)\.] (.*)/) {
+              $line = ($olist ? '</li>' : '<ol>') . '<li value="' . $1 . '">' . $2;
+              $olist = 1;
+              $olist_newline = 0;
+            } elsif ($olist) {
+              if ($olist_newline) {
+                $line = '</li></ol>' . $line;
+                $olist = 0;
+              } elsif ($line =~ '^\s+$') {
+                $olist_newline = 1;
+              } else {
+                $line = $line;
+              }
+            }
+
             $desc .= $line;
-            $line = '</pre>' . $line if $code_block;
+            $line = '</pre><p>' . $line . '</p>' if $code_block;
           }
         }
         chomp($line);
