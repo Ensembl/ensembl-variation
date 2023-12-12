@@ -313,6 +313,7 @@ sub read_plugin_file {
         }
         else {
           if ($desc ne '' || $line !~ /^\s+$/) {
+            # Create unordered list when starting line with certain characters
             if ($line =~ /^\s+[-*+] (.*)/) {
               $line = ($ulist ? '</li>' : '<ul>') . '<li>' . $1;
               $ulist = 1;
@@ -328,6 +329,7 @@ sub read_plugin_file {
               }
             }
 
+            # Create table for plugin arguments
             if ($line =~ 'key=value') {
               $line = '</td></tr></tbody></table>' . "\n" . $line if $table;
               $table = 1;
@@ -401,6 +403,7 @@ sub read_plugin_file {
               }
             }
 
+            # Create ordered list from numbers at line start
             if ($line =~ /^\s+\(?([0-9]+)[\)\.] (.*)/) {
               $line = ($olist ? '</li>' : '<ol>') . '<li value="' . $1 . '">' . $2;
               $olist = 1;
