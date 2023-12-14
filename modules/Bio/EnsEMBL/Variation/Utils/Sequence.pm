@@ -569,38 +569,23 @@ sub hgvs_variant_notation {
   # If this is an insertion, we should check if the preceeding reference nucleotides match the insertion. In that case it should be annotated as a multiplication.
   if (!$ref_length) {
   
-    # lookup_direction 1 means look at 5' direction for ref string and -1 means the look at 3' direction
-    my $lookup_direction = $lookup_order == 1 ? 1 : -1;
+    # lookup_direction = 1: look at 5' then 3' direction for ref string (reversed order for -1)
+    my @lookup_direction = $lookup_order == 1 ? (1, -1) : (-1, 1);
 
-    # Get the same number of nucleotides preceding the insertion as the length of the insertion
-    my $prev_str = $lookup_direction == 1 ? 
-      substr($ref_sequence,$ref_end,$alt_length) : 
-      substr($ref_sequence,($ref_end-$alt_length),$alt_length);
+    for my $direction (@lookup_direction) {
+      # Get the same number of nucleotides preceding the insertion as the length of the insertion
+      my $prev_str = $direction == 1 ?
+        substr($ref_sequence,$ref_end,$alt_length) :
+        substr($ref_sequence,($ref_end-$alt_length),$alt_length);
 
-    # If they match, this is a duplication
-    if ($prev_str eq $alt_allele) {
-      $notation{'end'} = $display_start + $alt_length - 1 if $lookup_direction == 1;
-      $notation{'start'} = ($display_end - $alt_length + 1) if $lookup_direction == -1;
-      $notation{'type'} = 'dup';
-      
-      return \%notation;
-    }
+      # If they match, this is a duplication
+      if ($prev_str eq $alt_allele) {
+        $notation{'end'}   = $display_start + $alt_length - 1 if $direction == 1;
+        $notation{'start'} = ($display_end - $alt_length + 1) if $direction == -1;
+        $notation{'type'}  = 'dup';
 
-    # change lookup direction and look again
-    $lookup_direction *= -1;
-
-    # Get the same number of nucleotides preceding the insertion as the length of the insertion
-    $prev_str = $lookup_direction == 1 ? 
-      substr($ref_sequence,$ref_end,$alt_length) : 
-      substr($ref_sequence,($ref_end-$alt_length),$alt_length);
-
-    # If they match, this is a duplication
-    if ($prev_str eq $alt_allele) {
-      $notation{'end'} = $display_start + $alt_length - 1 if $lookup_direction == 1;
-      $notation{'start'} = ($display_end - $alt_length + 1) if $lookup_direction == -1;
-      $notation{'type'} = 'dup';
-      
-      return \%notation;
+        return \%notation;
+      }
     }
 
     # If they didn't match it's a plain insertion
