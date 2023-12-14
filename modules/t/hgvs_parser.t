@@ -563,7 +563,7 @@ my %test_output_no_shift = (
            "ENSP00000435307.1:p.Arg151_Ser152insTer",
             "insertion, stop gained [-1]"
            ],
-     3 =>  ["NC_000013.10:g.51519668dup",    ##rs17857128
+     3 =>  ["NC_000013.10:g.51519668dup",
            "G",
            "ENST00000336617.2:c.616dup",
            "G",
