@@ -243,7 +243,7 @@ sub copy_number_gain {
 
     return (
         duplication(@_) or
-        tandem_duplication(@_) or
+        tandem_repeat(@_) or
         $bvf->class_SO_term(undef, 1) =~ /gain/i or
         grep(/gain/i, _supporting_cnv_terms($bvf))
     );
@@ -269,11 +269,11 @@ sub duplication {
             ($bvf->class_SO_term(undef, 1) =~ /duplication/i) or
             grep(/duplication/i, _supporting_cnv_terms($bvf))
         ) and
-        (not tandem_duplication(@_))
+        (not tandem_repeat(@_))
     );
 }
 
-sub tandem_duplication {
+sub tandem_repeat {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
     $bvf ||= $bvfoa->base_variation_feature;
     
@@ -295,8 +295,9 @@ sub tandem_duplication {
     if($bvf->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature')) {
         return (
             ($bvf->class_SO_term(undef, 1) eq 'tandem_duplication') or
-            ($bvf->class_SO_term(undef, 1) =~ /tandem_duplication/i) or
-            grep(/tandem_duplication/i, _supporting_cnv_terms($bvf))
+            ($bvf->class_SO_term(undef, 1) eq 'tandem_repeat') or
+            ($bvf->class_SO_term(undef, 1) =~ /tandem/i) or
+            grep(/tandem/i, _supporting_cnv_terms($bvf))
         );
     }
 }
