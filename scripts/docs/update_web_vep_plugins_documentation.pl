@@ -337,7 +337,7 @@ sub read_plugin_file {
               $ulist_newline = 0;
             } elsif ($ulist) {
               if ($ulist_newline) {
-                $line = '</li></ul>' . $line;
+                $line = '</li></ul><p>' . $line;
                 $ulist = 0;
               } elsif ($line =~ '^\s+$') {
                 $ulist_newline = 1;
@@ -348,7 +348,7 @@ sub read_plugin_file {
 
             # Create table for plugin arguments
             if ($line =~ 'key=value') {
-              $line = '</td></tr></tbody></table>' . "\n" . $line if $table;
+              $line = '</td></tr></tbody></table><p>' . $line if $table;
               $table = 1;
               $table_newline = 0;
               chomp($line);
@@ -368,7 +368,7 @@ sub read_plugin_file {
                   '<td>' . $description . ' ');
                 $table_newline = 0;
               } elsif ($table_newline) {
-                $line = '</td></tr></tbody></table>' . "\n" . $line;
+                $line = '</td></tr></tbody></table><p>' . $line;
                 $table = 0;
                 $table_newline = 0;
               } elsif ($line =~ '^\s+$') {
@@ -418,7 +418,7 @@ sub read_plugin_file {
                 $line = "" if $line =~ /^\s+$/;
 
                 # end code block (terminal commands)
-                $line = '</pre><p>' . $line . '</p>';
+                $line = '</pre><p>' . $line;
                 $code_block = 0;
               }
             }
@@ -430,7 +430,7 @@ sub read_plugin_file {
               $olist_newline = 0;
             } elsif ($olist) {
               if ($olist_newline) {
-                $line = '</li></ol>' . $line;
+                $line = '</li></ol><p>' . $line;
                 $olist = 0;
               } elsif ($line =~ '^\s+$') {
                 $olist_newline = 1;
@@ -440,14 +440,17 @@ sub read_plugin_file {
             }
 
             $desc .= $line;
-            $line = '</pre><p>' . $line . '</p>' if $code_block;
+            $line = '</pre><p>' . $line if $code_block;
           }
         }
         chomp($line);
       }
-      $desc .= '</td></tr></tbody></table>' if $table_newline;
+      $desc .= '</ul><p>' if $ulist_newline;
+      $desc .= '</ol><p>' if $olist_newline;
+      $desc .= '</td></tr></tbody></table><p>' if $table_newline;
+      $desc .= '</pre><p>' if $code_block;
     }
-    
+
     # Get the non Ensembl Perl module dependencies
     if ($line =~ /^use\s+(.+);/) {
       my $lib = $1;
