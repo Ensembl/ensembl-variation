@@ -170,13 +170,14 @@ foreach my $file (@sorted_files) {
   $plugin_class_list{$plugin_class} = $plugin_id;
 
   $table_content .= sprintf(
-    '<tr class="%s plugin_row" data-category="%s">'.
+    '<tr id="%s" class="%s plugin_row" data-category="%s">'.
     '<td><div style="font-weight:bold"><a rel="external" href="%s">%s</a></div>%s</td>'.
     '<td>%s</td>'.
     '<td><div class="vdoc_dtype_count" style="white-space:normal;float:left;padding:2px 6px;cursor:default;background-color:%s">%s</div></td>'.
     '<td>%s</td>'.
     '<td>%s</td>'.
     '</tr>',
+    $plugin_name,
     $tr_class,
     $plugin_id,
     "$vep_plugin_url_version/$file",
