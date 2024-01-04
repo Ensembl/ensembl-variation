@@ -378,23 +378,26 @@ sub read_plugin_file {
              
             # Add code block -- three types of code blocks:
             #   1. to show a code script
-            #        start: line starts with ##### or contains # BEGIN
-            #        end:   line contains # END 
+            #        start: line contains # BEGIN or starts with ``` or #####
+            #        end:   line contains # END   or starts with ```
             #   2. to show arbitrary code lines
             #        line starts with > or --plugin or bash commands (see $cmds)
             #   3. to illustrate variant location:
             #        start: line contains v (variant) after 3 or more spaces
             #        end:   line only contains I (intron) or ES/EE (exon start/end)
-            if ($line =~ /#{5,}/ || $line =~ /# BEGIN/) {
-              # start block of code script
-              $line = '<pre class="code sh_sh">' . $line unless $code_script;
-              $code_script = 1;
-            } elsif ($code_script) {
-              # continue code script until getting to a line containing # END
-              if ($line =~ /# END/) {
+            if ($code_script) {
+              # continue code script until getting to a line containing # END or ```
+              $line =~ s/^\s*>?\s?//;
+              if ($line =~ /# END/ || $line =~ /^\s*```\s*$/) {
+                $line = '' if $line =~ /^\s*```\s*$/;
                 $line .= '</pre>';
                 $code_script = 0;
               }
+            } elsif ($line =~ /#{5,}/ || $line =~ /# BEGIN/ || $line =~ /^\s*```\s*$/) {
+              # start block of code script
+              $line = '' if $line =~ /^\s*```\s*$/;
+              $line = '<pre class="code sh_sh">' . $line unless $code_script;
+              $code_script = 1;
             } elsif ($line =~ /^\s{3,}v/) {
               # start code block to illustrate variant position
               $line = '<pre class="code sh_sh">' . $line unless $code_block;
