@@ -141,8 +141,8 @@ warn join("\n  - ", "The following plugins were NOT documented:", @skipped), "\n
 # Print output HTML
 open OUT, "> $output_file" or die $!;
 
-my $table_content .= qq{   
-  <table class="ss" style="table-layout: fixed;">
+my $table_content .= qq{
+  <table class="ss" style="table-layout: fixed; word-break: break-word;">
     <thead>
       <tr>
         <th>Plugin</th>
