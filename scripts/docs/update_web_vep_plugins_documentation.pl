@@ -142,11 +142,11 @@ warn join("\n  - ", "The following plugins were NOT documented:", @skipped), "\n
 open OUT, "> $output_file" or die $!;
 
 my $table_content .= qq{   
-  <table class="ss">
+  <table class="ss" style="table-layout: fixed;">
     <thead>
       <tr>
         <th>Plugin</th>
-        <th style="max-width:50%">Description</th>
+        <th style="width:50%">Description</th>
         <th>Category</th>
         <th>External libraries</th>
         <th>Developer</th>
@@ -173,7 +173,7 @@ foreach my $file (@sorted_files) {
     '<tr class="%s plugin_row" data-category="%s">'.
     '<td><div style="font-weight:bold"><a rel="external" href="%s">%s</a></div>%s</td>'.
     '<td>%s</td>'.
-    '<td><div class="vdoc_dtype_count" style="float:left;padding:2px 6px;cursor:default;background-color:%s">%s</div></td>'.
+    '<td><div class="vdoc_dtype_count" style="white-space:normal;float:left;padding:2px 6px;cursor:default;background-color:%s">%s</div></td>'.
     '<td>%s</td>'.
     '<td>%s</td>'.
     '</tr>',
@@ -452,7 +452,7 @@ sub read_plugin_file {
     my $lc_name = lc($name);
        $lc_name =~ s/ /_/g;
     my $desc_link = qq{ <a class="button" href="#$lc_name" style="padding:3px 8px 0px 8px !important;height:18px" onclick="show_hide('$lc_name');" id="a_$lc_name">more</a>};
-    $desc =~ s/<\/p><p>/$desc_link<\/p><div id="div_$lc_name" style="display:none;"><p>/;
+    $desc =~ s/<\/p><p>/$desc_link<\/p><div id="div_$lc_name" style="display:none;word-wrap:break-word;"><p>/;
     $desc .= '</div>';
   }
 
