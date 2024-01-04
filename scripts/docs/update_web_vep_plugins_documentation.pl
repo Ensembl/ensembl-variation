@@ -230,6 +230,7 @@ sub read_plugin_file {
   my @developer = ();
   my $name = '';
   my $desc = '';
+  my $usage = '';
   my %libs;
   
   open F, "< $git_dir/$file" or die $!;
@@ -283,7 +284,23 @@ sub read_plugin_file {
         }
       }
     }
-    
+
+    # Get plugin synopsis (usage examples)
+    if ($line =~ /=head1 SYNOPSIS/) {
+      my $synopsis_flag = 1;
+      while ($synopsis_flag != 0) {
+        $line = <F>;
+        if ($line =~ /^\s*=head1/ || $line =~ /^\s*=cut/) {
+          $synopsis_flag = 0;
+        } else {
+          $line =~ s/^\h+//;
+          $usage .= $line;
+        }
+      }
+      chomp($usage);
+      $usage = '<h2>Usage examples:</h2> <pre class="code sh_sh">' . $usage . '</pre>';
+    }
+
     # Get the plugin description
     if ($line =~ /=head1 DESCRIPTION/) {
       my $desc_flag = 1;
@@ -436,13 +453,17 @@ sub read_plugin_file {
         
         $libs{$lib} = qq{<a href="$cpanm_url$1" rel="external">$1</a>$2};
       }
-    }  
+    }
   }
+
   close(F);
 
   # Make URLs clickable
   $desc =~ s|((http\|ftp)s?:\/\/(www\.)?[-a-zA-Z0-9\@:%._\+~#=]{1,256}\.[a-zA-Z0-9():]{0,6}\b([-a-zA-Z0-9()\@:%_\+.~#?&//=]*[^\)\.,;:\s\<]))|<a href="$1">$1</a>|g;
-  
+
+  # Add usage examples
+  $desc .= '<p>' . $usage . '</p>';
+
   # Postprocess the description content (reformatting)
   $desc = "<p>$desc</p>";
   $desc =~ s/\n\s*\n/<\/p><p>/g;
