@@ -92,7 +92,7 @@ sub default_options {
         vf_per_slice => 2_000_000, # if number of vf exceeds this we split the slice and dump for each split slice
         max_split_slice_length => 5e6, # 1e7
 
-        data_dir => '/nfs/production/panda/ensembl/variation/data/',
+        data_dir => '/nfs/production/flicek/ensembl/variation/data/',
 
         ancestral_alleles_file_dir => {'homo_sapiens' => {
                                           'GRCh37' => $self->o('data_dir') . 'ancestral_alleles/GRCh37',
