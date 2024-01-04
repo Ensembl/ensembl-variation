@@ -325,13 +325,17 @@ sub read_plugin_file {
       while ($desc_flag != 0) {
         $line = <F>;
         
+        # Escape non-HTML tags, such as <test>
+        $line =~ s|<|&lt|g;
+        $line =~ s|>|&gt|g;
+
         if ($line =~ /^\s*=head1/ || $line =~ /^\s*=cut/) {
           $desc_flag = 0;
         }
         else {
           if ($desc ne '' || $line !~ /^\s+$/) {
             # Create unordered list when starting line with certain characters
-            if ($line =~ /^\s+[-*+] (.*)/) {
+            if ($line =~ /^\s*[-*+] (.*)/) {
               $line = ($ulist ? '</li>' : '<ul>') . '<li>' . $1;
               $ulist = 1;
               $ulist_newline = 0;
@@ -406,13 +410,12 @@ sub read_plugin_file {
               # end code block to illustrate variant position
               $line .= '</pre>';
               $code_block = 0;
-            } elsif ($line =~ /^\s*>\s?/ || $line =~ /^\s*($cmds)\s/ || $line =~ /^\s*--plugin/) {
+            } elsif ($line =~ /^\s*\&gt\s?/ || $line =~ /^\s*($cmds)\s/ || $line =~ /^\s*--plugin/) {
               # start code block (terminal commands)
-              $line =~ s/^\s*>?\s?//;
+              $line =~ s/^\s*(\&gt)?\s?//;
               $line = '<pre class="code sh_sh">' . $line unless $code_block;
               $code_block = 1;
             } else {
-#              $line =~ s/^\s+// if $line =~ /\S+/;
               if ($code_block) {
                 # remove blank lines after code block (looks nicer)
                 $line = "" if $line =~ /^\s+$/;
@@ -424,7 +427,7 @@ sub read_plugin_file {
             }
 
             # Create ordered list from numbers at line start
-            if ($line =~ /^\s+\(?([0-9]+)[\)\.] (.*)/) {
+            if ($line =~ /^\s*\(?([0-9]+)[\)\.] (.*)/) {
               $line = ($olist ? '</li>' : '<ol>') . '<li value="' . $1 . '">' . $2;
               $olist = 1;
               $olist_newline = 0;
