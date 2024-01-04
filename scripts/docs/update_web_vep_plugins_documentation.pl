@@ -471,6 +471,9 @@ sub read_plugin_file {
   # Make URLs clickable
   $desc =~ s|((http\|ftp)s?:\/\/(www\.)?[-a-zA-Z0-9\@:%._\+~#=]{1,256}\.[a-zA-Z0-9():]{0,6}\b([-a-zA-Z0-9()\@:%_\+.~#?&//=]*[^\)\.,;:\s\<]))|<a href="$1">$1</a>|g;
 
+  # Convert DOI to URL
+  $desc =~ s|(doi:([^\s]+[A-Za-z0-9]))|<a rel="external" href="https://doi.org/$2">$1</a>|g;
+
   # Convert pair of single quotes to code
   $desc =~ s|[\'\`]([\w:\-?\/_\.\|\&\,\;\=\]\[]*)[\'\`]|<kbd>$1</kbd>|g;
 
