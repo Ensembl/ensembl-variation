@@ -141,12 +141,12 @@ warn join("\n  - ", "The following plugins were NOT documented:", @skipped), "\n
 # Print output HTML
 open OUT, "> $output_file" or die $!;
 
-my $table_content .= qq{   
-  <table class="ss">
+my $table_content .= qq{
+  <table class="ss" style="table-layout: fixed; word-break: break-word;">
     <thead>
       <tr>
         <th>Plugin</th>
-        <th style="max-width:50%">Description</th>
+        <th style="width:50%">Description</th>
         <th>Category</th>
         <th>External libraries</th>
         <th>Developer</th>
@@ -170,13 +170,14 @@ foreach my $file (@sorted_files) {
   $plugin_class_list{$plugin_class} = $plugin_id;
 
   $table_content .= sprintf(
-    '<tr class="%s plugin_row" data-category="%s">'.
+    '<tr id="%s" class="%s plugin_row" data-category="%s">'.
     '<td><div style="font-weight:bold"><a rel="external" href="%s">%s</a></div>%s</td>'.
     '<td>%s</td>'.
-    '<td><div class="vdoc_dtype_count" style="float:left;padding:2px 6px;cursor:default;background-color:%s">%s</div></td>'.
+    '<td><div class="vdoc_dtype_count" style="white-space:normal;float:left;padding:2px 6px;cursor:default;background-color:%s">%s</div></td>'.
     '<td>%s</td>'.
     '<td>%s</td>'.
     '</tr>',
+    $plugin_name,
     $tr_class,
     $plugin_id,
     "$vep_plugin_url_version/$file",
@@ -230,6 +231,7 @@ sub read_plugin_file {
   my @developer = ();
   my $name = '';
   my $desc = '';
+  my $usage = '';
   my %libs;
   
   open F, "< $git_dir/$file" or die $!;
@@ -286,44 +288,124 @@ sub read_plugin_file {
         }
       }
     }
-    
+
+    # Get plugin synopsis (usage examples)
+    if ($line =~ /=head1 SYNOPSIS/) {
+      my $synopsis_flag = 1;
+      while ($synopsis_flag != 0) {
+        $line = <F>;
+        if ($line =~ /^\s*=head1/ || $line =~ /^\s*=cut/) {
+          $synopsis_flag = 0;
+        } else {
+          $line =~ s/^\h+//;
+          $usage .= $line;
+        }
+      }
+      chomp($usage);
+      $usage = '<h2>Usage examples:</h2> <pre class="code sh_sh">' . $usage . '</pre>';
+    }
+
     # Get the plugin description
     if ($line =~ /=head1 DESCRIPTION/) {
       my $desc_flag = 1;
       my $code_block = 0;
       my $code_script = 0;
-      my $cmds = join "|", qw( zcat zgrep cat wget rm gzip gunzip awk head
-                               sort sed bgzip unzip cd perl make tabix mysql
-                               echo tar ./filter_vep ./vep );
+
+      my $ulist = 0;
+      my $ulist_newline = 0; # prepare to ignore newlines
+      my $olist = 0;
+      my $olist_newline = 0; # prepare to ignore newlines
+
+      my $table = 0;
+      my $table_newline = 0; # prepare to ignore newlines
+      my $tr_class = '';
+
+      my $cmds = join "|", qw( ./vep ./filter_vep awk bgzip cat cd chmod cp curl
+                               echo exit grep gunzip gzip head ls less make mkdir
+                               mysql mv perl rm sed sort paste pwd sudo tabix
+                               tail tar touch unzip wget zcat zgrep zip );
       $cmds =~ s#(\.|/)#\\$1#g;
 
       while ($desc_flag != 0) {
         $line = <F>;
         
+        # Escape non-HTML tags, such as <test>
+        $line =~ s|<|&lt|g;
+        $line =~ s|>|&gt|g;
+
         if ($line =~ /^\s*=head1/ || $line =~ /^\s*=cut/) {
           $desc_flag = 0;
         }
         else {
           if ($desc ne '' || $line !~ /^\s+$/) {
+            # Create unordered list when starting line with certain characters
+            if ($line =~ /^\s*[-*+] (.*)/) {
+              $line = ($ulist ? '</li>' : '<ul>') . '<li>' . $1;
+              $ulist = 1;
+              $ulist_newline = 0;
+            } elsif ($ulist) {
+              if ($ulist_newline) {
+                $line = '</li></ul><p>' . $line;
+                $ulist = 0;
+              } elsif ($line =~ '^\s+$') {
+                $ulist_newline = 1;
+              } else {
+                $line = '&nbsp;' . $line;
+              }
+            }
+
+            # Create table for plugin arguments
+            if ($line =~ 'key=value') {
+              $line = '</td></tr></tbody></table><p>' . $line if $table;
+              $table = 1;
+              $table_newline = 0;
+              chomp($line);
+              $line .=
+                '<table class="ss">'.
+                '<thead><tr><th>Argument</th><th>Description</th></tr></thead>'.
+                '<tbody>';
+            } elsif ($table) {
+              if ($line =~ ' : ') {
+                my ($arg, $description) = split(/ : /, $line);
+                $arg =~ s/^\s+|\s+$//g;
+                $description =~ s/^\s+|\s+$//g;
+                $tr_class = ($tr_class eq 'bg1') ? 'bg2' : 'bg1';
+                $line = join("",
+                  '<tr class="' . $tr_class . '">',
+                  '<td><pre>' . $arg . '</pre></td>',
+                  '<td>' . $description . ' ');
+                $table_newline = 0;
+              } elsif ($table_newline) {
+                $line = '</td></tr></tbody></table><p>' . $line;
+                $table = 0;
+                $table_newline = 0;
+              } elsif ($line =~ '^\s+$') {
+                $table_newline = 1;
+              }
+            }
+             
             # Add code block -- three types of code blocks:
             #   1. to show a code script
-            #        start: line starts with ##### or contains # BEGIN
-            #        end:   line contains # END 
+            #        start: line contains # BEGIN or starts with ``` or #####
+            #        end:   line contains # END   or starts with ```
             #   2. to show arbitrary code lines
             #        line starts with > or --plugin or bash commands (see $cmds)
             #   3. to illustrate variant location:
             #        start: line contains v (variant) after 3 or more spaces
             #        end:   line only contains I (intron) or ES/EE (exon start/end)
-            if ($line =~ /#{5,}/ || $line =~ /# BEGIN/) {
-              # start block of code script
-              $line = '<pre class="code sh_sh">' . $line unless $code_script;
-              $code_script = 1;
-            } elsif ($code_script) {
-              # continue code script until getting to a line containing # END
-              if ($line =~ /# END/) {
+            if ($code_script) {
+              # continue code script until getting to a line containing # END or ```
+              $line =~ s/^\s*>?\s?//;
+              if ($line =~ /# END/ || $line =~ /^\s*```\s*$/) {
+                $line = '' if $line =~ /^\s*```\s*$/;
                 $line .= '</pre>';
                 $code_script = 0;
               }
+            } elsif ($line =~ /#{5,}/ || $line =~ /# BEGIN/ || $line =~ /^\s*```\s*$/) {
+              # start block of code script
+              $line = '' if $line =~ /^\s*```\s*$/;
+              $line = '<pre class="code sh_sh">' . $line unless $code_script;
+              $code_script = 1;
             } elsif ($line =~ /^\s{3,}v/) {
               # start code block to illustrate variant position
               $line = '<pre class="code sh_sh">' . $line unless $code_block;
@@ -332,30 +414,50 @@ sub read_plugin_file {
               # end code block to illustrate variant position
               $line .= '</pre>';
               $code_block = 0;
-            } elsif ($line =~ /^\s*>\s?/ || $line =~ /^\s*($cmds)\s/ || $line =~ /^\s*--plugin/) {
+            } elsif ($line =~ /^\s*\&gt\s?/ || $line =~ /^\s*($cmds)\s/ || $line =~ /^\s*--plugin/) {
               # start code block (terminal commands)
-              $line =~ s/^\s*>?\s?//;
+              $line =~ s/^\s*(\&gt)?\s?//;
               $line = '<pre class="code sh_sh">' . $line unless $code_block;
               $code_block = 1;
             } else {
-              $line =~ s/^\s+// if $line =~ /\S+/;
               if ($code_block) {
                 # remove blank lines after code block (looks nicer)
                 $line = "" if $line =~ /^\s+$/;
 
                 # end code block (terminal commands)
-                $line = '</pre>' . $line;
+                $line = '</pre><p>' . $line;
                 $code_block = 0;
               }
             }
+
+            # Create ordered list from numbers at line start
+            if ($line =~ /^\s*\(?([0-9]+)[\)\.] (.*)/) {
+              $line = ($olist ? '</li>' : '<ol>') . '<li value="' . $1 . '">' . $2;
+              $olist = 1;
+              $olist_newline = 0;
+            } elsif ($olist) {
+              if ($olist_newline) {
+                $line = '</li></ol><p>' . $line;
+                $olist = 0;
+              } elsif ($line =~ '^\s+$') {
+                $olist_newline = 1;
+              } else {
+                $line = $line;
+              }
+            }
+
             $desc .= $line;
-            $line = '</pre>' . $line if $code_block;
+            $line = '</pre><p>' . $line if $code_block;
           }
         }
         chomp($line);
       }
+      $desc .= '</ul><p>' if $ulist_newline;
+      $desc .= '</ol><p>' if $olist_newline;
+      $desc .= '</td></tr></tbody></table><p>' if $table_newline;
+      $desc .= '</pre><p>' if $code_block;
     }
-    
+
     # Get the non Ensembl Perl module dependencies
     if ($line =~ /^use\s+(.+);/) {
       my $lib = $1;
@@ -364,24 +466,33 @@ sub read_plugin_file {
         
         $libs{$lib} = qq{<a href="$cpanm_url$1" rel="external">$1</a>$2};
       }
-    }  
+    }
   }
+
   close(F);
 
   # Make URLs clickable
-  $desc =~ s|((http\|ftp)s?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9():]{0,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*[^\)\.,;:\s]))|<a href="$1">$1</a>|g;
-  
+  $desc =~ s|((http\|ftp)s?:\/\/(www\.)?[-a-zA-Z0-9\@:%._\+~#=]{1,256}\.[a-zA-Z0-9():]{0,6}\b([-a-zA-Z0-9()\@:%_\+.~#?&//=]*[^\)\.,;:\s\<]))|<a href="$1">$1</a>|g;
+
+  # Convert DOI to URL
+  $desc =~ s|(doi:([^\s]+[A-Za-z0-9]))|<a rel="external" href="https://doi.org/$2">$1</a>|g;
+
+  # Convert pair of single quotes to code
+  $desc =~ s|[\'\`]([\w:\-?\/_\.\|\&\,\;\=\]\[]*)[\'\`]|<kbd>$1</kbd>|g;
+
+  # Add usage examples
+  $desc .= '<p>' . $usage . '</p>';
+
   # Postprocess the description content (reformatting)
   $desc = "<p>$desc</p>";
   $desc =~ s/\n\s*\n/<\/p><p>/g;
   $desc =~ s/<\/p><p><\/p>/<\/p>/g;
-  $desc =~ s/\n/<br \/>/g;
   $desc =~ s/<br \/><\/p>/<\/p>/g;
   if ($desc =~ /<\/p><p>/) {
     my $lc_name = lc($name);
        $lc_name =~ s/ /_/g;
     my $desc_link = qq{ <a class="button" href="#$lc_name" style="padding:3px 8px 0px 8px !important;height:18px" onclick="show_hide('$lc_name');" id="a_$lc_name">more</a>};
-    $desc =~ s/<\/p><p>/$desc_link<\/p><div id="div_$lc_name" style="display:none;"><p>/;
+    $desc =~ s/<\/p><p>/$desc_link<\/p><div id="div_$lc_name" style="display:none;word-wrap:break-word;"><p>/;
     $desc .= '</div>';
   }
 
