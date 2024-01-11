@@ -2164,7 +2164,9 @@ sub _clip_alleles {
   ### check if clipping suggests a type change 
   
   ## no protein change - use transcript level annotation 
-  if( $check_ref eq $check_alt) {
+  if( defined $hgvs_notation->{'numbering'} &&
+        $hgvs_notation->{'numbering'} eq 'p'&&
+        $check_ref eq $check_alt) {
       $hgvs_notation->{type} = "=";
   }   
   
