@@ -172,7 +172,7 @@ sub complete_overlap_feature {
 }
 
 sub _supporting_cnv_terms {
-  # if variant is CNV, return class SO terms for its supporting variants
+  # if variant is CNV, return class SO terms for its supporting variants
   my $bvf = shift;
 
   return if $bvf->class_SO_term(undef, 1) ne "copy_number_variation";
@@ -1227,7 +1227,7 @@ sub stop_lost {
     #        }
             
             my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
-
+            
             if(defined($ref_pep) && defined($alt_pep)) {
                 $cache->{stop_lost} = ( ($alt_pep !~ /\*/) and ($ref_pep =~ /\*/) );
             }
@@ -1280,7 +1280,6 @@ sub stop_retained {
         my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
 
         if(defined($alt_pep) && $alt_pep ne '') {
-            return 0 unless $alt_pep =~/^\*/; 
 
             ## handle inframe insertion of a stop just before the stop (no ref peptide)
             if(
@@ -1292,8 +1291,8 @@ sub stop_retained {
             }
             else {
                 return 0 unless $ref_pep;
-
-                $cache->{stop_retained} = ( $alt_pep =~ /^\*/ && $ref_pep =~ /^\*/ );
+                # this is the line that needs to change 
+                $cache->{stop_retained} = !_ins_del_stop_altered(@_);
             }
         }
         else {
@@ -1390,6 +1389,8 @@ sub frameshift {
     if($bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele')) {
 
         return 0 if partial_codon(@_);
+
+        return 0 if stop_retained(@_);
     
         return 0 unless defined $bvfo->cds_start && defined $bvfo->cds_end;
         
