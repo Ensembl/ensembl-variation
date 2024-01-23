@@ -1070,8 +1070,10 @@ sub missense_variant {
     return 0 if stop_lost(@_);
     return 0 if stop_gained(@_);
     return 0 if partial_codon(@_);
+    return 0 if stop_retained(@_); # added because a variant can not be stop_retained and misense 
     
-    return ( $ref_pep ne $alt_pep ) && ( length($ref_pep) == length($alt_pep) );
+    # also need to check that the translated sequence is not the same i think . 
+    return ( $ref_pep ne $alt_pep ) && ( length($ref_pep) == length($alt_pep)  );
 }
 
 sub inframe_insertion {
@@ -1264,6 +1266,8 @@ sub stop_retained {
 
     # use cache for this method as it gets called a lot
     my $cache = $bvfoa->{_predicate_cache} ||= {};
+    
+    return 0 if stop_lost(@_);
 
     unless(exists($cache->{stop_retained})) {
         $bvfo ||= $bvfoa->base_variation_feature_overlap;
@@ -1280,27 +1284,44 @@ sub stop_retained {
         my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
 
         if(defined($alt_pep) && $alt_pep ne '') {
-
-            ## handle inframe insertion of a stop just before the stop (no ref peptide)
-            if(
-              $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele') &&
-              $bvfo->_peptide &&
-              $bvfo->translation_start() > length($bvfo->_peptide)
-            ) {
-              $cache->{stop_retained} = 1;
-            }
-            else {
-                return 0 unless $ref_pep;
-                # this is the line that needs to change 
-                $cache->{stop_retained} = !_ins_del_stop_altered(@_);
-            }
+          ## handle inframe insertion of a stop just before the stop (no ref peptide)
+          return 0 unless $ref_pep;
+          $cache->{stop_retained} = !_ins_del_stop_altered(@_) && ref_eq_alt_sequence(@_);
         }
         else {
             $cache->{stop_retained} = ($pre->{increase_length} || $pre->{decrease_length}) && _overlaps_stop_codon(@_) && !_ins_del_stop_altered(@_);
         }
-    }
 
+    }
     return $cache->{stop_retained};
+}
+
+sub ref_eq_alt_sequence {
+   my ($bvfoa, $feat, $bvfo, $bvf) = @_; 
+
+   my $ref_seq = $bvfo->_peptide;
+   my $mut_seq = $ref_seq;
+   my $tl_start = $bvfo->translation_start;
+   my $tl_end = $bvfo->translation_end;
+
+   my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
+
+   substr($mut_seq, $tl_start-1, $tl_end - $tl_start + 1) = $alt_pep; # creating a mutated sequence from the ref sequence. 
+   
+   my $mut_substring = substr($mut_seq, 0, length($ref_seq)); # getting a substring up to the length of the ref sequence for comparison from index 0 to the length of the ref seq;
+   
+   my $final_stop = substr($mut_seq, length($ref_seq)) if length($ref_seq) < length($mut_seq); # getting the length of the $mut_seq from the length of the ref_seq to the end 
+   
+   my $final_stop_length = length($final_stop) if defined($final_stop) ne '';
+
+   my $value = 0 if $ref_pep eq "X" && $alt_pep eq "X"; 
+   my $data = 1 if $ref_seq eq $mut_substring && defined($final_stop_length) < 3;
+
+   return 0 if $ref_pep eq "X" && $alt_pep eq "X"; # this is to account for incomplete coding terminal;
+
+   return 1 if $ref_seq eq $mut_substring && defined($final_stop_length) < 3;
+
+   return 0;
 }
 
 sub _overlaps_stop_codon {
@@ -1348,6 +1369,9 @@ sub _ins_del_stop_altered {
         # get cDNA coords and CDS start
         my ($cdna_start, $cdna_end, $cds_start) = ($bvfo->cdna_start, $bvfo->cdna_end, $bvfo->cds_start);
         return 0 unless $cdna_start && $cdna_end && $cds_start;
+        
+        # i am trying to check for the reference sequence to the mutated seqence, if it is the same. 
+
 
         # make and edit UTR + translateable seq
         my $translateable = $bvfo->_translateable_seq();
@@ -1365,6 +1389,7 @@ sub _ins_del_stop_altered {
         # new sequence shorter, we know it has been altered
         return $cache->{ins_del_stop_altered} = 1 if length($utr_and_translateable) < length($translateable);
 
+
         # now we need the codon from the new seq at the equivalent end pos from translateable
         # and to translate it to check if it is still a stop
         my $pep = Bio::Seq->new(
@@ -1375,7 +1400,7 @@ sub _ins_del_stop_altered {
             undef, undef, undef, $bvfo->_codon_table
         )->seq;
 
-        $cache->{ins_del_stop_altered} = !($pep && $pep eq '*');
+        $cache->{ins_del_stop_altered} = !($pep && $pep eq '*');    
     }
 
     return $cache->{ins_del_stop_altered};
