@@ -1274,7 +1274,7 @@ sub _parse_breakends {
   for my $alt_string (split "/", $alt) {
     my ($alt_allele, $alt_chr, $alt_pos, $alt_allele2) =
       $alt_string =~ '([A-Za-z]*)\s*[\[\]]\s*(\S+)\s*:\s*([0-9]+)\s*[\[\]]\s*([(A-Za-z)]*)';
-    $alt_allele = $alt_allele2 unless defined $alt_allele;
+    $alt_allele ||= $alt_allele2;
 
     unless (defined $alt_allele and defined $alt_chr and defined $alt_pos) {
       # Check if single breakend symbol, such as 'N.'
