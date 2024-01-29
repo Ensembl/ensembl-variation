@@ -1992,8 +1992,8 @@ sub _get_gene_transcripts {
   my ($self, $transcript_adaptor, $reference, $multiple_ok) = @_;
 
   my $gene_adaptor = $transcript_adaptor->db->get_GeneAdaptor();
-  my ($gene) = grep {($_->external_name || '') eq $reference} @{$gene_adaptor->fetch_all_by_external_name($reference)};
-  
+  my ($gene) = grep {($_->external_name || '') eq $reference && $_->is_reference} @{$gene_adaptor->fetch_all_by_external_name($reference)};
+
   my @transcripts;
 
   if($gene) {
@@ -2224,20 +2224,15 @@ sub _pick_likely_transcript {
 }
 
 ## Extract enough information to make a variation_feature from HGVS protein nomenclature
-## Only attempts substitutions
+## Only attempts substitutions or simple deletions-insertions (delins)
 ##    - assumes protein change results from minimum number of nucleotide changes
 ##    - returns VF information only if one minimal solution found
 sub _parse_hgvs_protein_position{
 
   my ($description, $reference, $transcript ) = @_;
-  ## only supporting the parsing of hgvs substitutions [eg. Met213Ile]
-  my ($from, $pos, $to) = $description =~ /^(\w+?)(\d+)(\w+?|\*)$/; 
-
-  throw("Could not parse HGVS protein notation " . $reference . ":p.". $description ) unless $from and $pos and $to;
-
-  # convert three letter AA to single
-  $from = $Bio::SeqUtils::ONECODE{$from} || $from;
-  $to   = $Bio::SeqUtils::ONECODE{$to} || $to;
+  ## only parses hgvs substitutions [eg. Met213Ile] or delins [eg. 124delinsAla]
+  my ($from, $pos, $to) = $description =~ /^([A-Za-z]+?)?(\d+)(?:delins)?(\w+|\*|\=|\?)$/;
+  $to = $from if $to eq "=";
 
   # get genomic position - returns seq on transcript strand
   my ($from_codon_ref, $start, $end, $strand) = get_reference($transcript, $pos, undef, 0);  
@@ -2249,10 +2244,17 @@ sub _parse_hgvs_protein_position{
 
   # default to the vertebrate codon table which is denoted as 1 
   my $codon_table = Bio::Tools::CodonTable->new( -id => ($attrib ? $attrib->value : 1)); 
+  my $check_prot = $codon_table->translate($from_codon_ref);
+  $from = $check_prot if !defined $from && $description =~ /delins/;
+
+  throw("Could not parse HGVS protein notation " . $reference . ":p.". $description )
+    unless ($from and $pos and $to);
+
+  # convert three letter AA to single
+  $from = $Bio::SeqUtils::ONECODE{$from} || $from;
+  $to   = $Bio::SeqUtils::ONECODE{$to} || $to;
 
   # check genomic codon is compatible with input HGVS
-  my $check_prot   = $codon_table->translate($from_codon_ref);
-
   my @from_codons = ();
   ## if the genomic sequence translates to match the input HGVS ref protein, use this
   if ($check_prot eq $from){
@@ -2263,7 +2265,7 @@ sub _parse_hgvs_protein_position{
   }
 
   # rev-translate alt sequence
-  my @to_codons   = $codon_table->revtranslate($to); 
+  my @to_codons = $codon_table->revtranslate($to);
 
   # now iterate over all possible mutation paths 
   my %paths; 
@@ -2274,7 +2276,7 @@ sub _parse_hgvs_protein_position{
       for my $i(0..2) { 
        
         my ($a, $b) = (substr($from_codon, $i, 1), substr($to_codon, $i, 1)); 
-        next if uc($a) eq uc($b); 
+        next if uc($a) eq uc($b) and uc($from_codon) ne uc($to_codon);
         push @{$paths{$key}}, $i.'_'.uc($a).'/'.uc($b); 
       } 
 

@@ -54,19 +54,19 @@ GetOptions(
 );
 
 if (!$e_version) {
-  print "> Error! Please give an Ensembl version, using the option '-v' \n";
+  print STDERR "> Error! Please give an Ensembl version, using the option '-v' \n";
   usage();
 }
 if (!$html_file) {
-  print "> Error! Please give an output file using the option '-o'\n";
+  print STDERR "> Error! Please give an output file using the option '-o'\n";
   usage();
 }
 if (!$hlist) {
-  print "> Error! Please give the list of host names where the new databases are stored using the option '-hlist'\n";
+  print STDERR "> Error! Please give the list of host names where the new databases are stored using the option '-hlist'\n";
   usage();
 }
 if (!$user) {
-  print "> Error! Please give user name using the option '-user'\n";
+  print STDERR "> Error! Please give user name using the option '-user'\n";
   usage();
 }
 
@@ -122,21 +122,21 @@ foreach my $hostname (@hostnames) {
   # loop over databases
   while (my ($dbname) = $sth->fetchrow_array) {
     next if ($dbname !~ /^[a-z][a-z_]*_[a-z0-9]+_$db_type\_$e_version\_\d+$/i);
-    next if ($dbname =~ /^(master_schema|drosophila|saccharomyces)/ || $dbname =~ /^homo_sapiens_$db_type\_\d+_37$/ || $dbname =~ /private/);
+    next if ($dbname =~ /^(master_schema|drosophila|saccharomyces|ciona)/ || $dbname =~ /^homo_sapiens_$db_type\_\d+_37$/ || $dbname =~ /private/);
     
-    print $dbname;
+    print STDERR "${dbname}\n";
     $dbname =~ /^(.+)_$db_type/;
     my $s_name = $1;
     
     if ($etype) { # EG site - need to filter out species
       my $img_thumb = sprintf qq{eg-plugins/%s/htdocs/img/species/thumb_%s.png}, $etype, ucfirst($s_name);
-      #  print "- checking for $img_thumb ... ";
+      #  print STDERR "- checking for $img_thumb ... ";
       if (! -e $img_thumb) {
-        print "\t... skipping \n";
+        print STDERR "\t... skipping \n";
         next;
-      } 
+      }
     }
-    print "\n";
+    print STDERR "\n";
     
     # Count the number of variations
     my $sth2 = get_connection_and_query($dbname, $hostname, $sql2);

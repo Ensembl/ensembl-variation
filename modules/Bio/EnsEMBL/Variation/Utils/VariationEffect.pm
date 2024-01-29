@@ -55,7 +55,7 @@ use warnings;
 
 use base qw(Exporter);
 
-our @EXPORT_OK = qw(overlap _intron_overlap within_feature within_cds MAX_DISTANCE_FROM_TRANSCRIPT within_intron stop_lost stop_retained start_lost frameshift $UPSTREAM_DISTANCE $DOWNSTREAM_DISTANCE);
+our @EXPORT_OK = qw(overlap _intron_overlap _compare_seq_region_names within_feature within_cds MAX_DISTANCE_FROM_TRANSCRIPT within_intron stop_lost stop_retained start_lost frameshift $UPSTREAM_DISTANCE $DOWNSTREAM_DISTANCE);
 
 use constant MAX_DISTANCE_FROM_TRANSCRIPT => 5000;
 
@@ -107,16 +107,26 @@ sub _intron_overlap {
   }
 }
 
+sub _compare_seq_region_names {
+  my $region1 = shift;
+  my $region2 = shift;
+
+  $region1 =~ s/^chr//;
+  $region2 =~ s/^chr//;
+
+  return lc $region1 eq lc $region2;
+}
+
 sub within_feature {
-    my ($bvfoa, $feat, $bvfo, $bvf, $match_chromosome) = @_;
+    my ($bvfoa, $feat, $bvfo, $bvf, $match_seq_region_names) = @_;
     $bvf  ||= $bvfoa->base_variation_feature;
     $feat ||= $bvfoa->feature;
-    $match_chromosome ||= 0;
+    $match_seq_region_names ||= 0;
 
     my $cmp_chr = 1;
-    if ($match_chromosome) {
+    if ($match_seq_region_names) {
       my $chr  = $bvf->{chr} || $bvf->{slice}->{seq_region_name};
-      $cmp_chr = $chr eq $feat->{slice}->{seq_region_name};
+      $cmp_chr = _compare_seq_region_names($chr, $feat->{slice}->{seq_region_name});
     }
 
     return $cmp_chr && overlap(
@@ -338,11 +348,7 @@ sub feature_truncation {
     return 0 if $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele');
     
     if(chromosome_breakpoint(@_)) {
-        for my $alt (@{$bvf->{_parsed_allele}}) {
-            # iterate over breakends to check if within_feature
-            return 1 if within_feature($bvfoa, $feat, $bvfo, $alt, 1);
-        }
-        return 1 if within_feature($bvfoa, $feat, $bvfo, $bvf, 1);
+        return 1 if within_feature($bvfoa, $feat, $bvfo, $bvfoa->breakend, 1);
     }
 
     return (
@@ -936,7 +942,12 @@ sub start_retained_variant {
 
     my $pre = $bvfoa->_pre_consequence_predicates;
 
-    return ($pre->{increase_length} || $pre->{decrease_length}) && _overlaps_start_codon(@_) && !_ins_del_start_altered(@_);
+    return 0 unless _overlaps_start_codon(@_);
+    if ($pre->{snp}) {
+        return !_snp_start_altered(@_);
+    } else { 
+        return !_ins_del_start_altered(@_);
+    }
 }
 
 sub _overlaps_start_codon {
@@ -964,6 +975,42 @@ sub _overlaps_start_codon {
     }
 
     return $cache->{overlaps_start_codon};
+}
+
+sub _snp_start_altered {
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+
+    my $cache = $bvfoa->{_predicate_cache} ||= {};
+
+    unless(exists($cache->{snp_start_altered})) {
+        $cache->{snp_start_altered} = 1;
+
+        return 0 if $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptStructuralVariationAllele');
+        return 0 unless $bvfoa->seq_is_unambiguous_dna();
+
+        $bvfo ||= $bvfoa->base_variation_feature_overlap;
+
+        # get cDNA coords
+        my ($cdna_start, $cdna_end) = ($bvfo->cdna_start, $bvfo->cdna_end);
+        return 0 unless $cdna_start && $cdna_end;
+
+        # make and edit UTR + translateable seq
+        my $translateable = $bvfo->_translateable_seq();
+        my $utr = $bvfo->_five_prime_utr();
+        my $utr_and_translateable = ($utr ? $utr->seq : '').$translateable;
+
+        my $vf_feature_seq = $bvfoa->feature_seq;
+        $vf_feature_seq = '' if $vf_feature_seq eq '-';
+
+        substr($utr_and_translateable, $cdna_start - 1, ($cdna_end - $cdna_start) + 1) = $vf_feature_seq;
+        
+        # get the aa now in place of prevoius start codon and see it is ATG
+        # it can happen for non-ATG variant (e.g - gene WT1, transcript ENST00000332351)
+        my $aa_replacing_start_codon = substr($utr_and_translateable, 0 - length($translateable), 3);
+        $cache->{snp_start_altered} = 0 if $aa_replacing_start_codon eq "ATG";
+    }
+
+    return $cache->{snp_start_altered};
 }
 
 sub _ins_del_start_altered {
@@ -1012,7 +1059,7 @@ sub synonymous_variant {
     
     return 0 unless $ref_pep;
 
-    return ( ($alt_pep eq $ref_pep) and (not stop_retained(@_) and ($alt_pep !~ /X/) and ($ref_pep !~ /X/)) );
+    return ( ($alt_pep eq $ref_pep) and (not stop_retained(@_) and not start_retained_variant(@_) and ($alt_pep !~ /X/) and ($ref_pep !~ /X/)) );
 }
 
 sub missense_variant {

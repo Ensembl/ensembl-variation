@@ -1246,10 +1246,18 @@ sub remove_outdated_citations {
     my $attrib_id = $c->[2];
 
     my $variation = $var_ad->fetch_by_dbID($variation_id);
-    die "No variation found for '$variation_id'!\n" unless defined $variation;
+    # if there is a dbSNP import then some variants in the phenotype tables could be missing from the variation table
+    # print which ones are not in variation anymore - to delete post-inspection
+    if(!$variation) {
+      print $wrt "WARNING: No variation found for variation_id = $variation_id\n";
+      next;
+    }
 
     my $publication = $pub_ad->fetch_by_dbID($publication_id);
-    die "No publication found for '$publication_id'!\n" unless defined $publication;
+    if(!$publication) {
+      print $wrt "WARNING: No publication found for publication_id = $publication_id\n";
+      next;
+    }
 
     my $variation_rsid = $variation->name();
     my $publication_pmid = $publication->pmid();
@@ -1259,7 +1267,7 @@ sub remove_outdated_citations {
     my @outdated_attribs;
     my @current_attribs;
     foreach my $attrib (@split_attrib_id) {
-      my $is_selected_attrib_id = $attrib ~~ @attrib_ids;
+      my $is_selected_attrib_id = grep(/^$attrib$/, @attrib_ids) ? 1 : 0;
 
       my $value = $attrib . '_' . $publication_pmid;
       my $is_cited_in_pheno = $citations_pheno_feature->{$value} || $citations_pheno_feature_attrib->{$value};
