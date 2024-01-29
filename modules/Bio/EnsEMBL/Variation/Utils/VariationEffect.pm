@@ -335,6 +335,7 @@ sub feature_elongation {
     return 0 if $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele');
     
     return (
+        within_cdna(@_) and
         complete_within_feature($bvfoa, $feat, $bvfo, $bvf) and
         (copy_number_gain(@_) or insertion(@_))
     );
@@ -352,6 +353,7 @@ sub feature_truncation {
     }
 
     return (
+        within_cdna(@_) and
         (
             partial_overlap_feature($bvfoa, $feat, $bvfo, $bvf) or
             complete_within_feature($bvfoa, $feat, $bvfo, $bvf)
