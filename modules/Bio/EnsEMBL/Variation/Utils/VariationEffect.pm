@@ -172,7 +172,7 @@ sub complete_overlap_feature {
 }
 
 sub _supporting_cnv_terms {
-  # if variant is CNV, return class SO terms for its supporting variants
+  #if variant is CNV, return class SO terms for its supporting variants
   my $bvf = shift;
 
   return if $bvf->class_SO_term(undef, 1) ne "copy_number_variation";
@@ -1229,7 +1229,6 @@ sub stop_lost {
     #        }
             
             my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
-            
             if(defined($ref_pep) && defined($alt_pep)) {
                 $cache->{stop_lost} = ( ($alt_pep !~ /\*/) and ($ref_pep =~ /\*/) );
             }
@@ -1268,7 +1267,6 @@ sub stop_retained {
     my $cache = $bvfoa->{_predicate_cache} ||= {};
     
     return 0 if stop_lost(@_);
-
     unless(exists($cache->{stop_retained})) {
         $bvfo ||= $bvfoa->base_variation_feature_overlap;
         $bvf  ||= $bvfo->base_variation_feature;
@@ -1290,7 +1288,7 @@ sub stop_retained {
           #print Dumper($cache->{stop_retained});
         }
         else {
-            $cache->{stop_retained} = ($pre->{increase_length} || $pre->{decrease_length}) && !_ins_del_stop_altered(@_) && _overlaps_stop_codon(@_);
+            $cache->{stop_retained} = ($pre->{increase_length} || $pre->{decrease_length}) && _overlaps_stop_codon(@_) && !_ins_del_stop_altered(@_);
         }
 
     }
@@ -1394,7 +1392,6 @@ sub _ins_del_stop_altered {
         # new sequence shorter, we know it has been altered
         return $cache->{ins_del_stop_altered} = 1 if length($utr_and_translateable) < length($translateable);
 
-
         # now we need the codon from the new seq at the equivalent end pos from translateable
         # and to translate it to check if it is still a stop
         my $pep = Bio::Seq->new(
@@ -1404,8 +1401,7 @@ sub _ins_del_stop_altered {
         )->translate(
             undef, undef, undef, $bvfo->_codon_table
         )->seq;
-
-        $cache->{ins_del_stop_altered} = !($pep && $pep eq '*');    
+        $cache->{ins_del_stop_altered} = !($pep && $pep eq '*');
     }
 
     return $cache->{ins_del_stop_altered};
@@ -1419,7 +1415,6 @@ sub frameshift {
     if($bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele')) {
 
         return 0 if partial_codon(@_);
-
         return 0 if stop_retained(@_);
     
         return 0 unless defined $bvfo->cds_start && defined $bvfo->cds_end;
