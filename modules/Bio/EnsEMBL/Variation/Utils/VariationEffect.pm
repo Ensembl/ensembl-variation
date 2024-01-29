@@ -1297,7 +1297,8 @@ sub stop_retained {
 
 sub ref_eq_alt_sequence {
    my ($bvfoa, $feat, $bvfo, $bvf) = @_; 
-
+   
+   $bvfo ||= $bvfoa->base_variation_feature_overlap;
    my $ref_seq = $bvfo->_peptide;
 
    my $mut_seq = $ref_seq;
