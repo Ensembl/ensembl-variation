@@ -1282,14 +1282,15 @@ sub stop_retained {
         my $pre = $bvfoa->_pre_consequence_predicates;
 
         my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
-
+ 
         if(defined($alt_pep) && $alt_pep ne '') {
           ## handle inframe insertion of a stop just before the stop (no ref peptide)
           return 0 unless $ref_pep;
-          $cache->{stop_retained} = !_ins_del_stop_altered(@_) && ref_eq_alt_sequence(@_);
+          $cache->{stop_retained} = ref_eq_alt_sequence(@_);
+          #print Dumper($cache->{stop_retained});
         }
         else {
-            $cache->{stop_retained} = ($pre->{increase_length} || $pre->{decrease_length}) && _overlaps_stop_codon(@_) && !_ins_del_stop_altered(@_);
+            $cache->{stop_retained} = ($pre->{increase_length} || $pre->{decrease_length}) && !_ins_del_stop_altered(@_) && _overlaps_stop_codon(@_);
         }
 
     }
@@ -1300,26 +1301,30 @@ sub ref_eq_alt_sequence {
    my ($bvfoa, $feat, $bvfo, $bvf) = @_; 
 
    my $ref_seq = $bvfo->_peptide;
+
    my $mut_seq = $ref_seq;
    my $tl_start = $bvfo->translation_start;
    my $tl_end = $bvfo->translation_end;
-
+   
    my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
+   
+   return 0 if $ref_pep eq "X" && $alt_pep eq "X"; # this is to account for incomplete coding terminal;
+   return 0 if $ref_pep ne "*" && $alt_pep ne "*" && $ref_pep eq $alt_pep; # this is to account for synonymous variant if $ref_pep eq $alt_pep, it is not stop_retained
+   
+   return 0 if length($alt_pep) > 1 && substr($alt_pep, 0, 1) ne substr($ref_pep, 0, 1);
+
+   return 1 if  $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele') && defined($ref_seq) && $tl_start > length($ref_seq);
+
 
    substr($mut_seq, $tl_start-1, $tl_end - $tl_start + 1) = $alt_pep; # creating a mutated sequence from the ref sequence. 
-   
+
    my $mut_substring = substr($mut_seq, 0, length($ref_seq)); # getting a substring up to the length of the ref sequence for comparison from index 0 to the length of the ref seq;
    
    my $final_stop = substr($mut_seq, length($ref_seq)) if length($ref_seq) < length($mut_seq); # getting the length of the $mut_seq from the length of the ref_seq to the end 
    
    my $final_stop_length = length($final_stop) if defined($final_stop) ne '';
-
-   my $value = 0 if $ref_pep eq "X" && $alt_pep eq "X"; 
-   my $data = 1 if $ref_seq eq $mut_substring && defined($final_stop_length) < 3;
-
-   return 0 if $ref_pep eq "X" && $alt_pep eq "X"; # this is to account for incomplete coding terminal;
-
-   return 1 if $ref_seq eq $mut_substring && defined($final_stop_length) < 3;
+   
+   return 1 if $ref_seq eq $mut_substring && defined($final_stop_length) < 3;  
 
    return 0;
 }
