@@ -1372,9 +1372,6 @@ sub _ins_del_stop_altered {
         # get cDNA coords and CDS start
         my ($cdna_start, $cdna_end, $cds_start) = ($bvfo->cdna_start, $bvfo->cdna_end, $bvfo->cds_start);
         return 0 unless $cdna_start && $cdna_end && $cds_start;
-        
-        # i am trying to check for the reference sequence to the mutated seqence, if it is the same. 
-
 
         # make and edit UTR + translateable seq
         my $translateable = $bvfo->_translateable_seq();
