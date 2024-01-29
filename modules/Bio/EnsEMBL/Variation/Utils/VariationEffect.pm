@@ -1308,12 +1308,16 @@ sub ref_eq_alt_sequence {
    my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
    
    return 0 if $ref_pep eq "X" && $alt_pep eq "X"; # this is to account for incomplete coding terminal;
-   return 0 if $ref_pep ne "*" && $alt_pep ne "*" && $ref_pep eq $alt_pep; # this is to account for synonymous variant if $ref_pep eq $alt_pep, it is not stop_retained
+   # this is to account for synonymous variant if $ref_pep eq $alt_pep 
+   # as there is no resulting change to the amino acid sequence, it is not stop_retained
+   return 0 if $ref_pep ne "*" && $alt_pep ne "*" && $ref_pep eq $alt_pep;
    
+   #Examples if peptide alleles */C*G, this is not a stop retained 
+   # but if L/L*X then it is a stop retained. 
    return 0 if length($alt_pep) > 1 && substr($alt_pep, 0, 1) ne substr($ref_pep, 0, 1);
 
+   # this is a logic from the former logic 
    return 1 if  $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele') && defined($ref_seq) && $tl_start > length($ref_seq);
-
 
    substr($mut_seq, $tl_start-1, $tl_end - $tl_start + 1) = $alt_pep; # creating a mutated sequence from the ref sequence. 
 
