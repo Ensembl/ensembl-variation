@@ -196,7 +196,7 @@ my $column_names = {
       },
     },
   },
-    '4.3a' => {
+  '4.3a' => {
     assembly_unspecific => {
       chr => '#chr',
       ref => 'ref',
@@ -219,7 +219,7 @@ my $column_names = {
       },
     },
   },
-    '4.4a' => {
+  '4.4a' => {
     assembly_unspecific => {
       chr => '#chr',
       ref => 'ref',
@@ -339,11 +339,15 @@ sub get_dbNSFP_row {
   }
   my $assembly_unspecific = $column_names->{$dbnsfp_version}->{assembly_unspecific};
   foreach my $column_name (keys %{$assembly_unspecific}) {
-    $data->{$column_name} = $raw_data{$assembly_unspecific->{$column_name}};
+    if (defined $assembly_unspecific->{$column_name}) {
+      $data->{$column_name} = $raw_data{$assembly_unspecific->{$column_name}};
+    }
   }
   my $assembly_specific =  $column_names->{$dbnsfp_version}->{assembly_specific}->{$assembly}; 
   foreach my $column_name (keys %{$assembly_specific}) {
-    $data->{$column_name} = $raw_data{$assembly_specific->{$column_name}};
+    if (defined $assembly_specific->{$column_name}) {
+      $data->{$column_name} = $raw_data{$assembly_specific->{$column_name}};
+    }
   }
   return $data;
 }
