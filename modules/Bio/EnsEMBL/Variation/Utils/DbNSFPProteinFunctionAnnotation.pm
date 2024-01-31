@@ -69,11 +69,18 @@ sub new {
 
   my $self = $class->SUPER::new(@_);
 
-  if (! grep {$_ eq $self->annotation_file_version} ('3.5a', '4.0a', '4.1a', '4.2a', '4.3a', '4.4a')) {
+  my @versions = ('3.5a', '4.0a', '4.1a', '4.2a', '4.3a', '4.4a');
+  if (! grep {$_ eq $self->annotation_file_version} @versions) {
     die "dbNSFP version " . $self->annotation_file_version . " is not supported.";
   }
 
-  $self->analysis([qw/dbnsfp_revel dbnsfp_meta_lr dbnsfp_mutation_assessor/]);
+  my @analysis;
+  if ($self->annotation_file_version =~ /a$/) {
+    # include extra scores if using academic licenced file
+    @analysis = qw/dbnsfp_revel/;
+  }
+  push @analysis, qw/dbnsfp_meta_lr dbnsfp_mutation_assessor/;
+  $self->analysis(\@analysis);
 
   return $self;
 }
@@ -288,8 +295,8 @@ sub add_predictions {
     my $prediction;
     if ($self->annotation_file_version eq '3.5a') {
       $prediction = $predictions->{dbnsfp_mutation_assessor}->{$data->{mutation_assessor_pred}};  
-    } elsif (grep {$_ eq $self->annotation_file_version} ('4.0a', '4.1a', '4.2a', '4.3a', '4.4a')) {
-      # In 4.0a the prediction is not always provided and we need to assign it based on the score thresholds     
+    } elsif ($self->annotation_file_version =~ /^4\./) {
+      # In version 4 files, the prediction is not always provided and we need to assign it based on the score thresholds     
       # The rankscore cutoffs between "H" and "M", "M" and "L", and "L" and "N", are 0.9307, 0.52043 and 0.19675,
       my $score = $data->{mutation_assessor_score}; 
       if ($score >= 0.9307) {
