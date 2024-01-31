@@ -283,7 +283,7 @@ sub load_predictions_for_triplets {
 
 sub add_predictions {
   my ($self, $data, $i, $mutated_aa) = @_;
-  if ($data->{revel_score} ne '.') {
+  if (defined $data->{revel_score} && $data->{revel_score} ne '.') {
     my $prediction = ($data->{revel_score} >= $REVEL_CUTOFF) ? 'likely disease causing' : 'likely benign';
     $self->add_prediction($i, $mutated_aa, 'dbnsfp_revel', $data->{revel_score}, $prediction);
   }
