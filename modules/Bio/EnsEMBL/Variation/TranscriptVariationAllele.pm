@@ -244,9 +244,13 @@ sub _return_3prime {
   
   my $shift_length;
   my $strand = $tr->strand;
+
+  # vf can be on different strand than transcript
+  my $vf_strand = $self->variation_feature->strand;
+  reverse_comp(\$seq_to_check) if $vf_strand != $strand;
   
   ## Actually performs the shift, and provides raw data in order to create shifting hash
-  ($shift_length, $seq_to_check, $hgvs_output_string, $start, $end) = $self->perform_shift($seq_to_check, $post_seq, $pre_seq, $start, $end, $hgvs_output_string, (-1 * ($strand -1))/2); 
+  ($shift_length, $seq_to_check, $hgvs_output_string, $start, $end) = $self->perform_shift($seq_to_check, $post_seq, $pre_seq, $start, $end, $hgvs_output_string, (-1 * ($strand -1))/2, $strand); 
   
   ## Creates shift_hash to attach to VF and TVA objects for 
   $self->create_shift_hash($seq_to_check, $post_seq, $pre_seq, $start, $end, $hgvs_output_string, $type, $shift_length, $strand, 0);
@@ -286,10 +290,14 @@ sub check_tva_shifting_hashes {
 
 sub perform_shift {
   ## Performs the shifting calculation
-  my ($self, $seq_to_check, $post_seq, $pre_seq, $var_start, $var_end, $hgvs_output_string, $reverse) = @_;
+  my ($self, $seq_to_check, $post_seq, $pre_seq, $var_start, $var_end, $hgvs_output_string, $reverse, $seq_strand) = @_;
   ## get length of pattern to check 
   my $indel_length = (length $seq_to_check);
   my $shift_length = 0;
+
+  # hgvs_output_string can be on different strand than seq_to_check
+  my $vf_strand = $self->variation_feature->strand;
+  my $hgvs_reverse = ($vf_strand != $seq_strand);
   
   ## Sets up the for loop, ensuring that the correct bases are compared depending on the strand
   my $loop_limiter = $reverse ? (length($pre_seq) - $indel_length) + 1 : (length($post_seq) - $indel_length);
@@ -305,12 +313,12 @@ sub perform_shift {
     {
       $check_next_del  = substr($seq_to_check, length($seq_to_check) -1, 1);
       $check_next_pre = substr($pre_seq, length($pre_seq) - $n, 1);
-      $hgvs_next_del  = substr($hgvs_output_string, length($hgvs_output_string) -1, 1);
+      $hgvs_next_del  = $hgvs_reverse ? substr($hgvs_output_string, 0, 1) : substr($hgvs_output_string, length($hgvs_output_string) -1, 1);
     }
     else{
       $check_next_del  = substr($seq_to_check, 0, 1);
       $check_next_pre = substr($post_seq, $n, 1);
-      $hgvs_next_del  = substr($hgvs_output_string, 0, 1);  
+      $hgvs_next_del  = $hgvs_reverse ? substr($hgvs_output_string, length($hgvs_output_string) -1, 1) : substr($hgvs_output_string, 0, 1); 
     }
     if($check_next_del eq $check_next_pre){
       
@@ -321,16 +329,16 @@ sub perform_shift {
       if($reverse)
       {
         $seq_to_check = substr($seq_to_check, 0, length($seq_to_check) -1);
-        $hgvs_output_string = substr($hgvs_output_string, 0, length($hgvs_output_string) -1);
+        $hgvs_output_string = $hgvs_reverse ? substr($hgvs_output_string,1) : substr($hgvs_output_string, 0, length($hgvs_output_string) -1);
         $seq_to_check = $check_next_del . $seq_to_check;  
-        $hgvs_output_string = $hgvs_next_del . $hgvs_output_string;
+        $hgvs_output_string = $hgvs_reverse ? $hgvs_output_string . $hgvs_next_del : $hgvs_next_del . $hgvs_output_string;
       }
       else
       {
         $seq_to_check = substr($seq_to_check,1);
-        $hgvs_output_string = substr($hgvs_output_string,1);
+        $hgvs_output_string = $hgvs_reverse ? substr($hgvs_output_string, 0, length($hgvs_output_string) -1) : substr($hgvs_output_string,1);
         $seq_to_check .= $check_next_del;
-        $hgvs_output_string .= $hgvs_next_del;
+        $hgvs_output_string = $hgvs_reverse ? $hgvs_next_del . $hgvs_output_string : $hgvs_output_string . $hgvs_next_del;
         $var_start++;
         $var_end++;
       }
@@ -451,7 +459,7 @@ sub _genomic_shift
   reverse_comp(\$seq_to_check) if $self->variation_feature->strand <0; 
   
   ## Actually performs the shift, and provides raw data in order to create shifting hash
-  ($shift_length, $seq_to_check, $hgvs_output_string, $var_start, $var_end) = $self->perform_shift($seq_to_check, $post_seq, $pre_seq, $var_start, $var_end, $hgvs_output_string, (-1 * ($strand -1))/2); 
+  ($shift_length, $seq_to_check, $hgvs_output_string, $var_start, $var_end) = $self->perform_shift($seq_to_check, $post_seq, $pre_seq, $var_start, $var_end, $hgvs_output_string, (-1 * ($strand -1))/2, 1); 
   
   ## Creates shift_hash to attach to VF and TVA objects for 
   $self->create_shift_hash($seq_to_check, $post_seq, $pre_seq, $var_start, $var_end, $hgvs_output_string, $type, $shift_length, $strand, 1);
@@ -1377,26 +1385,19 @@ sub hgvs_transcript {
   }
   ## this may be different to the input one for insertions/deletions
     print "vfs: $variation_feature_sequence &  $self->{_slice_start} -> $self->{_slice_end}\n" if $DEBUG ==1;
+
+  my $lookup_order = 1;
   if($variation_feature_sequence && $vf->strand != $refseq_strand) {
-    if($vf->strand == 1){
-      reverse_comp(\$variation_feature_sequence);
-    }
-    else{
-      # if variation feature is in + strand and transcript in - strand only complementing is 
-      # enough as variation feature sequence will be from reverse strand but in 3'-5' direction
-      $variation_feature_sequence =~
-        tr/acgtrymkswhbvdnxACGTRYMKSWHBVDNX/tgcayrkmswdvbhnxTGCAYRKMSWDVBHNX/;
-    }
+    reverse_comp(\$variation_feature_sequence);
+    $lookup_order = -1 if $adaptor_shifting_flag == 0;
   };
   ## delete consequences if we have an offset. This is only in here for when we want HGVS to shift but not consequences.
   ## TODO add no_shift flag test
   delete($self->{_predicate_cache}) if $self->transcript_variation->{shifted} && $offset_to_add != 0; 
   print "sending alt: $variation_feature_sequence &  $self->{_slice_start} -> $self->{_slice_end} for formatting\n" if $DEBUG ==1;
-  
+
   return undef if (($self->{_slice}->end - $self->{_slice}->start + 1) < ($self->{_slice_end} + $offset_to_add));
   #return undef if (length($self->{_slice}->seq()) < ($self->{_slice_end} + $offset_to_add));
-  
-  my $dup_lookup_direction = ($refseq_strand == -1 && !$offset_to_add) ? 1 : -1;
   $hgvs_notation = hgvs_variant_notation(
     $variation_feature_sequence,    ### alt_allele,
     $self->{_slice}->seq(),                             ### using this to extract ref allele
@@ -1405,9 +1406,9 @@ sub hgvs_transcript {
     "",
     "",
     $var_name,
-    $dup_lookup_direction
+    $lookup_order
   );
-  
+
   ### This should not happen
   unless($hgvs_notation->{'type'}){
     #warn "Error - not continuing; no HGVS annotation\n";
@@ -1732,6 +1733,7 @@ sub hgvs_protein {
   $convert_to_three_letter = 1 unless defined $convert_to_three_letter;
   ##### Convert ref & alt peptides taking into account HGVS rules
   $hgvs_notation = $self->_get_hgvs_peptides($hgvs_notation, $convert_to_three_letter);
+
   unless($hgvs_notation) {
     $self->{hgvs_protein} = undef;
     return undef;
@@ -2119,9 +2121,10 @@ sub _clip_alleles {
     my $check_next_ref = substr( $check_ref, 0, 1);
     my $check_next_alt = substr( $check_alt, 0, 1);
     
-    if( defined $hgvs_notation->{'numbering'} && $hgvs_notation->{'numbering'} eq 'p' && 
+    ### stop re-created by variant - no protein change
+    if( defined $hgvs_notation->{'numbering'} &&
+        $hgvs_notation->{'numbering'} eq 'p' &&
         $check_next_ref eq  "*" && $check_next_alt eq "*"){
-      ### stop re-created by variant - no protein change
       $hgvs_notation->{type} = "=";
 
       return($hgvs_notation);
@@ -2164,7 +2167,9 @@ sub _clip_alleles {
   ### check if clipping suggests a type change 
   
   ## no protein change - use transcript level annotation 
-  if( $check_ref eq $check_alt) {
+  if( defined $hgvs_notation->{'numbering'} &&
+        $hgvs_notation->{'numbering'} eq 'p'&&
+        $check_ref eq $check_alt) {
       $hgvs_notation->{type} = "=";
   }   
   
@@ -2180,11 +2185,13 @@ sub _clip_alleles {
   
   ### re-set as ins/dup not delins 
   elsif(length ($check_ref) == 0 && length ($check_alt) >= 1){
-      ### re-set as dup not delins
+      ### re-set as dup not delins (ignore for protein as it is checked later on)
       my $prev_str = substr($preseq, length($preseq) - length($check_alt));
-      if($check_alt eq $prev_str) {
-        $hgvs_notation->{type} = "dup";
-        $hgvs_notation->{start} -= length($check_alt);
+      if( defined $hgvs_notation->{'numbering'} &&
+          $hgvs_notation->{'numbering'} ne 'p' &&
+          $check_alt eq $prev_str) {
+            $hgvs_notation->{type} = "dup";
+            $hgvs_notation->{start} -= length($check_alt);
       }
     
       ### re-set as ins not delins

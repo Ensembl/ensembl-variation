@@ -1933,6 +1933,7 @@ sub hgvs_genomic {
 
     ### Apply HGVS 3' shift if required
     my $offset = 0;
+    my $lookup_order = 1;
     my $var_class  =  $self->var_class();
     $var_class  =~ s/somatic_//;
 
@@ -1967,6 +1968,7 @@ sub hgvs_genomic {
    }
     else{
       reverse_comp(\$check_allele) if $flip_allele == 1 ;
+      $lookup_order = -1 if $flip_allele == 1 ;
     }
 
     my $hgvs_notation = hgvs_variant_notation(
@@ -1976,7 +1978,8 @@ sub hgvs_genomic {
       $ref_end + $offset,
       $chr_start + $offset,   ## start wrt seq region slice is on (eg. chrom)
       $chr_end + $offset,
-      $self->variation_name() ## for error message
+      $self->variation_name(), ## for error message
+      $lookup_order
     );
 
     # Skip if e.g. allele is identical to the reference slice
