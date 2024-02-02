@@ -1733,6 +1733,7 @@ sub hgvs_protein {
   $convert_to_three_letter = 1 unless defined $convert_to_three_letter;
   ##### Convert ref & alt peptides taking into account HGVS rules
   $hgvs_notation = $self->_get_hgvs_peptides($hgvs_notation, $convert_to_three_letter);
+
   unless($hgvs_notation) {
     $self->{hgvs_protein} = undef;
     return undef;
@@ -2120,9 +2121,10 @@ sub _clip_alleles {
     my $check_next_ref = substr( $check_ref, 0, 1);
     my $check_next_alt = substr( $check_alt, 0, 1);
     
-    if( defined $hgvs_notation->{'numbering'} && $hgvs_notation->{'numbering'} eq 'p' && 
+    ### stop re-created by variant - no protein change
+    if( defined $hgvs_notation->{'numbering'} &&
+        $hgvs_notation->{'numbering'} eq 'p' &&
         $check_next_ref eq  "*" && $check_next_alt eq "*"){
-      ### stop re-created by variant - no protein change
       $hgvs_notation->{type} = "=";
 
       return($hgvs_notation);
@@ -2165,7 +2167,9 @@ sub _clip_alleles {
   ### check if clipping suggests a type change 
   
   ## no protein change - use transcript level annotation 
-  if( $check_ref eq $check_alt) {
+  if( defined $hgvs_notation->{'numbering'} &&
+        $hgvs_notation->{'numbering'} eq 'p'&&
+        $check_ref eq $check_alt) {
       $hgvs_notation->{type} = "=";
   }   
   
@@ -2181,11 +2185,13 @@ sub _clip_alleles {
   
   ### re-set as ins/dup not delins 
   elsif(length ($check_ref) == 0 && length ($check_alt) >= 1){
-      ### re-set as dup not delins
+      ### re-set as dup not delins (ignore for protein as it is checked later on)
       my $prev_str = substr($preseq, length($preseq) - length($check_alt));
-      if($check_alt eq $prev_str) {
-        $hgvs_notation->{type} = "dup";
-        $hgvs_notation->{start} -= length($check_alt);
+      if( defined $hgvs_notation->{'numbering'} &&
+          $hgvs_notation->{'numbering'} ne 'p' &&
+          $check_alt eq $prev_str) {
+            $hgvs_notation->{type} = "dup";
+            $hgvs_notation->{start} -= length($check_alt);
       }
     
       ### re-set as ins not delins
