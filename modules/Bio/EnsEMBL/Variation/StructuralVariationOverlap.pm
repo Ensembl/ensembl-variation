@@ -126,10 +126,10 @@ sub new_fast {
 }
 
 sub _close_to_feature {
-    my $self = shift;
+    my $vf = shift;
     my $feature = shift;
 
-    my $chr = $self->{seq_region_name} || $self->{chr};
+    my $chr = $vf->{seq_region_name} || $vf->{chr};
     return 0 unless (
       defined $chr and
       defined $feature and defined $feature->seq_region_name and
@@ -137,13 +137,9 @@ sub _close_to_feature {
     );
 
     # check if breakend is within/around feature
-    my $slice = $feature->{slice}->expand(
-        MAX_DISTANCE_FROM_TRANSCRIPT,
-        MAX_DISTANCE_FROM_TRANSCRIPT
-    );
-    return 0 unless
-        overlap($self->{start}, $self->{end}, $slice->start, $slice->end);
-
+    my $slice = $feature->feature_Slice;
+    $slice = $slice->expand(MAX_DISTANCE_FROM_TRANSCRIPT, MAX_DISTANCE_FROM_TRANSCRIPT);
+    return 0 unless overlap($vf->{start}, $vf->{end}, $slice->start, $slice->end);
     return 1;
 }
 

@@ -54,6 +54,7 @@ my $svf = Bio::EnsEMBL::Variation::StructuralVariationFeature->new
    -end         => $outer_end,
    -outer_end   => $outer_end,
    -strand      => 1,
+   -slice       => $slice_adaptor->fetch_by_region('chromosome', $chr),
    -variation_name => $var_name,
    -is_somatic => $is_somatic,
    -length => $sv_length,
@@ -62,17 +63,13 @@ my $svf = Bio::EnsEMBL::Variation::StructuralVariationFeature->new
 
 sub _create_feature {
   my $obj = shift;
-
+  my $chr = $obj->{chr} || $obj->seq_region_name;
   return Bio::EnsEMBL::Feature->new(
-    -seqname => $obj->{chr},
+    -seqname => $chr,
     -start   => $obj->{start} - 100,
     -end     => $obj->{end} + 100,
     -strand  => 0,
-    -slice   => Bio::EnsEMBL::Slice->new_fast({
-      seq_region_name => $obj->{chr},
-      start           => $obj->{start} - 100,
-      end             => $obj->{end} + 100,
-    })
+    -slice   => $slice_adaptor->fetch_by_region('chromosome', $chr),
   );
 }
 
@@ -97,11 +94,7 @@ $svf = Bio::EnsEMBL::Variation::StructuralVariationFeature->new(
   -end             => 7803891,
   -outer_end       => 7803891,
   -seq_region_name => '8',
-  -slice           => Bio::EnsEMBL::Slice->new_fast({
-    seq_region_name => 8,
-    start           => 7803891,
-    end             => 7803891,
-  }),
+  -slice           => $slice_adaptor->fetch_by_region('chromosome', 8),
   -strand          => 1,
   -allele_string   => "A[4:66578[/T[7:3433[",
   -class_SO_term   => 'chromosome_breakpoint',
@@ -165,11 +158,7 @@ $svf = Bio::EnsEMBL::Variation::StructuralVariationFeature->new(
   -end             => 7803891,
   -outer_end       => 7803891,
   -seq_region_name => '8',
-  -slice           => Bio::EnsEMBL::Slice->new_fast({
-    seq_region_name => 8,
-    start           => 7803891,
-    end             => 7803891,
-  }),
+  -slice           => $slice_adaptor->fetch_by_region('chromosome', 8),
   -strand          => 1,
   -allele_string   => "TCG.",
   -class_SO_term   => 'chromosome_breakpoint',
