@@ -55,12 +55,13 @@ use warnings;
 
 use base qw(Exporter);
 
-our @EXPORT_OK = qw(overlap _intron_overlap _compare_seq_region_names within_feature within_cds MAX_DISTANCE_FROM_TRANSCRIPT within_intron stop_lost stop_retained start_lost frameshift $UPSTREAM_DISTANCE $DOWNSTREAM_DISTANCE);
+our @EXPORT_OK = qw(overlap _intron_overlap _compare_seq_region_names within_feature within_cds MAX_DISTANCE_FROM_TRANSCRIPT within_intron stop_lost stop_retained start_lost frameshift $UPSTREAM_DISTANCE $DOWNSTREAM_DISTANCE $CHROMOSOME_SYNONYMS);
 
 use constant MAX_DISTANCE_FROM_TRANSCRIPT => 5000;
 
 our $UPSTREAM_DISTANCE = MAX_DISTANCE_FROM_TRANSCRIPT;
 our $DOWNSTREAM_DISTANCE = MAX_DISTANCE_FROM_TRANSCRIPT;
+our $CHROMOSOME_SYNONYMS = {};
 
 #
 # Interface with some of the module function XS reimplementation
@@ -108,12 +109,17 @@ sub _intron_overlap {
 }
 
 sub _compare_seq_region_names {
-  my $region1 = shift;
-  my $region2 = shift;
-
-  $region1 =~ s/^chr//;
-  $region2 =~ s/^chr//;
-
+  my ($region1, $region2) = @_;
+  if ($CHROMOSOME_SYNONYMS) {
+    return 1 if
+      (
+        exists $CHROMOSOME_SYNONYMS->{$region1} &&
+        grep /^$region2$/, keys %{$CHROMOSOME_SYNONYMS->{$region1}}
+      ) || (
+        exists $CHROMOSOME_SYNONYMS->{$region2} &&
+        grep /^$region1$/, keys %{$CHROMOSOME_SYNONYMS->{$region2}}
+      );
+  }
   return lc $region1 eq lc $region2;
 }
 

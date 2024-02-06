@@ -448,9 +448,30 @@ ok($vfa->fetch_by_hgvs_notation('NM_000484:c.196_*3del')->end eq 27542743, 'HGVS
 
 # test HGVS protein when codon is within two exons
 # forward strand
-ok($vfa->fetch_by_hgvs_notation('ENSP00000422007.1:p.Gly469Glu')->start eq 66325646, 'HGVSp multi-exon (forward)');
+my $vf_hgvs = $vfa->fetch_by_hgvs_notation('ENSP00000422007.1:p.Gly469Glu');
+ok($vf_hgvs->start eq 66326707, 'HGVSp multi-exon (forward) 1 start');
+ok($vf_hgvs->end   eq 66326707, 'HGVSp multi-exon (forward) 1 end');
+
+$vf_hgvs = $vfa->fetch_by_hgvs_notation('ENSP00000427406.1:p.P81F');
+ok($vf_hgvs->start eq 130027801, 'HGVSp multi-exon (forward) 2 start');
+ok($vf_hgvs->end   eq 130027802, 'HGVSp multi-exon (forward) 2 end');
+
+$vf_hgvs = $vfa->fetch_by_hgvs_notation('ENSP00000400908.1:p.E21S');
+ok($vf_hgvs->start eq 102008309, 'HGVSp multi-exon (forward) 3 start');
+ok($vf_hgvs->end   eq 102010980, 'HGVSp multi-exon (forward) 3 end');
+
 # reverse strand
-ok($vfa->fetch_by_hgvs_notation('ENSP00000293261:p.Arg232Met')->start eq 48846578, 'HGVSp multi-exon (reverse)');
+$vf_hgvs = $vfa->fetch_by_hgvs_notation('ENSP00000293261:p.Arg232Met');
+ok($vf_hgvs->start eq 48846578, 'HGVSp multi-exon (reverse) 1');
+ok($vf_hgvs->end   eq 48846578, 'HGVSp multi-exon (reverse) 1');
+
+$vf_hgvs = $vfa->fetch_by_hgvs_notation('ENSP00000324740.4:p.G91F');
+ok($vf_hgvs->start eq 751804, 'HGVSp multi-exon (reverse) 2 start');
+ok($vf_hgvs->end   eq 756557, 'HGVSp multi-exon (reverse) 2 end');
+
+$vf_hgvs = $vfa->fetch_by_hgvs_notation('ENSP00000385444.1:p.R527T');
+ok($vf_hgvs->start eq 32716, 'HGVSp multi-exon (reverse) 3');
+ok($vf_hgvs->end   eq 32716, 'HGVSp multi-exon (reverse) 3');
 
 
 print "\n# Test - fetch_by_spdi_notation\n";

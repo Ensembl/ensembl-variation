@@ -1268,10 +1268,13 @@ sub _parse_breakends {
   my $ref;
 
   my $breakends = [];
-  # Support multiple breakends from ALT in the format C[2:321682[,]17:198982]G
+  # Support multiple breakends in the format T/C[2:321682[/]17:198982]G
+  # NB: the equivalent ALT format in VCF would be C[2:321682[,]17:198982]G
+  #     VEP converts the commas in ALT to slash and prepends the ref allele
   for my $alt_string (split "/", $alt) {
-    my ($alt_allele) = ($alt_string =~ '[\[\]]?([A-Za-z]+)[\[\]]?');
-    my ($alt_chr, $alt_pos) = ($alt_string =~ '([A-Za-z0-9]+) ?: ?([0-9]+)');
+    my ($alt_allele, $alt_chr, $alt_pos, $alt_allele2) =
+      $alt_string =~ '([A-Za-z]*)\s*[\[\]]\s*(\S+)\s*:\s*([0-9]+)\s*[\[\]]\s*([(A-Za-z)]*)';
+    $alt_allele ||= $alt_allele2;
 
     unless (defined $alt_allele and defined $alt_chr and defined $alt_pos) {
       # Check if single breakend symbol, such as 'N.'
