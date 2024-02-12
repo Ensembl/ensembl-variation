@@ -1285,7 +1285,6 @@ sub stop_retained {
           ## handle inframe insertion of a stop just before the stop (no ref peptide)
           return 0 unless $ref_pep;
           $cache->{stop_retained} = ref_eq_alt_sequence(@_);
-          #print Dumper($cache->{stop_retained});
         }
         else {
             $cache->{stop_retained} = ($pre->{increase_length} || $pre->{decrease_length}) && _overlaps_stop_codon(@_) && !_ins_del_stop_altered(@_);
