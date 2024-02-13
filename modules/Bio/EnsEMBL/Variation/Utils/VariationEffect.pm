@@ -1211,7 +1211,8 @@ sub stop_lost {
 
     # use cache for this method as it gets called a lot
     my $cache = $bvfoa->{_predicate_cache} ||= {};
-
+    
+    return 0 if stop_retained(@_);
     unless(exists($cache->{stop_lost})) {
         $cache->{stop_lost} = 0;
 
@@ -1265,8 +1266,7 @@ sub stop_retained {
 
     # use cache for this method as it gets called a lot
     my $cache = $bvfoa->{_predicate_cache} ||= {};
-    
-    return 0 if stop_lost(@_);
+
     return 0 if partial_codon(@_);
 
     unless(exists($cache->{stop_retained})) {
@@ -1282,6 +1282,7 @@ sub stop_retained {
         my $pre = $bvfoa->_pre_consequence_predicates;
 
         my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
+  
 
         if(defined($alt_pep) && $alt_pep ne '') {
           ## handle inframe insertion of a stop just before the stop (no ref peptide)
@@ -1307,11 +1308,13 @@ sub ref_eq_alt_sequence {
    my $tl_end = $bvfo->translation_end;
    
    my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
+
    return 0 if $ref_pep eq "X" && $alt_pep eq "X"; # this is to account for incomplete coding terminal;
 
    # this is to account for synonymous variant if $ref_pep eq $alt_pep 
    # as there is no resulting change to the amino acid sequence, it is not stop_retained
    return 0 if $ref_pep ne "*" && $alt_pep ne "*" && $ref_pep eq $alt_pep;
+
 
    # this is a logic from the former logic 
    return 1 if  $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele') && defined($ref_seq) && $tl_start > length($ref_seq);
