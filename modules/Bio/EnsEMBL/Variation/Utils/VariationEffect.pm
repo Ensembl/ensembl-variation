@@ -1146,7 +1146,7 @@ sub inframe_deletion {
         return 0 if partial_codon(@_);
 
         my ($ref_codon, $alt_codon) = _get_codon_alleles(@_);
-        
+        my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
         return 0 unless defined $ref_codon;
         return 0 unless length($alt_codon) < length ($ref_codon);
         
@@ -1267,6 +1267,8 @@ sub stop_retained {
     my $cache = $bvfoa->{_predicate_cache} ||= {};
     
     return 0 if stop_lost(@_);
+    return 0 if partial_codon(@_);
+
     unless(exists($cache->{stop_retained})) {
         $bvfo ||= $bvfoa->base_variation_feature_overlap;
         $bvf  ||= $bvfo->base_variation_feature;
@@ -1288,6 +1290,7 @@ sub stop_retained {
         }
         else {
             $cache->{stop_retained} = ($pre->{increase_length} || $pre->{decrease_length}) && _overlaps_stop_codon(@_) && !_ins_del_stop_altered(@_);
+            #print Dumper($cache->{stop_retained});
         }
 
     }
@@ -1305,18 +1308,14 @@ sub ref_eq_alt_sequence {
    my $tl_end = $bvfo->translation_end;
    
    my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
-   
+
    return 0 if $ref_pep eq "X" && $alt_pep eq "X"; # this is to account for incomplete coding terminal;
    # this is to account for synonymous variant if $ref_pep eq $alt_pep 
    # as there is no resulting change to the amino acid sequence, it is not stop_retained
    return 0 if $ref_pep ne "*" && $alt_pep ne "*" && $ref_pep eq $alt_pep;
-   
-   #Examples if peptide alleles */C*G, this is not a stop retained 
-   # but if L/L*X then it is a stop retained. 
-   return 0 if length($alt_pep) > 1 && substr($alt_pep, 0, 1) ne substr($ref_pep, 0, 1);
 
    # this is a logic from the former logic 
-   return 1 if  $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele') && defined($ref_seq) && $tl_start > length($ref_seq);
+   return 1  if  $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele') && defined($ref_seq) && $tl_start > length($ref_seq);
 
    substr($mut_seq, $tl_start-1, $tl_end - $tl_start + 1) = $alt_pep; # creating a mutated sequence from the ref sequence. 
 
@@ -1325,9 +1324,8 @@ sub ref_eq_alt_sequence {
    my $final_stop = substr($mut_seq, length($ref_seq)) if length($ref_seq) < length($mut_seq); # getting the length of the $mut_seq from the length of the ref_seq to the end 
    
    my $final_stop_length = length($final_stop) if defined($final_stop) ne '';
-   
-   return 1 if $ref_seq eq $mut_substring && defined($final_stop_length) < 3;  
 
+   return 1 if $ref_seq eq $mut_substring && defined($final_stop_length) && $final_stop_length < 3;  
    return 0;
 }
 
@@ -1464,10 +1462,13 @@ sub partial_codon {
         $cache->{_partial_codon} = 0;
 
         $bvfo ||= $bvfoa->base_variation_feature_overlap;
+
+        my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
         
         return 0 unless defined $bvfo->translation_start;
 
         my $cds_length = length $bvfo->_translateable_seq;
+
 
         my $codon_cds_start = ($bvfo->translation_start * 3) - 2;
 
