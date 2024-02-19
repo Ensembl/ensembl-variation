@@ -115,7 +115,7 @@ process store_pph2_scores {
 }
 
 // module imports                                                               
-include { delete_prediction_data; update_meta } from './database_utils.nf'        
+include { delete_prediction_data; update_meta } from './database.nf'        
 include { filter_existing_translations        } from './translations.nf'
 
 workflow run_pph2_pipeline {
