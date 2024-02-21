@@ -39,8 +39,8 @@ process align_peptides {
     val blastdb_name
 
   output:
-    tuple val(peptide), path('*.alignedfasta'), emit: blast optional true
-    path 'expected_error.txt', emit: error optional true
+    tuple val(peptide), path('*.alignedfasta'), emit: aln optional true
+    path 'expected_error.txt', emit: errors optional true
 
   afterScript 'rm -rf *.fa *.fa.query.out'
 
@@ -80,14 +80,20 @@ process run_sift_on_all_aminoacid_substitutions {
     tuple val(peptide), path(aln)
 
   output:
-    tuple val(peptide), path('*.SIFTprediction'), optional: true
+    tuple val(peptide), path('*.SIFTprediction'), emit: scores optional true
+    path 'expected_error.txt', emit: errors optional true
 
   afterScript 'rm -rf *.subs'
 
   """
   subs=${peptide.id}.subs                                                       
   create_aa_substitutions.sh sift ${peptide.id} "${peptide.seqString}" > \${subs}
-  info_on_seqs ${aln} \${subs} protein.SIFTprediction
+
+  error=0
+  info_on_seqs ${aln} \${subs} protein.SIFTprediction || error=$?
+
+  # Capture expected errors to avoid failing job
+  capture_expected_errors.sh ${peptide.md5} sift .command.err \$error expected_error.txt
   """
 }
 
@@ -136,11 +142,13 @@ workflow run_sift_pipeline {
       update_sift_db_version( file(params.blastdb) )
     }
     // Align translated sequences against BLAST database to run SIFT
-    alignment = align_peptides(translated,
-                               file(params.blastdb).parent,
-                               file(params.blastdb).name)
-    scores = run_sift_on_all_aminoacid_substitutions(alignment.blast)
-    alignment.error.collectFile(name: 'sift_errors.txt', newLine: true)
+    blast = align_peptides(translated,
+                           file(params.blastdb).parent,
+                           file(params.blastdb).name)
+    sift = run_sift_on_all_aminoacid_substitutions(blast.aln)
     store_sift_scores(wait, // wait for data deletion
-                      params.species, scores)
+                      params.species, sift.scores)
+    all_errors = sift.errors.concat(blast.errors)
+  emit:
+    errors = all_errors
 }

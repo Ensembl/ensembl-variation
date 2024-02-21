@@ -186,8 +186,13 @@ workflow {
   translated = translated.unique { it.md5 }
 
   // Run protein function prediction
-  if ( params.sift_run_type != "NONE" ) run_sift_pipeline( translated )
-  if ( params.pph_run_type  != "NONE" ) run_pph2_pipeline( translated )
+  errors = Channel.empty()
+  if ( params.sift_run_type != "NONE" ) errors = errors.concat(run_sift_pipeline( translated ))
+  if ( params.pph_run_type  != "NONE" ) errors = errors.concat(run_pph2_pipeline( translated ))
+
+  errors
+    .collectFile(name: 'failure_reason.tsv', newLine: true, storeDir: ${params.outdir})
+    .subscribe { println "Errors saved to file $it" }
 }
 
 // Print summary

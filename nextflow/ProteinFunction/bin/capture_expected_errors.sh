@@ -12,6 +12,8 @@ if [ "${category}" == "sift_align" ]; then
   errors=("PSI-BLAST found no hits"
           "Not enough sequences found by the PSI-BLAST search"
           "Not enough sequences (only [0-9]*) found by the PSI-BLAST search")
+elif [ "${category}" == "sift" ]; then
+  errors=("The following sequences have been removed because they  were found to be over 100% identical with your protein query")
 elif [ "${category}" == "pph2" ]; then
   errors=("Failed to locate sequence position")
 fi
@@ -25,7 +27,7 @@ for error in "${errors[@]}"; do
     rm ${stderr_file}
     exit_status=0
 
-    echo "${md5}\t${error}" > ${error_out}
+    echo "${md5}\t${error}\t${category}" > ${error_out}
     break
   fi
 done

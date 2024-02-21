@@ -35,7 +35,8 @@ process run_pph2_on_all_aminoacid_substitutions {
     val peptide
 
   output:
-    tuple val(peptide), path ('*_scores.txt'), optional: true
+    tuple val(peptide), path ('*_scores.txt'), emit: scores optional true
+    path 'expected_error.txt', emit: errors optional true
 
   afterScript 'rm -rf *.fa *.subs tmp/'
 
@@ -114,21 +115,23 @@ include { filter_existing_translations        } from './translations.nf'
 workflow run_pph2_pipeline {
   take: translated
   main:
-  if ( params.pph_run_type == "UPDATE" ) {
-    translated = filter_existing_translations( "polyphen_%", translated )
-    wait = "ready"
-  } else if ( params.pph_run_type == "FULL" ) {
-    delete_prediction_data("polyphen_%")
-    wait = delete_prediction_data.out
-    get_pph2_version()
-    update_meta("polyphen_version", get_pph2_version.out)
-  }
-  // Run PolyPhen-2 and Weka
-  predictions = run_pph2_on_all_aminoacid_substitutions(translated)
+    if ( params.pph_run_type == "UPDATE" ) {
+      translated = filter_existing_translations( "polyphen_%", translated )
+      wait = "ready"
+    } else if ( params.pph_run_type == "FULL" ) {
+      delete_prediction_data("polyphen_%")
+      wait = delete_prediction_data.out
+      get_pph2_version()
+      update_meta("polyphen_version", get_pph2_version.out)
+    }
+    // Run PolyPhen-2 and Weka
+    pph2 = run_pph2_on_all_aminoacid_substitutions(translated)
 
-  weka_model = Channel.of("HumDiv.UniRef100.NBd.f11.model",
-                          "HumVar.UniRef100.NBd.f11.model")
-  scores = run_weka(weka_model, predictions)
-  store_pph2_scores(wait, // wait for data deletion
-                    params.species, scores)
+    weka_model = Channel.of("HumDiv.UniRef100.NBd.f11.model",
+                            "HumVar.UniRef100.NBd.f11.model")
+    weka = run_weka(weka_model, pph2.scores)
+    store_pph2_scores(wait, // wait for data deletion
+                      params.species, weka)
+  emit:
+    errors = pph2.errors
 }
