@@ -30,12 +30,12 @@ process store_translation_mapping {
         --user=${params.user} --password=${params.pass} \
         ${params.database} --local-infile=1 <<'EOF'
 
-    CREATE TABLE translation_mapping (
+    CREATE TABLE IF NOT EXISTS translation_mapping (
       stable_id   VARCHAR(255),
       md5         CHAR(32),
       PRIMARY KEY (stable_id),
       KEY md5_idx (md5)
-    ) IF NOT EXISTS;
+    );
 
     LOAD DATA LOCAL INFILE '${translation_mapping}'
     IGNORE INTO TABLE translation_mapping;
