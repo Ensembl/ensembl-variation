@@ -49,7 +49,8 @@ process align_peptides {
     val blastdb_name
 
   output:
-    tuple val(peptide), path('*.alignedfasta'), optional: true
+    tuple val(peptide), path('*.alignedfasta'), emit: aln optional true
+    path 'expected_error.txt', emit: errors optional true
 
   afterScript 'rm -rf *.fa *.fa.query.out'
 
@@ -58,11 +59,15 @@ process align_peptides {
   cat > ${peptide.md5}.fa << EOL
 ${peptide.text}EOL
 
+  setenv error 0
   setenv tmpdir "."
-  setenv NCBI "/opt/blast/bin/"
-  seqs_chosen_via_median_info.csh ${peptide.md5}.fa \
-                                  ${blastdb_dir}/${blastdb_name} \
-                                  ${params.median_cutoff}
+  #setenv NCBI "/opt/blast/bin/"
+  setenv NCBI "/hps/software/users/ensembl/ensw/C8-MAR21-sandybridge/linuxbrew/Cellar/blast/2.2.30/bin"
+  seqs_chosen_via_median_info.csh ${peptide.md5}.fa \\
+                                  ${blastdb_dir}/${blastdb_name} \\
+                                  ${params.median_cutoff} || setenv error \$status
+  # Capture expected errors to avoid failing job
+  capture_expected_errors.sh ${peptide.md5} sift_align .command.err \$error expected_error.txt
   """
 }
 
@@ -85,22 +90,26 @@ process run_sift_on_all_aminoacid_substitutions {
     tuple val(peptide), path(aln)
 
   output:
-    tuple val(peptide), path('*.SIFTprediction'), optional: true
+    tuple val(peptide), path('*.SIFTprediction'), emit: scores optional true
+    path 'expected_error.txt', emit: errors optional true
 
   afterScript 'rm -rf *.subs'
 
   """
   subs=${peptide.id}.subs                                                       
   create_aa_substitutions.sh sift ${peptide.id} "${peptide.seqString}" > \${subs}
-  info_on_seqs ${aln} \${subs} protein.SIFTprediction
+
+  error=0
+  info_on_seqs ${aln} \${subs} protein.SIFTprediction || error=$?
+
+  # Capture expected errors to avoid failing job
+  capture_expected_errors.sh ${peptide.md5} sift .command.err \$error expected_error.txt
   """
 }
 
 process store_sift_scores {
   tag "${peptide.id}"
   container "ensemblorg/ensembl-vep:latest"
-
-  cache false
 
   input:
     val ready
@@ -115,7 +124,7 @@ process store_sift_scores {
 }
 
 // module imports                                                               
-include { delete_prediction_data; update_meta } from './database_utils.nf'        
+include { delete_prediction_data; update_meta } from './database.nf'        
 include { filter_existing_translations        } from './translations.nf'
 
 workflow update_sift_version {
@@ -143,11 +152,13 @@ workflow run_sift_pipeline {
       update_sift_db_version( file(params.blastdb) )
     }
     // Align translated sequences against BLAST database to run SIFT
-    align_peptides(translated,
-                   file(params.blastdb).parent,
-                   file(params.blastdb).name)
-    run_sift_on_all_aminoacid_substitutions(align_peptides.out)
+    blast = align_peptides(translated,
+                           file(params.blastdb).parent,
+                           file(params.blastdb).name)
+    sift = run_sift_on_all_aminoacid_substitutions(blast.aln)
     store_sift_scores(wait, // wait for data deletion
-                      params.species,
-                      run_sift_on_all_aminoacid_substitutions.out)
+                      params.species, sift.scores)
+    all_errors = sift.errors.concat(blast.errors)
+  emit:
+    errors = all_errors
 }
