@@ -52,17 +52,10 @@ process run_pph2_on_all_aminoacid_substitutions {
   error=0
   mkdir -p tmp/lock
   out=!{peptide.id}_scores.txt
-  /opt/pph2/bin/run_pph.pl -A -d tmp -s ${fasta} ${subs} > $out 2> error.out || error=$?
+  /opt/pph2/bin/run_pph.pl -A -d tmp -s ${fasta} ${subs} > $out || error=$?
 
   # Capture expected errors to avoid failing job
-  if grep -q "Failed to locate sequence position" error.out ; then
-    echo "======= Captured expected error: job is successful ======="
-    cat error.out
-    echo "=========================================================="
-    rm error.out
-  elif [ $error -ne 0 ]; then
-    exit $error
-  fi
+  capture_expected_errors.sh !{peptide.md5} pph2 .command.err $error expected_error.txt
 
   # Remove output if only contains header
   if [ "$( wc -l <$out )" -eq 1 ]; then rm $out; fi
@@ -131,11 +124,11 @@ workflow run_pph2_pipeline {
     update_meta("polyphen_version", get_pph2_version.out)
   }
   // Run PolyPhen-2 and Weka
-  run_pph2_on_all_aminoacid_substitutions(translated)
+  predictions = run_pph2_on_all_aminoacid_substitutions(translated)
 
   weka_model = Channel.of("HumDiv.UniRef100.NBd.f11.model",
                           "HumVar.UniRef100.NBd.f11.model")
-  run_weka(weka_model, run_pph2_on_all_aminoacid_substitutions.out)
+  scores = run_weka(weka_model, predictions)
   store_pph2_scores(wait, // wait for data deletion
-                    params.species, run_weka.out)
+                    params.species, scores)
 }
