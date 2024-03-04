@@ -385,7 +385,7 @@ sub parse_line {
 }
 
 sub _valid_region_regex {
-  return qr/^([^:]+):(\d+)-(\d+)(:[-\+]?1)?[\/:]([a-z]{3,}|[ACGTN-]+)$/i;
+  return qr/^([^:]+):(\d+)-(\d+)(:[-\+]?1)?[\/:]([a-z0-9:]{3,}|[ACGTN-]+)$/i;
 }
 
 # sub-routine to check format of string
