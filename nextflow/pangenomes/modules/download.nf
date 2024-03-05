@@ -18,8 +18,10 @@ process list_assemblies {
   output:
     stdout
 
+  script:
+    def link = url + "/"
   """
-  curl -l ${params.url}
+  curl -l ${link}
   """
 }
 
