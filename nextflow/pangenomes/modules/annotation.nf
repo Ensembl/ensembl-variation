@@ -19,7 +19,7 @@ process create_latest_annotation {
     'GO,match=gene_symbol' :
     'Phenotypes,dir=.,include_types=Gene'
   """
-  vep --database --db_version ${version} \
+  ${params.vep} --database --db_version ${version} \
       --species $species \
       --user ${user} --host ${host} --port ${port} \
       --plugin ${plugin_opts} \

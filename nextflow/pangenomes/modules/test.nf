@@ -12,7 +12,7 @@ process test_annotation {
     shuf -n 100 | \\
     awk '{print \$1, \$4, \$4, "C/T", "+"}' > input.txt
   
-  vep -i input.txt \\
+  ${params.vep} -i input.txt \\
       -o vep.out \\
       --fasta ${fasta} --gtf ${gtf} \\
       --plugin ${plugin},file=${annotation}
