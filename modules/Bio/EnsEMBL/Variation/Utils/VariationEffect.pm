@@ -1212,7 +1212,6 @@ sub stop_lost {
     # use cache for this method as it gets called a lot
     my $cache = $bvfoa->{_predicate_cache} ||= {};
     
-    return 0 if stop_retained(@_);
     unless(exists($cache->{stop_lost})) {
         $cache->{stop_lost} = 0;
 
@@ -1268,6 +1267,7 @@ sub stop_retained {
     my $cache = $bvfoa->{_predicate_cache} ||= {};
 
     return 0 if partial_codon(@_);
+    return 0 if stop_lost(@_);
 
     unless(exists($cache->{stop_retained})) {
         $bvfo ||= $bvfoa->base_variation_feature_overlap;
@@ -1282,18 +1282,18 @@ sub stop_retained {
         my $pre = $bvfoa->_pre_consequence_predicates;
 
         my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
-  
 
         if(defined($alt_pep) && $alt_pep ne '') {
+         
           ## handle inframe insertion of a stop just before the stop (no ref peptide)
           $cache->{stop_retained} = ref_eq_alt_sequence(@_);
         }
         else {
             $cache->{stop_retained} = ($pre->{increase_length} || $pre->{decrease_length}) && _overlaps_stop_codon(@_) && !_ins_del_stop_altered(@_);
-            #print Dumper($cache->{stop_retained});
         }
 
     }
+    
     return $cache->{stop_retained};
 }
 
@@ -1315,9 +1315,8 @@ sub ref_eq_alt_sequence {
    # as there is no resulting change to the amino acid sequence, it is not stop_retained
    return 0 if $ref_pep ne "*" && $alt_pep ne "*" && $ref_pep eq $alt_pep;
 
-
    # this is a logic from the former logic 
-   return 1 if  $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele') && defined($ref_seq) && $tl_start > length($ref_seq);
+   return 1 if  $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele') && defined($ref_seq) && $tl_start > length($ref_seq) && $alt_pep =~/^\*/;
 
    substr($mut_seq, $tl_start-1, $tl_end - $tl_start + 1) = $alt_pep; # creating a mutated sequence from the ref sequence. 
 
@@ -1327,7 +1326,10 @@ sub ref_eq_alt_sequence {
    
    my $final_stop_length = length($final_stop) if defined($final_stop) ne '';
 
-   return 1 if $ref_seq eq $mut_substring && defined($final_stop_length) && $final_stop_length < 3;  
+   my $string_check = 1 if ($ref_pep eq '*' && substr($alt_pep, 0, 1) ne '*'); #if the $ref_pep is * and the $alt_pep is C*G as in ENST00000360027.4:c.377_378insCTGAGG, it is not a stop retained
+   
+
+   return 1 if $ref_seq eq $mut_substring && defined($final_stop_length) && $final_stop_length < 3 && !$string_check;  
    return 0;
 }
 
