@@ -39,6 +39,9 @@ process download_pangenomes_data {
   """
   wget -A "*genes.gtf.gz" --no-parent -r -nd ${link}
   wget -A "*unmasked.fa.gz" --no-parent -r -nd ${link}
+
+  # remove older GTF files (based on alphabetical listing)
+  ls *.gtf.gz | head -n -1 | xargs -r rm --
   """
 }
 
