@@ -27,6 +27,7 @@ process list_assemblies {
 
 process download_pangenomes_data {
   // Download pangenomes data
+  tag "${assembly}"
 
   input:
     val url

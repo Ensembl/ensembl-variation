@@ -42,6 +42,7 @@ process filter_Phenotypes_gene_annotation {
 
 process create_pangenomes_annotation {
   container 'docker://biocontainers/pandas:1.5.1_cv1'
+  tag "${gtf.baseName}"
 
   input:
     val plugin
@@ -62,6 +63,7 @@ process create_pangenomes_annotation {
 }
 
 process tabix_plugin_annotation {
+  tag "${annotation.baseName}"
   publishDir "${params.outdir}", mode: 'copy', pattern: '*plugin*.gz*'
 
   input:
