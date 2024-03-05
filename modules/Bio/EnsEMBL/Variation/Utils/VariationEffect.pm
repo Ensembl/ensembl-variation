@@ -1316,7 +1316,7 @@ sub ref_eq_alt_sequence {
    return 0 if $ref_pep ne "*" && $alt_pep ne "*" && $ref_pep eq $alt_pep;
 
    # this is a logic from the former logic 
-   return 1 if  $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele') && defined($ref_seq) && $tl_start > length($ref_seq) && $alt_pep =~/^\*/;
+   return 1 if  $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele') && defined($ref_seq) && $tl_start > length($ref_seq) && $alt_pep =~ /^\*/;
 
    substr($mut_seq, $tl_start-1, $tl_end - $tl_start + 1) = $alt_pep; # creating a mutated sequence from the ref sequence. 
 
@@ -1325,11 +1325,10 @@ sub ref_eq_alt_sequence {
    my $final_stop = substr($mut_seq, length($ref_seq)) if length($ref_seq) < length($mut_seq); # getting the length of the $mut_seq from the length of the ref_seq to the end 
    
    my $final_stop_length = length($final_stop) if defined($final_stop) ne '';
-
-   my $string_check = 1 if ($ref_pep eq '*' && substr($alt_pep, 0, 1) ne '*'); #if the $ref_pep is * and the $alt_pep is C*G as in ENST00000360027.4:c.377_378insCTGAGG, it is not a stop retained
    
+   return 0 if $ref_pep eq substr($alt_pep, 0, 1) && $alt_pep !~ /\*/; # adding one more check because X is usually a representation of when stop is lost, so for example P/PX is not a stop retained variant
 
-   return 1 if $ref_seq eq $mut_substring && defined($final_stop_length) && $final_stop_length < 3 && !$string_check;  
+   return 1 if $ref_seq eq $mut_substring && defined($final_stop_length) && $final_stop_length < 3 ;
    return 0;
 }
 
