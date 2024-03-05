@@ -4,6 +4,7 @@ nextflow.enable.dsl=2
 params.url     = 'ftp://ftp.ensembl.org/pub/rapid-release/species/Homo_sapiens/'
 params.outdir  = 'outdir'
 params.sw      = "${ENSEMBL_ROOT_DIR}"
+params.vep     = "${params.sw}/ensembl-vep/vep"
 
 params.version = null
 params.species = "homo_sapiens"
@@ -12,7 +13,8 @@ params.user    = null
 params.host    = null
 params.port    = null
 
-log.info "\nPipeline parameters:"
+log.info "\nCreate GO and Phenotype annotations for pangenomes"
+log.info "=================================================="
 for (a in params) {
   // print param
   log.info "  ${a.getKey().padRight(8)} : ${a.getValue()}"
