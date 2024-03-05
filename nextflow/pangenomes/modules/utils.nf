@@ -1,4 +1,6 @@
 process decompress_fasta {
+  tag "${fasta.baseName}"
+
   input:
     tuple path(gtf), path(fasta), path(annotation), path(annotation_tbi)
   output:
@@ -10,6 +12,8 @@ process decompress_fasta {
 }
 
 process tabix_gtf {
+  tag "${gtf.baseName}"
+
   input:
     tuple path(gtf), path(fasta), path(annotation), path(annotation_tbi)
   output:

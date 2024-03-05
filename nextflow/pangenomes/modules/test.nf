@@ -1,5 +1,7 @@
 process test_annotation {
   // Test annotation using the proper GTF and FASTA for the assembly
+  tag "${annotation.baseName}"
+
   input:
     val plugin
     tuple path(gtf), path(gtf_tbi), path(fasta), path(annotation), path(annotation_tbi)
