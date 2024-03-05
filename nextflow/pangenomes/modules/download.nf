@@ -33,7 +33,7 @@ process download_pangenomes_data {
     tuple path('*.gtf.gz'), path('*.fa.gz')
 
   script:
-    def link = url + assembly + "/"
+    def link = url + "/" + assembly + "/"
   """
   wget -A "*genes.gtf.gz" --no-parent -r -nd ${link}
   wget -A "*unmasked.fa.gz" --no-parent -r -nd ${link}
