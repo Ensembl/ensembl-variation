@@ -1326,7 +1326,7 @@ sub ref_eq_alt_sequence {
    
    my $final_stop_length = length($final_stop) if defined($final_stop) ne '';
    
-   return 0 if $ref_pep eq substr($alt_pep, 0, 1) && $alt_pep !~ /\*/; # adding one more check because X is usually a representation of when stop is lost, so for example P/PX is not a stop retained variant
+   return 0 if $ref_pep ne substr($alt_pep, 0, 1) && $alt_pep !~ /\*/; # adding one more check because X is usually a representation of when stop is lost, so for example P/PX is not a stop retained variant
 
    return 1 if $ref_seq eq $mut_substring && defined($final_stop_length) && $final_stop_length < 3 ;
    return 0;
