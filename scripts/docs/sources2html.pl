@@ -1329,7 +1329,7 @@ sub get_vcf_content_types {
   push @types, "genotype" if $genotypes;
   
   my $chr = `tabix $file_full_path -l | head -n 1`;
-  chomp $chr;
+  $chr = s/\R//g;
   my $line = `tabix $file_full_path $chr | head -n 1`;
 
   # check in a actual line for FORMAT field if not exist in header
