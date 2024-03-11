@@ -217,12 +217,12 @@ sub default_options {
         dbnsfp_max_workers      => 50,
         dbnsfp_working          => $self->o('species_dir').'/dbnsfp_working',
         dbnsfp_annotation       => { GRCh37 =>
-                                      { file => $self->o('variation_data') . '/dbNSFP/4.6c/dbNSFP4.6c_grch37.gz',
-                                        version => '4.6c',
+                                      { file => $self->o('variation_data') . '/dbNSFP/4.7c/dbNSFP4.7c_grch37.gz',
+                                        version => '4.7c',
                                       },
                                      GRCh38 =>
-                                      { file => $self->o('variation_data') . '/dbNSFP/4.6c/dbNSFP4.6c_grch38.gz',
-                                        version => '4.6c',
+                                      { file => $self->o('variation_data') . '/dbNSFP/4.7c/dbNSFP4.7c_grch38.gz',
+                                        version => '4.7c',
                                       } 
                                     },
         cadd_run_type         => NONE,
