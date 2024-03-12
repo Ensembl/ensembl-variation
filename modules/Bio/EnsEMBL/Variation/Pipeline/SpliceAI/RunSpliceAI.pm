@@ -68,7 +68,10 @@ sub run_spliceai {
     die("Directory ($output_vcf_files_dir) doesn't exist");
   }
 
-  my $cmd = "spliceai -I $vcf_input_dir_chr/$vcf_file -O $output_vcf_files_dir/$vcf_file -R $fasta_file -A $gene_annotation";
+  my $tmp_dir = $main_dir . "/tmp";
+  $self->run_system_command("mkdir $tmp_dir");
+
+  my $cmd = "spliceai -I $vcf_input_dir_chr/$vcf_file -O $output_vcf_files_dir/$vcf_file -R $fasta_file -A $gene_annotation -B 4096 -T 256 -t $tmp_dir";
 
   # Add option to calculate masked scores
   if($masked_scores) {
