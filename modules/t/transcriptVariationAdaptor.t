@@ -24,7 +24,6 @@ use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Variation::Source;
 our $verbose = 0;
 
-
 my $omulti = Bio::EnsEMBL::Test::MultiTestDB->new('multi');
 my $odb = $omulti->get_DBAdaptor('ontology');
 Bio::EnsEMBL::Registry->add_db($omulti, 'ontology', $odb);
@@ -425,7 +424,7 @@ $tv->cdna_start(1000);
 $tv->transcript->{cdna_coding_start} = 234;
 
 ## Coordinate within HGVS matches cds_start as these values take mismatch into account 
-ok($tv->hgvs_transcript->{A} eq 'NM_001270408.1:c.1234N>A', 'Refseq HGVS mismatch calculated');
+ok($tv->hgvs_transcript->{A} eq 'NM_001270408.1:c.1234G>A', 'Refseq HGVS mismatch calculated');
 
 ## Misalignment offset calculated from transcript edits recognises insertion of 4BP
 my @attribs = @{$tr->get_all_Attributes()};
