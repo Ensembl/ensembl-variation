@@ -72,6 +72,7 @@ foreach (keys %INCOMPATIBLE) {
   }
 }
 
+my (%missing, %redundant);
 open my $IN, "<", $tmp_file or die "Could not open $tmp_file - $!";
 {
   local $/;
@@ -105,17 +106,27 @@ open my $IN, "<", $tmp_file or die "Could not open $tmp_file - $!";
           
           # missing incompatibilities
           for my $opt (@{ $incompatible_matric->{$option} }){
-            print "$option missing incompatibility: $opt\n" unless grep(/^$opt$/, @{ $incompatibilities });
+            $missing{$option} = $opt unless grep(/^$opt$/, @{ $incompatibilities });
           }
 
           # redundant incompatibilities
           for my $opt (@{ $incompatibilities }){
-            print "$option redundant incompatibility: $opt\n" unless grep(/^$opt$/, @{ $incompatible_matric->{$option} });
+            $redundant{$option} = $opt unless grep(/^$opt$/, @{ $incompatible_matric->{$option} });
           }
         }
       }
     }
   }
+}
+
+# print
+print "\nMissing options in \"Incompatible with\" column (probably update needed in public-plugins/info/docs/tools/vep/script/vep_options.html):\n";
+for (keys %missing){
+  print $_, " missing ", $missing{$_}, "\n";
+}
+print "\nRedundant options in \"Incompatible with\" column (probably update needed in Bio::EnsEMBL::VEP::Config::INCOMPATIBLE):\n";
+for (keys %redundant){
+  print $_, " have redundant ", $redundant{$_}, "\n";
 }
 
 sub usage {
