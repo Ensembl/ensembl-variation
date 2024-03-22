@@ -161,14 +161,14 @@ my $sr_start = $vf->seq_region_start;
 
 is_deeply(
   $vf->to_VCF_record(),
-  [$chr, $sr_start, $vname, 'A', 'T', '.', '.', '.'],
+  [$chr, $sr_start, $vname, 'A', 'T', '.', '.', "END=$end"],
   'to_VCF_record'
 );
 
 $vf->strand(-1);
 is_deeply(
   $vf->to_VCF_record(),
-  [$chr, $sr_start, $vname, 'T', 'A', '.', '.', '.'],
+  [$chr, $sr_start, $vname, 'T', 'A', '.', '.', "END=$end"],
   'to_VCF_record - rev strand'
 );
 $vf->strand($strand);
@@ -176,35 +176,35 @@ $vf->strand($strand);
 $vf->allele_string('A/G/T');
 is_deeply(
   $vf->to_VCF_record(),
-  [$chr, $sr_start, $vname, 'A', 'G,T', '.', '.', '.'],
+  [$chr, $sr_start, $vname, 'A', 'G,T', '.', '.', "END=$end"],
   'to_VCF_record - multiple alts'
 );
 
 $vf->allele_string('AG/CT');
 is_deeply(
   $vf->to_VCF_record(),
-  [$chr, $sr_start, $vname, 'AG', 'CT', '.', '.', '.'],
+  [$chr, $sr_start, $vname, 'AG', 'CT', '.', '.', "END=$end"],
   'to_VCF_record - balanced non-SNP'
 );
 
 $vf->allele_string('A/-');
 is_deeply(
   $vf->to_VCF_record(),
-  [$chr, $sr_start - 1, $vname, 'NA', 'N', '.', '.', '.'],
+  [$chr, $sr_start - 1, $vname, 'NA', 'N', '.', '.', "END=$end"],
   'to_VCF_record - deletion'
 );
 
 $vf->allele_string('-/A');
 is_deeply(
   $vf->to_VCF_record(),
-  [$chr, $sr_start - 1, $vname, 'N', 'NA', '.', '.', '.'],
+  [$chr, $sr_start - 1, $vname, 'N', 'NA', '.', '.', "END=$end"],
   'to_VCF_record - insertion'
 );
 
 $vf->allele_string('A/-/G');
 is_deeply(
   $vf->to_VCF_record(),
-  [$chr, $sr_start - 1, $vname, 'NA', 'N,NG', '.', '.', '.'],
+  [$chr, $sr_start - 1, $vname, 'NA', 'N,NG', '.', '.', "END=$end"],
   'to_VCF_record - mixed'
 );
 
@@ -213,21 +213,21 @@ $vf->allele_string('HGMD_MUTATION');
 $vf->{class_SO_term} = 'SNV';
 is_deeply(
   $vf->to_VCF_record(),
-  [$chr, $sr_start, $vname, 'N', 'N', '.', '.', '.'],
+  [$chr, $sr_start, $vname, 'N', 'N', '.', '.', "END=$end"],
   'to_VCF_record - unknown alleles SNV'
 );
 
 $vf->{class_SO_term} = 'insertion';
 is_deeply(
   $vf->to_VCF_record(),
-  [$chr, $sr_start - 1, $vname, 'N', '<INS>', '.', '.', '.'],
+  [$chr, $sr_start - 1, $vname, 'N', '<INS>', '.', '.', "END=$end"],
   'to_VCF_record - unknown alleles insertion'
 );
 
 $vf->{class_SO_term} = 'deletion';
 is_deeply(
   $vf->to_VCF_record(),
-  [$chr, $sr_start - 1, $vname, 'NN', 'N', '.', '.', '.'],
+  [$chr, $sr_start - 1, $vname, 'NN', 'N', '.', '.', "END=$end"],
   'to_VCF_record - unknown alleles deletion'
 );
 
@@ -242,14 +242,14 @@ my $fully_justified_allele_str = 'ACGTGGACG/ACG/ACGTGGACGTGGACG';
 $vf->allele_string($fully_justified_allele_str);
 is_deeply(
   $vf->to_VCF_record(),
-  [$chr, $sr_start, $vname, 'ACGTGGA', 'A,ACGTGGACGTGGA', '.', '.', '.'],
+  [$chr, $sr_start, $vname, 'ACGTGGA', 'A,ACGTGGACGTGGA', '.', '.', "END=$end"],
   'to_VCF_record - fully justified allele string clipped'
 );
 
 
 is_deeply(
   $vf->to_VCF_record(1),
-  [$chr, $sr_start, $vname, 'ACGTGGACG', 'ACG,ACGTGGACGTGGACG', '.', '.', '.'],
+  [$chr, $sr_start, $vname, 'ACGTGGACG', 'ACG,ACGTGGACGTGGACG', '.', '.', "END=$end"],
   'to_VCF_record - fully justified allele string  not clipped'
 );
 
