@@ -86,6 +86,7 @@ use Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor;
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(unambiguity_code SO_variation_class);
+use Bio::EnsEMBL::Variation::Utils::Config qw(%SV_SO_TERMS);
 use Bio::EnsEMBL::Variation::Utils::EnsEMBL2GFF3;
 use Bio::EnsEMBL::Variation::StructuralVariationFeature;
 use Bio::EnsEMBL::Variation::DBSQL::StructuralVariationFeatureAdaptor;
@@ -478,12 +479,7 @@ sub parse_ensembl {
         my $so_term;
 
         # convert to SO term
-        my %terms = (
-            INS  => 'insertion',
-            DEL  => 'deletion',
-            TDUP => 'tandem_duplication',
-            DUP  => 'duplication'
-        );
+        my %terms = %SV_SO_TERMS;
 
         $so_term = defined $terms{$allele_string} ? $terms{$allele_string} : $allele_string;
 
@@ -631,12 +627,7 @@ sub parse_vcf {
 
         if(defined($type)) {
             # convert to SO term
-            my %terms = (
-                INS  => 'insertion',
-                DEL  => 'deletion',
-                TDUP => 'tandem_duplication',
-                DUP  => 'duplication'
-            );
+            my %terms = %SV_SO_TERMS;
 
             $so_term = defined $terms{$type} ? $terms{$type} : $type;
         }
@@ -933,12 +924,7 @@ sub convert_to_vcf {
     else {
 
         # convert to SO term
-        my %terms = (
-            'insertion' => 'INS',
-            'deletion' => 'DEL',
-            'tandem_duplication' => 'TDUP',
-            'duplication' => 'DUP'
-        );
+        my %terms = reverse %SV_SO_TERMS;
 
         my $alt = '<'.($terms{$vf->class_SO_term} || $vf->class_SO_term).'>';
 
