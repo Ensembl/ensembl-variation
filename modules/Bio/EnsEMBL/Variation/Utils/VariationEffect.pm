@@ -1313,10 +1313,10 @@ sub ref_eq_alt_sequence {
 
    # this is to account for synonymous variant if $ref_pep eq $alt_pep 
    # as there is no resulting change to the amino acid sequence, it is not stop_retained
-   return 0 if $ref_pep ne "*" && $alt_pep ne "*" && $ref_pep eq $alt_pep;
+   #return 0 if $ref_pep ne "*" && $alt_pep ne "*" && $ref_pep eq $alt_pep;
 
    # this is a logic from the former logic 
-   return 1 if  $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele') && defined($ref_seq) && $tl_start > length($ref_seq) && $alt_pep =~ /^\*/;
+   return 1 if ($bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele') && defined($ref_seq) && $tl_start > length($ref_seq) && $alt_pep =~ /^\*/);
 
    substr($mut_seq, $tl_start-1, $tl_end - $tl_start + 1) = $alt_pep; # creating a mutated sequence from the ref sequence. 
 
@@ -1326,9 +1326,11 @@ sub ref_eq_alt_sequence {
    
    my $final_stop_length = length($final_stop) if defined($final_stop) ne '';
    
-   return 0 if $ref_pep ne substr($alt_pep, 0, 1) && $alt_pep !~ /\*/; # adding one more check because X is usually a representation of when stop is lost, so for example P/PX is not a stop retained variant
-
-   return 1 if $ref_seq eq $mut_substring && defined($final_stop_length) && $final_stop_length < 3 ;
+   # 1 is if the ref_pep and the first letter of the alt_pep is the same and the alt_pep has * in it 
+   # 2 is the ref_seq eq $mut_substring and the final stop length is less than 3
+   # 3 is * in ref_pep and the same index position exists for both the ref and alt pep
+   return 1 if ( ($ref_pep eq substr($alt_pep, 0, 1) && $alt_pep =~ /\*/) ||
+       ($ref_seq eq $mut_substring && defined($final_stop_length) && $final_stop_length < 3) || ( $ref_pep =~ /\*/ && (index($ref_pep, "*") + 1 == index($alt_pep, "*") + 1) ));
    return 0;
 }
 
