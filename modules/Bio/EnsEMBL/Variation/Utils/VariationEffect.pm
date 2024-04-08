@@ -1467,9 +1467,7 @@ sub partial_codon {
         $cache->{_partial_codon} = 0;
 
         $bvfo ||= $bvfoa->base_variation_feature_overlap;
-
-        my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
-        
+   
         return 0 unless defined $bvfo->translation_start;
 
         my $cds_length = length $bvfo->_translateable_seq;
