@@ -1121,6 +1121,31 @@ sub class_SO_term {
     return $self->{class_SO_term};
 }
 
+=head2 var_allele_class
+
+    Args[1]     : allele
+    Example     : my $variation_allele_class = $vf->var_allele_class('AA/A');
+    Description : returns the Ensembl term for the class of this variation allele
+    ReturnType  : String
+    Exceptions  : throws if we can't find a corresponding display term for an SO term
+    Caller      : General
+    Status      : Stable
+
+=cut
+
+sub var_allele_class {
+    my $self    = shift;
+    my $allele  = shift;
+
+    my $so_term = SO_variation_class($allele);
+
+    # convert the SO term to the ensembl display term
+    my $class = $self->is_somatic ?
+        $VARIATION_CLASSES{$so_term}->{somatic_display_term} :
+        $VARIATION_CLASSES{$so_term}->{display_term};
+    return $class;
+}
+
 =head2 get_all_evidence_values
 
   Arg [1]     : none
@@ -1934,7 +1959,7 @@ sub hgvs_genomic {
     ### Apply HGVS 3' shift if required
     my $offset = 0;
     my $lookup_order = 1;
-    my $var_class  =  $self->var_class();
+    my $var_class  =  $self->var_allele_class($ref_allele . "/" . $allele);
     $var_class  =~ s/somatic_//;
 
     ##  only check insertions & deletions & don't move beyond transcript
@@ -1986,7 +2011,21 @@ sub hgvs_genomic {
     next if (!defined($hgvs_notation));
 
     ## alleles may need trimming if the type is reported as a delins
-    $hgvs_notation = _clip_alleles($hgvs_notation) if( $hgvs_notation->{type} eq 'delins');
+    if( $hgvs_notation->{type} eq 'delins') {
+      $hgvs_notation = _clip_alleles($hgvs_notation);
+
+      # check if trimmed indel is actually insertion or deletion
+      $hgvs_notation = hgvs_variant_notation(
+        $hgvs_notation->{'alt'},
+        $hgvs_notation->{'ref'},
+        1,
+        length($hgvs_notation->{'ref'}),
+        $hgvs_notation->{'start'},
+        $hgvs_notation->{'end'},
+        $self->variation_name(), ## for error message
+        $lookup_order
+      );
+    }
 
     # Add the name of the reference
     $hgvs_notation->{'ref_name'} = $reference_name;
