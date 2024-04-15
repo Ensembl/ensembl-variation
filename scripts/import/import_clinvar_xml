@@ -1380,9 +1380,6 @@ sub enter_var{
 
   $var_feat_adaptor->store($vf);
 
-use Data::Dumper;
-print Dumper($vf);
-
 if($insert_tv) {
     my $count_tv = 0;
     my $all_tv = $vf->get_all_TranscriptVariations();
