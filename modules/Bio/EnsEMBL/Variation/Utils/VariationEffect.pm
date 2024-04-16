@@ -178,7 +178,7 @@ sub complete_overlap_feature {
 }
 
 sub _supporting_cnv_terms {
-  # if variant is CNV, return class SO terms for its supporting variants
+  #if variant is CNV, return class SO terms for its supporting variants
   my $bvf = shift;
 
   return if $bvf->class_SO_term(undef, 1) ne "copy_number_variation";
@@ -1078,8 +1078,10 @@ sub missense_variant {
     return 0 if stop_lost(@_);
     return 0 if stop_gained(@_);
     return 0 if partial_codon(@_);
+    return 0 if stop_retained(@_); # added because a variant can not be stop_retained and misense 
     
-    return ( $ref_pep ne $alt_pep ) && ( length($ref_pep) == length($alt_pep) );
+    # also need to check that the translated sequence is not the same i think . 
+    return ( $ref_pep ne $alt_pep ) && ( length($ref_pep) == length($alt_pep)  );
 }
 
 sub inframe_insertion {
@@ -1152,7 +1154,7 @@ sub inframe_deletion {
         return 0 if partial_codon(@_);
 
         my ($ref_codon, $alt_codon) = _get_codon_alleles(@_);
-        
+        my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
         return 0 unless defined $ref_codon;
         return 0 unless length($alt_codon) < length ($ref_codon);
         
@@ -1217,7 +1219,7 @@ sub stop_lost {
 
     # use cache for this method as it gets called a lot
     my $cache = $bvfoa->{_predicate_cache} ||= {};
-
+    
     unless(exists($cache->{stop_lost})) {
         $cache->{stop_lost} = 0;
 
@@ -1235,7 +1237,6 @@ sub stop_lost {
     #        }
             
             my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
-
             if(defined($ref_pep) && defined($alt_pep)) {
                 $cache->{stop_lost} = ( ($alt_pep !~ /\*/) and ($ref_pep =~ /\*/) );
             }
@@ -1273,6 +1274,9 @@ sub stop_retained {
     # use cache for this method as it gets called a lot
     my $cache = $bvfoa->{_predicate_cache} ||= {};
 
+    return 0 if partial_codon(@_);
+    return 0 if stop_lost(@_);
+
     unless(exists($cache->{stop_retained})) {
         $bvfo ||= $bvfoa->base_variation_feature_overlap;
         $bvf  ||= $bvfo->base_variation_feature;
@@ -1288,28 +1292,54 @@ sub stop_retained {
         my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
 
         if(defined($alt_pep) && $alt_pep ne '') {
-            return 0 unless $alt_pep =~/^\*/; 
-
-            ## handle inframe insertion of a stop just before the stop (no ref peptide)
-            if(
-              $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele') &&
-              $bvfo->_peptide &&
-              $bvfo->translation_start() > length($bvfo->_peptide)
-            ) {
-              $cache->{stop_retained} = 1;
-            }
-            else {
-                return 0 unless $ref_pep;
-
-                $cache->{stop_retained} = ( $alt_pep =~ /^\*/ && $ref_pep =~ /^\*/ );
-            }
+         
+          ## handle inframe insertion of a stop just before the stop (no ref peptide)
+          $cache->{stop_retained} = ref_eq_alt_sequence(@_);
         }
         else {
             $cache->{stop_retained} = ($pre->{increase_length} || $pre->{decrease_length}) && _overlaps_stop_codon(@_) && !_ins_del_stop_altered(@_);
         }
-    }
 
+    }
+    
     return $cache->{stop_retained};
+}
+
+sub ref_eq_alt_sequence {
+   my ($bvfoa, $feat, $bvfo, $bvf) = @_; 
+   
+   $bvfo ||= $bvfoa->base_variation_feature_overlap;
+   my $ref_seq = $bvfo->_peptide;
+
+   my $mut_seq = $ref_seq;
+   my $tl_start = $bvfo->translation_start;
+   my $tl_end = $bvfo->translation_end;
+   
+   my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
+
+   return 0 if $ref_pep eq "X" && $alt_pep eq "X"; # this is to account for incomplete coding terminal;
+
+   # this is to account for synonymous variant if $ref_pep eq $alt_pep 
+   # as there is no resulting change to the amino acid sequence, it is not stop_retained
+   #return 0 if $ref_pep ne "*" && $alt_pep ne "*" && $ref_pep eq $alt_pep;
+
+   # this is a logic from the former logic 
+   return 1 if ($bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele') && defined($ref_seq) && $tl_start > length($ref_seq) && $alt_pep =~ /^\*/);
+
+   substr($mut_seq, $tl_start-1, $tl_end - $tl_start + 1) = $alt_pep; # creating a mutated sequence from the ref sequence. 
+
+   my $mut_substring = substr($mut_seq, 0, length($ref_seq)); # getting a substring up to the length of the ref sequence for comparison from index 0 to the length of the ref seq;
+   
+   my $final_stop = substr($mut_seq, length($ref_seq)) if length($ref_seq) < length($mut_seq); # getting the length of the $mut_seq from the length of the ref_seq to the end 
+   
+   my $final_stop_length = length($final_stop) if defined($final_stop) ne '';
+   
+   # 1 is if the ref_pep and the first letter of the alt_pep is the same and the alt_pep has * in it 
+   # 2 is the ref_seq eq $mut_substring and the final stop length is less than 3
+   # 3 is * in ref_pep and the same index position exists for both the ref and alt pep
+   return 1 if ( ($ref_pep eq substr($alt_pep, 0, 1) && $alt_pep =~ /\*/) ||
+       ($ref_seq eq $mut_substring && defined($final_stop_length) && $final_stop_length < 3) || ( $ref_pep =~ /\*/ && (index($ref_pep, "*") + 1 == index($alt_pep, "*") + 1) ));
+   return 0;
 }
 
 sub _overlaps_stop_codon {
@@ -1383,7 +1413,6 @@ sub _ins_del_stop_altered {
         )->translate(
             undef, undef, undef, $bvfo->_codon_table
         )->seq;
-
         $cache->{ins_del_stop_altered} = !($pep && $pep eq '*');
     }
 
@@ -1398,6 +1427,7 @@ sub frameshift {
     if($bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele')) {
 
         return 0 if partial_codon(@_);
+        return 0 if stop_retained(@_);
     
         return 0 unless defined $bvfo->cds_start && defined $bvfo->cds_end;
         
@@ -1445,10 +1475,11 @@ sub partial_codon {
         $cache->{_partial_codon} = 0;
 
         $bvfo ||= $bvfoa->base_variation_feature_overlap;
-        
+   
         return 0 unless defined $bvfo->translation_start;
 
         my $cds_length = length $bvfo->_translateable_seq;
+
 
         my $codon_cds_start = ($bvfo->translation_start * 3) - 2;
 
