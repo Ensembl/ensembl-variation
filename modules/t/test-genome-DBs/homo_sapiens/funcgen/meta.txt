@@ -335,3 +335,5 @@
 775	\N	patch	patch_109_110_a.sql|schema_version
 776	\N	patch	patch_110_111_a.sql|schema_version
 777	\N	patch	patch_111_112_a.sql|schema_version
+778	\N	patch	patch_111_112_b.sql|fix data_file_id length
+779	\N	patch	patch_111_112_c.sql|set data_file_id to not null auto increment

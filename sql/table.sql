@@ -1824,7 +1824,7 @@ CREATE TABLE meta (
 
   meta_id 		INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
   species_id  INT UNSIGNED DEFAULT 1,
-  meta_key    VARCHAR( 40 ) NOT NULL,
+  meta_key    VARCHAR( 64 ) NOT NULL,
   meta_value  VARCHAR( 255 ) NOT NULL,
 
   PRIMARY KEY ( meta_id ),
@@ -1835,11 +1835,12 @@ CREATE TABLE meta (
 
 
 # Add schema type and schema version to the meta table.
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type', 'variation'), (NULL, 'schema_version', '112');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type', 'variation'), (NULL, 'schema_version', '113');
 
 
 # Patch IDs for new release
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_111_112_a.sql|schema version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_112_113_a.sql|schema version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_112_113_b.sql|Update meta_key length');
 
 /**
 @header  Failed tables
