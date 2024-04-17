@@ -44,8 +44,6 @@ use Digest::MD5 qw(md5_hex);
 
 use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 
-my $DEBUG   = 0;
-
 sub run {
   my $self = shift;
 

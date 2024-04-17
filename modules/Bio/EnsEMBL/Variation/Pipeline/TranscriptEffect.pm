@@ -106,6 +106,7 @@ sub run {
     my $ta = $core_dba->get_TranscriptAdaptor;
     my $transcript = $ta->fetch_by_stable_id($transcript_stable_id) 
       or die "failed to fetch transcript for stable id: $transcript_stable_id";
+
     $slice = $sa->fetch_by_transcript_stable_id(
       $transcript_stable_id, 
       $max_distance
@@ -114,7 +115,9 @@ sub run {
     $slice->seq();
     $transcript = $transcript->transfer($slice);
     push @transcripts, $transcript;
-  } else {
+  } 
+  
+  else {
     my $gene_stable_id =  $self->param('gene_stable_id');
     $stable_id = $gene_stable_id;
     my $ga = $core_dba->get_GeneAdaptor;
@@ -153,12 +156,16 @@ sub run {
   );
 
   for my $transcript (@transcripts) {
-    
+
     my $biotype = $transcript->biotype;
     my $is_mane = $transcript->is_mane(); # grch38
     my $is_canonical = $transcript->is_canonical(); # grch37
     my $stable_id = $transcript->stable_id;
     my @vf_ids;
+
+    #Skip transcript if running in gc primary mode and transcript isn't part of that set.
+    next if ($self->param('gencode_primary') and !$transcript->gencode_primary);
+
 
     for my $vf(@vfs) {
 

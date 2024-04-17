@@ -68,6 +68,7 @@ sub run {
   my @transcript_ids_fan = (); # e-hive speak: fan transcript_ids (run for each transcript_id in parallel) 
 
   for my $transcript (@{ $gene->get_all_Transcripts }) { 
+    next if ($self->param('gencode_primary') and !$transcript->gencode_primary);
     push @transcript_ids_fan, {
       transcript_stable_id => $transcript->stable_id,
       max_distance => $max_distance,
