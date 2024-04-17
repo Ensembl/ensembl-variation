@@ -1476,13 +1476,11 @@ sub format_coords {
       $vf_start = $vf_end + 1;
     }
   } elsif ($allele_str eq '-/' && $data->{hgvs_g} =~ /g\.\d+dup/){ #new style formated "g.123dup"
-    print "-> 127dup\n";
     my $ref_slice = $slice_adaptor->fetch_by_region( 'chromosome', $data->{Chr}, $data->{end}, $data->{end});
     my $ref_seq = $ref_slice->seq();
     $allele_str = "-/".$ref_seq;
     $vf_start= $vf_end + 1;
   } elsif ($allele_str eq '-/' && $data->{hgvs_g} =~ /g\.\d+\_\d+dup/){ #new style formated "g.123_126dup"
-    print "-> 123_127dup\n";
     my $ref_slice = $slice_adaptor->fetch_by_region( 'chromosome', $data->{Chr}, $data->{start}, $data->{end});
     my $ref_seq = $ref_slice->seq();
     $allele_str = "-/".$ref_seq;
