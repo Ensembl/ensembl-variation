@@ -99,7 +99,7 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp expand);
-use Bio::EnsEMBL::Variation::Utils::Sequence qw(ambiguity_code hgvs_variant_notation SO_variation_class format_hgvs_string get_3prime_seq_offset trim_right);
+use Bio::EnsEMBL::Variation::Utils::Sequence qw(ambiguity_code hgvs_variant_notation SO_variation_class format_hgvs_string get_3prime_seq_offset trim_right trim_sequences);
 use Bio::EnsEMBL::Variation::Utils::Sequence;
 use Bio::EnsEMBL::Variation::Variation;
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(MAX_DISTANCE_FROM_TRANSCRIPT);
@@ -1929,7 +1929,9 @@ sub hgvs_genomic {
   my @all_alleles = split(/\//,$tr_vf->allele_string());
   my $ref_allele = shift @all_alleles;  ## remove reference allele - not useful for HGVS
 
-  foreach my $allele ( @all_alleles ) {
+  my $is_multi_allelic = scalar @all_alleles > 1;
+  foreach my $original_allele ( @all_alleles ) {
+    my $allele = $original_allele;
 
     ## If a particular allele was requested, ignore others
     next if  (defined($use_allele) && $allele ne $use_allele);
@@ -1959,7 +1961,14 @@ sub hgvs_genomic {
     ### Apply HGVS 3' shift if required
     my $offset = 0;
     my $lookup_order = 1;
-    my $var_class  =  $self->var_allele_class($ref_allele . "/" . $allele);
+
+    if ($is_multi_allelic) {
+      # fix for multi-allelic variants
+      ($ref_allele, $allele, $chr_start, $chr_end, my $change) = @{trim_sequences($ref_allele, $allele, $chr_start)};
+      $ref_start += $change;
+      $allele ||= '-';      
+    }
+    my $var_class  =  $self->var_allele_class($ref_allele . '/' . $allele);
     $var_class  =~ s/somatic_//;
 
     ##  only check insertions & deletions & don't move beyond transcript
@@ -2011,21 +2020,7 @@ sub hgvs_genomic {
     next if (!defined($hgvs_notation));
 
     ## alleles may need trimming if the type is reported as a delins
-    if( $hgvs_notation->{type} eq 'delins') {
-      $hgvs_notation = _clip_alleles($hgvs_notation);
-
-      # check if trimmed indel is actually insertion or deletion
-      $hgvs_notation = hgvs_variant_notation(
-        $hgvs_notation->{'alt'},
-        $hgvs_notation->{'ref'},
-        1,
-        length($hgvs_notation->{'ref'}),
-        $hgvs_notation->{'start'},
-        $hgvs_notation->{'end'},
-        $self->variation_name(), ## for error message
-        $lookup_order
-      );
-    }
+    $hgvs_notation = _clip_alleles($hgvs_notation) if $hgvs_notation->{type} eq 'delins';
 
     # Add the name of the reference
     $hgvs_notation->{'ref_name'} = $reference_name;
@@ -2035,7 +2030,7 @@ sub hgvs_genomic {
     # Construct the HGVS notation from the data in the hash
     $hgvs_notation->{'hgvs'} = format_hgvs_string( $hgvs_notation);
 
-    $hgvs{$allele} = $hgvs_notation->{'hgvs'};
+    $hgvs{$original_allele} = $hgvs_notation->{'hgvs'};
   }
   return \%hgvs;
 
