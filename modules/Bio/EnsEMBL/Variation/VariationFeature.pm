@@ -2343,6 +2343,8 @@ sub to_VCF_record {
     $non_acgt = 1 if $allele && $allele !~ /^[ACGTN\.]+$/;
   }
 
+  my $INFO = $self->end ? 'END='.$self->end : '.';
+
   # in/del/unbalanced
   if($non_acgt || scalar keys %allele_lengths > 1) {
 
@@ -2385,7 +2387,7 @@ sub to_VCF_record {
       $self->variation_name || '.',
       shift @alleles,
       (join ",", @alleles) || '.',
-      '.', '.', '.'
+      '.', '.', $INFO
     ];
 
   }
@@ -2398,7 +2400,7 @@ sub to_VCF_record {
       $self->variation_name || '.',
       shift @alleles,
       (join ",", @alleles) || '.',
-      '.', '.', '.'
+      '.', '.', $INFO
     ];
   }
 }
