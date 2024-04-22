@@ -834,13 +834,11 @@ sub codon {
       delete($tv->{_cds_coords});
     }
     my $cds;
-    if (abs($allele_len - $vf_nt_len) % 3) {
-      # this is a frameshift variation, we don't attempt to 
-      # calculate the resulting codon or peptide change as this 
-      # could get quite complicated 
-      # return undef;
-    }
 
+    # if (abs($allele_len - $vf_nt_len) % 3)
+    # This is frameshift variation
+    # The resulting codon/peptide changed needs to be calculated
+   
     ## Bioperl Seq object
     my $cds_obj = $self->_get_alternate_cds();
     return undef unless defined($cds_obj);
