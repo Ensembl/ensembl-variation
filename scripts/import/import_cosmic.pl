@@ -27,7 +27,7 @@ use Text::CSV;
 use IO::Handle;
 STDOUT->autoflush(1); # flush STDOUT buffer immediately
 
-my ( $infile, $registry_file, $version, $help, $chromosome, $cleanup );
+my ( $infile, $registry_file, $version, $help, $chromosome, $cleanup, $insert_tv );
 
 GetOptions(
   "import|i=s"   => \$infile,
@@ -36,6 +36,7 @@ GetOptions(
   "help|h"       => \$help,
   "chromosome=s" => \$chromosome,
   "cleanup|c"    => \$cleanup,
+  "insert_tv=s"  => \$insert_tv
 );
 
 if ($help) {
@@ -48,7 +49,10 @@ if ($help) {
       $0 --import <input_file> --registry <reg_file> --version <cosmic_version> --chromosome X
       $0 --import <input_file> --registry <reg_file> --version <cosmic_version> --chromosome MT
       # clean up data
-      $0 --registry <reg_file> --cleanup\n";
+      $0 --registry <reg_file> --cleanup
+      # to populate transcript_variation
+      $0 --registry <reg_file> --insert_tv 1
+      \n";
     exit(0);
 }
 
@@ -546,42 +550,45 @@ sub insert_cosmic_entries {
 
     $var_feat_adaptor->store($vf);
 
-    # Get all transcript variations to insert into transcript_variation table
-    my $count_tv = 0;
-    my $all_tv = $vf->get_all_TranscriptVariations();
-    foreach my $tv (@{$all_tv}) {
-      # Do not include upstream and downstream consequences
-      next unless overlap($vf->start, $vf->end, $tv->transcript->start - 0, $tv->transcript->end + 0);
-      
-      $count_tv += 1;
+    # Populate transcript_variation
+    if($insert_tv){
+      # Get all transcript variations to insert into transcript_variation table
+      my $count_tv = 0;
+      my $all_tv = $vf->get_all_TranscriptVariations();
+      foreach my $tv (@{$all_tv}) {
+        # Do not include upstream and downstream consequences
+        next unless overlap($vf->start, $vf->end, $tv->transcript->start - 0, $tv->transcript->end + 0);
 
-      # only include valid biotypes in MTMP_transcript_variation
-      my $write_biotype = $biotypes_to_skip{$tv->transcript->biotype} ? 0 : 1;
-      # write to MTMP table if transcript is MANE (GRCh38)
-      # add check if assembly is GRCh37
-      my $write_mane = $tv->transcript->is_mane ? 1 : 0;
-      my $mtmp = $write_mane && $write_biotype;
-      $tva->store($tv, $mtmp);
-    }
+        $count_tv += 1;
 
-    # Update consequence_types in variation_feature table
-    # get variation_feature_id
-    my $vf_dbid = $vf->dbID;
+        # only include valid biotypes in MTMP_transcript_variation
+        my $write_biotype = $biotypes_to_skip{$tv->transcript->biotype} ? 0 : 1;
+        # write to MTMP table if transcript is MANE (GRCh38)
+        # add check if assembly is GRCh37
+        my $write_mane = $tv->transcript->is_mane ? 1 : 0;
+        my $mtmp = $write_mane && $write_biotype;
+        $tva->store($tv, $mtmp);
+      }
 
-    # If variation_feature has no entry in transcript_variation then we need to set the consequence_types to default
-    if(!$count_tv) {
-      $vf_sth->execute('intergenic_variant', $vf->dbID) || die "Error updating consequence_types to default in table variation_feature\n";
-    }
+      # Update consequence_types in variation_feature table
+      # get variation_feature_id
+      my $vf_dbid = $vf->dbID;
 
-    # By default group_concat has maximum length 1024
-    # some variants have consequence_types longer than 1024
-    $sth_len->execute();
+      # If variation_feature has no entry in transcript_variation then we need to set the consequence_types to default
+      if(!$count_tv) {
+        $vf_sth->execute('intergenic_variant', $vf->dbID) || die "Error updating consequence_types to default in table variation_feature\n";
+      }
 
-    $tv_sth->execute($vf_dbid) || die "Error selecting consequence_types from transcript_variation\n";
-    my $data_tv = $tv_sth->fetchall_arrayref();
-    if (defined $data_tv->[0]->[0]) {
-      # warn "Inserting variation_feature: $data_tv->[0]->[0], $data_tv->[0]->[1]\n";
-      $vf_sth->execute($data_tv->[0]->[1], $data_tv->[0]->[0]) || die "Error updating consequence_types in table variation_feature\n";
+      # By default group_concat has maximum length 1024
+      # some variants have consequence_types longer than 1024
+      $sth_len->execute();
+
+      $tv_sth->execute($vf_dbid) || die "Error selecting consequence_types from transcript_variation\n";
+      my $data_tv = $tv_sth->fetchall_arrayref();
+      if (defined $data_tv->[0]->[0]) {
+        # warn "Inserting variation_feature: $data_tv->[0]->[0], $data_tv->[0]->[1]\n";
+        $vf_sth->execute($data_tv->[0]->[1], $data_tv->[0]->[0]) || die "Error updating consequence_types in table variation_feature\n";
+      }
     }
   }
 
