@@ -80,7 +80,6 @@ def load_scores (f):
       # get index to sort data (required to match scores with MaveDB mappings)
       row['index'] = int(row['accession'].split("#")[1])
       scores.append(row)
-  scores = sorted(scores, key=operator.itemgetter('index'))
   return scores
 
 chrom = None
@@ -116,7 +115,6 @@ def join_information (hgvs, mapped_info, row, extra):
 def match_information (hgvs, matches, row, extra):
   """Match a given HGVS to join variant and MaveDB score information"""
   out = []
-  
   if hgvs not in matches:
     warnings.warn(f"{hgvs} not found in HGVSp-variant matches")
     return out
@@ -138,19 +136,6 @@ def map_variant_to_MaveDB_scores (matches, mapped_info, row, extra):
     # HGVS protein matches
     return match_information(hgvs, matches, row, extra)
 
-def get_next_mapping(m, index):
-  """Get next mapping in list of mappings"""
-  if index >= len(m):
-    mapping = m[-1]
-
-  while index < len(m):
-    mapping = m[index]
-    if mapping['score'] is None:
-      index += 1
-    else:
-      break
-  return mapping, index
-
 def round_float_columns(row):
   """Round all values that are float"""
   if args.round is not None:
@@ -164,39 +149,48 @@ def round_float_columns(row):
         pass
   return row
 
-def map_scores_to_variants (scores, mappings, matches=None):
+def map_scores_to_variants (scores, mappings, map_ids, matches=None):
   """Map MaveDB scores to variants"""
 
-  if mappings['target'] is not None and mappings['target']['refseq'] is not None:
-    refseq = mappings['target']['refseq']['identifier']
+  refseq = None
+  if len(mappings['metadata']['targetGenes']) > 1:
+    raise Exception("multiple targets are not currently supported")
   else:
-    refseq = None
-  pubmed = ",".join([i['identifier'] for i in mappings['pubmed_ids']])
+    for item in mappings['metadata']['targetGenes'][0]['externalIdentifiers']:
+      if item['identifier']['dbName'] == 'RefSeq':
+        refseq = item['identifier']['identifier']
+
+  pubmed_list = []
+  for pub in mappings['metadata']['primaryPublicationIdentifiers']:
+    if pub['dbName'] == 'PubMed':
+      pubmed_list.append(pub['identifier'])
+  pubmed = ",".join(pubmed_list)
+
   extra = {
-    'urn'          : mappings['urn'],
-    'publish_date' : mappings['publish_date'],
+    'urn'          : mappings['metadata']['urn'],
+    'publish_date' : mappings['metadata']['experiment']['publishedDate'],
     'refseq'       : refseq,
     'pubmed'       : pubmed,
   }
 
   out = []
-  index = 0
   for row in scores:
     # Skip special HGVSp
-    if row['hgvs_pro'] in ('_sy', '_wt'):
+    if row['hgvs_pro'] in ('_sy', '_wt', 'p.=') or row['hgvs_nt'] in ('_sy', '_wt'):
       continue
 
     # Skip missing values
     if row['score'] == "NA" or row['score'] is None:
       continue
-    score = float(row['score'])
-
-    # Iterate over mappings to find next non-missing value
-    mapping, index = get_next_mapping(mappings['mapped_scores'], index)
-    score_mappings = float(mapping['score'])
 
     # Map available information
-    if isclose(score, score_mappings):
+    if row['accession'] in map_ids:
+      mapping = mappings['mapped_scores'][ map_ids.index(row['accession']) ]
+    else:
+      warnings.warn(row['accession'] + "not in mappings file")
+      continue
+
+    if row['accession'] == mapping['mavedb_id']:
       row = round_float_columns(row)
       mapped_info = mapping['post_mapped']
       if mapped_info['type'] == "Haplotype":
@@ -204,9 +198,8 @@ def map_scores_to_variants (scores, mappings, matches=None):
           out += map_variant_to_MaveDB_scores(matches, member, row, extra)
       else:
         out += map_variant_to_MaveDB_scores(matches, mapped_info, row, extra)
-      index += 1
     else:
-      warnings.warn("score mismatch for " + row['accession'] + "; " + row['hgvs_pro'])
+      warnings.warn("URN mismatch: trying to match " + row['accession'] + " from scores file with " + mapping['mavedb_id'] + " from mappings file")
       continue
   return out
 
@@ -238,6 +231,7 @@ if not os.path.isfile(scores_file):
 print("Loading MaveDB data...", flush=True)
 scores     = load_scores(scores_file)
 mappings   = json.load(open(args.mappings))
+mavedb_ids = [ i['mavedb_id'] for i in mappings['mapped_scores'] ]
 
 if args.vr is not None:
   hgvsp2vars = load_vr_output(args.vr)
@@ -246,8 +240,10 @@ else:
 
 # create output file with variant location and respective scores
 print("Preparing mappings between variants and MaveDB scores...", flush=True)
-map = map_scores_to_variants(scores, mappings, hgvsp2vars)
+map = map_scores_to_variants(scores, mappings, mavedb_ids, hgvsp2vars)
 write_variant_mapping(args.output, map)
 
 # clean up
-os.remove(scores_file)
+#os.remove(scores_file)
+
+print("Done: MaveDB score mapped to variants!", flush=True)
