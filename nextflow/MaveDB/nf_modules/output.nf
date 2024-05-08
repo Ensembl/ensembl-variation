@@ -4,6 +4,8 @@ process concatenate_files {
   input:  path(mapped_variants)
   output: path("combined.tsv")
 
+  memory '4GB'
+
   """
   #!/usr/bin/env python3
   import glob, pandas

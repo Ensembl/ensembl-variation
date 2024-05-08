@@ -5,6 +5,8 @@ process map_scores_to_HGVSp_variants {
   input:  tuple path(mappings), path(vr)
   output: tuple path(mappings), path('map_*.tsv')
 
+  memory { mappings.size() * 4.B + 1.GB }
+
   script:
   def urn   = mappings.simpleName
   def round = params.round ? "--round ${params.round}" : ""
@@ -23,6 +25,8 @@ process map_scores_to_HGVSg_variants {
   tag "${mappings.simpleName}"
   input:  path(mappings)
   output: tuple path(mappings), path('map_*.tsv')
+
+  memory { mappings.size() * 2.B + 1.GB }
 
   script:
   def urn   = mappings.simpleName
