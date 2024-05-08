@@ -13,7 +13,8 @@ process run_variant_recoder {
 
   script:
   def bin = "${params.ensembl}/ensembl-vep"
+  def reg = params.registry ? "--registry ${params.registry}" : ""
   """
-  perl ${bin}/variant_recoder -i $hgvs --vcf_string > vr.json
+  perl ${bin}/variant_recoder -i $hgvs --vcf_string $reg > vr.json
   """
 }
