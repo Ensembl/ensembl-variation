@@ -842,27 +842,15 @@ sub codon {
       delete($tv->{_cds_coords});
     }
     my $cds;
-    if ($allele_len != $vf_nt_len) {
-      # sequence does not involve a non-CDS (eg: intron) sequence
-      if (abs($allele_len - $vf_nt_len) % 3) {
-        # this is a frameshift variation, we don't attempt to 
-        # calculate the resulting codon or peptide change as this 
-        # could get quite complicated 
-        # return undef;
-      }
 
-      ## Bioperl Seq object
-      my $cds_obj = $self->_get_alternate_cds();
-      return undef unless defined($cds_obj);
-      $cds = ( $self->{is_reference} ? $tv->_translateable_seq() : $cds_obj->seq() );
-    }
-
-    else {
-      # splice the allele sequence into the CDS
-      $cds = $tv->_translateable_seq;
-
-      substr($cds, $tv->cds_start(undef, $tr->strand * $shifting_offset) -1, $vf_nt_len) = $seq;
-    }
+    # if (abs($allele_len - $vf_nt_len) % 3)
+    # This is frameshift variation
+    # The resulting codon/peptide changed needs to be calculated
+   
+    ## Bioperl Seq object
+    my $cds_obj = $self->_get_alternate_cds();
+    return undef unless defined($cds_obj);
+    $cds = ( $self->{is_reference} ? $tv->_translateable_seq() : $cds_obj->seq() );
 
     # and extract the codon sequence
     my $codon = ( $self->{is_reference} ? substr($cds, $codon_cds_start-1, $codon_len ) : substr($cds, $codon_cds_start-1, $codon_len + ($allele_len - $vf_nt_len)));
