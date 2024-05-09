@@ -302,6 +302,8 @@ sub read_plugin_file {
         }
       }
       chomp($usage);
+      $usage =~ s|<|&lt|g; # escape <
+      $usage =~ s|>|&gt|g; # escape >
       $usage = '<h2>Usage examples:</h2> <pre class="code sh_sh">' . $usage . '</pre>';
     }
 
