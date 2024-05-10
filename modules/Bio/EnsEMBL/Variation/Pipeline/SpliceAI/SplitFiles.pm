@@ -59,6 +59,9 @@ sub run {
     $self->check_split_vcf_file();
   }
   $self->split_vcf_file();
+
+  # create tmp dir where spliceai tmp files will be stored
+  $self->create_dir($self->param_required('main_dir') . '/tmp');
 }
 
 sub set_chr_from_filename {
