@@ -91,10 +91,14 @@ sub resource_classes {
     my ($self) = @_;
     return {
         %{$self->SUPER::resource_classes},  # inherit 'default' from the parent class
-            'test_mem'    => { 'LSF' => '-q production -R"select[mem>100] rusage[mem=100]" -M100'},
-            'default_mem' => { 'LSF' => '-q production -R"select[mem>2000] rusage[mem=2000]" -M2000'},
-            'medium_mem'  => { 'LSF' => '-q production -R"select[mem>4000] rusage[mem=4000]" -M4000'},
-            'high_mem'    => { 'LSF' => '-q production -R"select[mem>8000] rusage[mem=8000]" -M8000'},
+            'test_mem'    => { 'LSF' => '-q production -R"select[mem>100] rusage[mem=100]" -M100',
+                               'SLURM' => '--partition=production --time=12:00:00 --mem=100MB' },
+            'default_mem' => { 'LSF' => '-q production -R"select[mem>2000] rusage[mem=2000]" -M2000',
+                               'SLURM' => '--partition=production --time=12:00:00 --mem=2G' },
+            'medium_mem'  => { 'LSF' => '-q production -R"select[mem>4000] rusage[mem=4000]" -M4000',
+                               'SLURM' => '--partition=production --time=12:00:00 --mem=4G'},
+            'high_mem'    => { 'LSF' => '-q production -R"select[mem>8000] rusage[mem=8000]" -M8000',
+                               'SLURM' => '--partition=production --time=12:00:00 --mem=8G' },
     };
 }
 
@@ -124,13 +128,14 @@ sub pipeline_analyses {
           region_overlap  => $self->o('region_overlap'),
           bin_size => $self->o('bin_size')
       },
-      -rc_name           => 'medium_mem',
-      -max_retry_count   => 0,
-      -analysis_capacity => 500,
+      -rc_name           => 'high_mem',
+      -max_retry_count   => 2,
+      -analysis_capacity => 400,
     },
     {
       -logic_name => 'finish_dump_hgvs',
       -module     => 'Bio::EnsEMBL::Variation::Pipeline::DumpHGVS::FinishDumpHGVS',
+      -rc_name    => 'default_mem',
       -max_retry_count   => 0,
     },
   );
