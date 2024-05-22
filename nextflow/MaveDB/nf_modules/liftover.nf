@@ -18,6 +18,7 @@ process download_chain_files {
 process liftover_to_hg38 {
   // Identify genome of reference used to map variants and lift-over to hg38
   container 'quay.io/biocontainers/pyliftover:0.4--py_0'
+  tag "${mappings.simpleName}"
 
   input: 
     tuple path(mappings), path(mapped_variants)
