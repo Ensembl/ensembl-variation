@@ -31,7 +31,7 @@ our @EXPORT_OK = qw(
     $OVERLAP_CONSEQUENCE_CLASS
     $MAX_ATTRIB_CODE_LENGTH
     %SO_ACC_MAPPER
-    %SV_SO_TERMS
+    %SO_TERMS
 );
 
 our $OVERLAP_CONSEQUENCE_CLASS = 'Bio::EnsEMBL::Variation::OverlapConsequence';
@@ -1384,7 +1384,7 @@ our %SO_ACC_MAPPER = (
 );
 
 # Used to convert symbolic alternative allele to SO term
-our %SV_SO_TERMS = (
+our %SO_TERMS = (
         INS       => 'insertion',
         INS_ME    => 'mobile_element_insertion',
         INS_ALU   => 'Alu_insertion',
@@ -1399,7 +1399,7 @@ our %SV_SO_TERMS = (
         DEL_LINE1 => 'LINE1_deletion',
         DEL_SVA   => 'SVA_deletion',
 
-TREP => 'tandem_repeat',
+        TREP => 'tandem_repeat',
         TDUP => 'tandem_duplication',
         DUP  => 'duplication',
         CNV  => 'copy_number_variation',
