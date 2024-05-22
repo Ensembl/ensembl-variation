@@ -77,8 +77,6 @@ def load_scores (f):
   with open(scores_file) as csvfile:
     reader = csv.DictReader(csvfile)
     for row in reader:
-      # get index to sort data (required to match scores with MaveDB mappings)
-      row['index'] = int(row['accession'].split("#")[1])
       scores.append(row)
   return scores
 
@@ -187,7 +185,7 @@ def map_scores_to_variants (scores, mappings, map_ids, matches=None):
     if row['accession'] in map_ids:
       mapping = mappings['mapped_scores'][ map_ids.index(row['accession']) ]
     else:
-      warnings.warn(row['accession'] + "not in mappings file")
+      warnings.warn(row['accession'] + " not in mappings file")
       continue
 
     if row['accession'] == mapping['mavedb_id']:
@@ -244,6 +242,6 @@ map = map_scores_to_variants(scores, mappings, mavedb_ids, hgvsp2vars)
 write_variant_mapping(args.output, map)
 
 # clean up
-#os.remove(scores_file)
+os.remove(scores_file)
 
 print("Done: MaveDB score mapped to variants!", flush=True)
