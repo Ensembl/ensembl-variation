@@ -1399,6 +1399,7 @@ our %SV_SO_TERMS = (
         DEL_LINE1 => 'LINE1_deletion',
         DEL_SVA   => 'SVA_deletion',
 
+TREP => 'tandem_repeat',
         TDUP => 'tandem_duplication',
         DUP  => 'duplication',
         CNV  => 'copy_number_variation',
