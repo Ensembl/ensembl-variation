@@ -92,13 +92,13 @@ sub resource_classes {
     return {
         %{$self->SUPER::resource_classes},  # inherit 'default' from the parent class
             'test_mem'    => { 'LSF' => '-q production -R"select[mem>100] rusage[mem=100]" -M100',
-                               'SLURM' => '--partition=production --time=12:00:00 --mem=100MB' },
+                               'SLURM' => '--partition=production --time=12:00:00 --mem=1G' },
             'default_mem' => { 'LSF' => '-q production -R"select[mem>2000] rusage[mem=2000]" -M2000',
-                               'SLURM' => '--partition=production --time=12:00:00 --mem=2G' },
+                               'SLURM' => '--partition=production --time=12:00:00 --mem=4G' },
             'medium_mem'  => { 'LSF' => '-q production -R"select[mem>4000] rusage[mem=4000]" -M4000',
-                               'SLURM' => '--partition=production --time=12:00:00 --mem=4G'},
+                               'SLURM' => '--partition=production --time=12:00:00 --mem=8G'},
             'high_mem'    => { 'LSF' => '-q production -R"select[mem>8000] rusage[mem=8000]" -M8000',
-                               'SLURM' => '--partition=production --time=12:00:00 --mem=8G' },
+                               'SLURM' => '--partition=production --time=12:00:00 --mem=12G' },
     };
 }
 
@@ -128,7 +128,7 @@ sub pipeline_analyses {
           region_overlap  => $self->o('region_overlap'),
           bin_size => $self->o('bin_size')
       },
-      -rc_name           => 'high_mem',
+      -rc_name           => 'medium_mem',
       -max_retry_count   => 2,
       -analysis_capacity => 400,
     },
