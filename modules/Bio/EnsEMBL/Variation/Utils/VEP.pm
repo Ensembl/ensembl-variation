@@ -86,12 +86,13 @@ use Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor;
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(unambiguity_code SO_variation_class);
-use Bio::EnsEMBL::Variation::Utils::Config qw(%SV_SO_TERMS);
+use Bio::EnsEMBL::Variation::Utils::Config qw(%SO_TERMS);
 use Bio::EnsEMBL::Variation::Utils::EnsEMBL2GFF3;
 use Bio::EnsEMBL::Variation::StructuralVariationFeature;
 use Bio::EnsEMBL::Variation::DBSQL::StructuralVariationFeatureAdaptor;
 use Bio::EnsEMBL::Variation::TranscriptStructuralVariation;
 use Bio::EnsEMBL::Variation::Source;
+use Bio::EnsEMBL::VEP::Parser qw(get_SO_term);
 
 # we need to manually include all these modules for caching to work
 use Bio::EnsEMBL::CoordSystem;
@@ -479,7 +480,7 @@ sub parse_ensembl {
         my $so_term;
 
         # convert to SO term
-        my %terms = %SV_SO_TERMS;
+        my %terms = %SO_TERMS;
 
         $so_term = defined $terms{$allele_string} ? $terms{$allele_string} : $allele_string;
 
@@ -627,9 +628,7 @@ sub parse_vcf {
 
         if(defined($type)) {
             # convert to SO term
-            my %terms = %SV_SO_TERMS;
-
-            $so_term = defined $terms{$type} ? $terms{$type} : $type;
+            $so_term = get_SO_term($type) || $type;
         }
 
         my $svf = Bio::EnsEMBL::Variation::StructuralVariationFeature->new_fast({
@@ -924,9 +923,16 @@ sub convert_to_vcf {
     else {
 
         # convert to SO term
-        my %terms = reverse %SV_SO_TERMS;
+        my %terms = reverse %SO_TERMS;
+        my $abbrv = $terms{$vf->class_SO_term} || $vf->class_SO_term;
+
+        $abbrev = "DUP:TANDEM" if $abbrev eq "TDUP";
+        $abbrev = "CNV:TR" if $abbrev eq "TREP";
+        $abbrev = $abbrev =~ s/_/:/ if $abbrev =~ /^(INS|DEL)_ME$/;
+        $abbrev =~ s/_/:ME:/ if $abbrev =~ /^(INS|DEL)_[A-Z0-9]+$/;
 
         my $alt = '<'.($terms{$vf->class_SO_term} || $vf->class_SO_term).'>';
+        $alt = split(/\//, $vf->allele_string, 2)[1] if ($alt eq "BND");
 
         return [
             $vf->{chr} || $vf->seq_region_name,
