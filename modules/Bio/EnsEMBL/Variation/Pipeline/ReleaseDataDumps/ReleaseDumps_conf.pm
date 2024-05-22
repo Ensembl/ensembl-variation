@@ -168,11 +168,11 @@ sub resource_classes {
     return {
         %{$self->SUPER::resource_classes},
         'default' => { 'LSF' => '-q production -R"select[mem>1500] rusage[mem=1500]" -M1500',
-                       'SLURM' => '--partition=production --time=10:00:00 --mem=1500M'},
+                       'SLURM' => '--partition=production --time=10:00:00 --mem=4G'},
         'medium'  => { 'LSF' => '-q production -R"select[mem>4500] rusage[mem=4500]" -M4500',
-                       'SLURM' => '--partition=production --time=10:00:00 --mem=4500M'},
+                       'SLURM' => '--partition=production --time=10:00:00 --mem=8G'},
         'high'    => { 'LSF' => '-q production -R"select[mem>8500] rusage[mem=8500]" -M8500',
-                       'SLURM' => '--partition=production --time=10:00:00 --mem=8500M'},
+                       'SLURM' => '--partition=production --time=10:00:00 --mem=12G'},
     };
 }
 sub pipeline_analyses {
