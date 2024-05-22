@@ -1046,11 +1046,14 @@ sub _ins_del_start_altered {
         substr($utr_and_translateable, $cdna_start - 1, ($cdna_end - $cdna_start) + 1) = $vf_feature_seq;
 
         # check if still retain start
-        my $atg_start = length($utr->seq);
-        my $new_sc = substr($utr_and_translateable, $atg_start, 3);
-        my $new_utr = substr($utr_and_translateable, 0, length($utr->seq));
-        return $cache->{inv_start_altered} if ($new_utr eq $utr->seq && $new_sc eq 'ATG');
-        
+        if ($utr) {
+            my $atg_start = length($utr->seq);
+            my $new_sc = substr($utr_and_translateable, $atg_start, 3);
+            my $new_utr = substr($utr_and_translateable, 0, length($utr->seq));
+
+            return $cache->{ins_del_start_altered} if ($new_utr eq $utr->seq && $new_sc eq 'ATG');
+        }
+
         # sequence shorter, we know it has been altered
         return $cache->{ins_del_start_altered} = 1 if length($utr_and_translateable) < length($translateable);
 
