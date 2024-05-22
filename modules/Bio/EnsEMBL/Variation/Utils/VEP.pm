@@ -928,7 +928,7 @@ sub convert_to_vcf {
 
         $abbrev = "DUP:TANDEM" if $abbrev eq "TDUP";
         $abbrev = "CNV:TR" if $abbrev eq "TREP";
-        $abbrev = $abbrev =~ s/_/:/ if $abbrev =~ /^(INS|DEL)_ME$/;
+        $abbrev =~ s/_/:/ if $abbrev =~ /^(INS|DEL)_ME$/;
         $abbrev =~ s/_/:ME:/ if $abbrev =~ /^(INS|DEL)_[A-Z0-9]+$/;
 
         my $alt = '<'.($terms{$vf->class_SO_term} || $vf->class_SO_term).'>';
