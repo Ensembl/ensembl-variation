@@ -11,6 +11,7 @@ params.help     = false
 params.mappings = null
 params.ensembl  = "${ENSEMBL_ROOT_DIR}"
 params.output   = "output/MaveDB_variants.tsv.gz"
+params.registry = null
 
 params.licences = "CC0" // Open-access only
 params.round    = 4
@@ -33,6 +34,7 @@ if (params.help) {
     --output    Path to output file (default: 'output/MaveDB_variants.tsv.gz')
     --licences  Comma-separated list of accepted licences (default: 'CC0')
     --round     Decimal places to round floats in MaveDB data (default: 4)
+    --registry  Path to Ensembl registry
 
   Note: the mappings must be named with the MaveDB accession, such as
         '00000001-a-1.json'.

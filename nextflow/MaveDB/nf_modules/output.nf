@@ -4,6 +4,8 @@ process concatenate_files {
   input:  path(mapped_variants)
   output: path("combined.tsv")
 
+  memory '4GB'
+
   """
   #!/usr/bin/env python3
   import glob, pandas
@@ -61,7 +63,7 @@ process tabix {
   grep -v "^#" ${out} | grep -v "^LRG" | grep -v "^CHR_" > tmp.tsv
 
   # sort file by position
-  (head -n1 ${out}; sort -k1,1 -k2,2n -k3,3n tmp.tsv) > ${name}
+  (head -n1 ${out}; sort -k1,1 -k2,2n -k3,3n tmp.tsv | uniq) > ${name}
 
   bgzip ${name}
   tabix -s1 -b2 -e3 ${gzip}

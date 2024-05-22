@@ -18,8 +18,6 @@ mapped    = args.mapped_variants
 mappings  = args.mappings
 
 res = json.load(open(mappings))
-if len(res['target']['reference_maps']) > 1:
-  raise Exception("Multiple reference maps are not currently supported")
 
 def liftover_variants (mapped, genome, reference):
   # write file information with lifted-over coordinates to new file
@@ -49,7 +47,11 @@ def liftover_variants (mapped, genome, reference):
       out.write('\t'.join(l))
   out.close()
 
-genome = res['target']['reference_maps'][0]['genome']['short_name']
+if 'reference' in res['metadata']['extraMetadata']:
+  genome = res['metadata']['extraMetadata']['reference']
+else:
+  genome = 'hg38'
+
 if genome == reference:
   # just rename file if variants are already mapped to reference genome
   os.rename(mapped, f"liftover_{mapped}")
