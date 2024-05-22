@@ -924,15 +924,15 @@ sub convert_to_vcf {
 
         # convert to SO term
         my %terms = reverse %SO_TERMS;
-        my $abbrv = $terms{$vf->class_SO_term} || $vf->class_SO_term;
+        my $abbrev = $terms{$vf->class_SO_term} || $vf->class_SO_term;
 
         $abbrev = "DUP:TANDEM" if $abbrev eq "TDUP";
         $abbrev = "CNV:TR" if $abbrev eq "TREP";
         $abbrev =~ s/_/:/ if $abbrev =~ /^(INS|DEL)_ME$/;
         $abbrev =~ s/_/:ME:/ if $abbrev =~ /^(INS|DEL)_[A-Z0-9]+$/;
 
-        my $alt = '<'.($terms{$vf->class_SO_term} || $vf->class_SO_term).'>';
-        $alt = split(/\//, $vf->allele_string, 2)[1] if ($alt eq "BND");
+        my $alt = '<'.$abbrev.'>';
+        $alt = ( split(/\//, $vf->allele_string, 2) )[1] if ($alt eq "BND");
 
         return [
             $vf->{chr} || $vf->seq_region_name,
