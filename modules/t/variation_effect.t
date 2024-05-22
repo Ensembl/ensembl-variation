@@ -603,7 +603,7 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         alleles => 'GCA',
         start   => $cds_start+2,
         end     => $cds_start+1,
-        effects => [qw(inframe_insertion)],
+        effects => [qw(inframe_insertion start_retained_variant)],
     }, {
         alleles => '-',
         start   => $cds_start+3,
@@ -632,7 +632,7 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         alleles => 'CAT',
         start   => $cds_start-1,
         end     => $cds_start+2,
-        effects => [qw(5_prime_UTR_variant start_lost)],
+        effects => [qw(5_prime_UTR_variant start_retained_variant)],
         pep_alleles => '',
     }, {
         alleles => 'G',
