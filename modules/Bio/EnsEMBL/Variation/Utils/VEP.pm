@@ -92,7 +92,7 @@ use Bio::EnsEMBL::Variation::StructuralVariationFeature;
 use Bio::EnsEMBL::Variation::DBSQL::StructuralVariationFeatureAdaptor;
 use Bio::EnsEMBL::Variation::TranscriptStructuralVariation;
 use Bio::EnsEMBL::Variation::Source;
-use Bio::EnsEMBL::VEP::Parser qw(get_SO_term);
+use Bio::EnsEMBL::VEP::Parser qw(get_SO_term &check_format);
 
 # we need to manually include all these modules for caching to work
 use Bio::EnsEMBL::CoordSystem;
@@ -115,8 +115,6 @@ use vars qw(@ISA @EXPORT_OK);
 @ISA = qw(Exporter);
 
 @EXPORT_OK = qw(
-    &_valid_region_regex
-    &check_format
     &detect_format
     &parse_line
     &vf_to_consequences
@@ -384,68 +382,6 @@ sub parse_line {
     $_->{_line} = $line for @$vfs;
 
     return $vfs;
-}
-
-sub _valid_region_regex {
-  return qr/^([^:]+):(\d+)-(\d+)(:[-\+]?1)?[\/:]([a-z0-9:]{3,}|[ACGTN-]+)$/i;
-}
-
-# sub-routine to check format of string
-sub check_format {
-    my @line = @_;
-    my $format;
-
-    # any changes here must be copied to the JavaScript file to run instant VEP:
-    # public-plugins/tools/htdocs/components/20_VEPForm.js
-
-    # region: chr21:10-10:1/A
-    if ( scalar @line == 1 && $line[0] =~ &_valid_region_regex() ) {
-        $format = 'region';
-    }
-
-    # SPDI: NC_000016.10:68684738:G:A
-    elsif ( scalar @line == 1 && $line[0] =~ /^(.*?\:){2}([^\:]+|)$/i ) {
-        $format = 'spdi';
-    }
-
-    # CAID: CA9985736
-    elsif ( scalar @line == 1 && $line[0] =~ /^CA\d{1,}$/i ) {
-        $format = 'caid';
-    }
-
-    # HGVS: ENST00000285667.3:c.1047_1048insC
-    elsif (
-        scalar @line == 1 &&
-        $line[0] =~ /^([^\:]+)\:.*?([cgmrp]?)\.?([\*\-0-9]+.*)$/i
-    ) {
-        $format = 'hgvs';
-    }
-
-    # variant identifier: rs123456
-    elsif ( scalar @line == 1 ) {
-        $format = 'id';
-    }
-
-    # VCF: 20  14370  rs6054257  G  A  29  0  NS=58;DP=258;AF=0.786;DB;H2  GT:GQ:DP:HQ
-    elsif (
-        $line[0] =~ /(chr)?\w+/ &&
-        $line[1] =~ /^\d+$/ &&
-        $line[3] && $line[3] =~ /^[ACGTN\-\.]+$/i &&
-        $line[4]
-    ) {
-        $format = 'vcf';
-    }
-
-    # ensembl: 20  14370  14370  A/G  +
-    elsif (
-        $line[0] =~ /\w+/ &&
-        $line[1] =~ /^\d+$/ &&
-        $line[2] && $line[2] =~ /^\d+$/ &&
-        $line[3] && $line[3] =~ /([a-z]{2,})|([ACGTN-]+\/[ACGTN-]+)/i
-    ) {
-        $format = 'ensembl';
-    }
-    return $format;
 }
 
 # sub-routine to detect format of input
