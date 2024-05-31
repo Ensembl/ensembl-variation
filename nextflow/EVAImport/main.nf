@@ -20,13 +20,13 @@ params.release         = null
 params.registry        = null
 
 // Params for EVA import script
-params.input_file      = null
+params.input_file      = ""
 input_file_tbi         = "${params.input_file}.tbi"
 params.source          = "EVA"
 params.description     = "Short variant data imported from EVA"
 params.version         = 4
 params.remove_prefix   = false
-params.chr_synonyms    = false
+params.chr_synonyms    = ""
 params.merge_all_types = true
 params.fork            = 10
 params.skip_tables     = "allele,allele_code,population,population_genotype,genotype_code,compressed_genotype_var,sample"
@@ -132,7 +132,7 @@ if(!params.species) {
   exit 1, "ERROR: species name (--species) must be provided when running EVA import"
 }
 
-if(!params.input_file || !file(params.input_file).exists() || !file(input_file_tbi).exists()) {
+if(params.input_file == "" || !file(params.input_file).exists() || !file(input_file_tbi).exists()) {
   exit 1, "ERROR: a valid input file (--input_file) must be provided when running EVA import. Please make sure the file is compressed and indexed."
 }
 
@@ -155,6 +155,7 @@ if(!params.skipped_variants_file) {
 // Build command to run EVA import
 registry = file(params.registry)
 input_file = file(params.input_file)
+input_file_tbi = file(input_file_tbi)
 
 command_to_run = " -i ${input_file} --source ${params.source} --source_description '${params.description}' --version ${params.version} --registry ${registry} --species ${params.species} --skip_tables '${params.skip_tables}'"
 
@@ -170,10 +171,12 @@ process run_eva {
   val wait
   path eva_script
   val options
+  path input_file
+  path input_file_tbi
   val merge_all_types
   val fork
   val sort_vf
-  val chr_synonyms
+  path chr_synonyms
   val remove_prefix
   val output_file
   
@@ -183,7 +186,7 @@ process run_eva {
   def sort_vf_table     = sort_vf ? " --sort_vf" : ""
   def merge_all         = merge_all_types ? " --merge_all_types" : ""
   def use_fork          = fork ? "--fork ${fork}" : ""
-  def chr_synonyms_file = chr_synonyms ? " --chr_synonyms ${chr_synonyms}" : ""
+  def chr_synonyms_file = chr_synonyms == "" ? "" : " --chr_synonyms ${chr_synonyms}"
   def rm_prefix         = remove_prefix ? " --remove_prefix ${remove_prefix}" : ""
   
   """
@@ -197,8 +200,8 @@ process run_variant_synonyms {
   path var_syn_script
   val source_name
   val species
-  val input_file
-  val registry
+  path input_file
+  path registry
   val host
   val port
   val dbname
@@ -232,7 +235,7 @@ process run_variation_set {
   val files_path
   val filenames
   val species
-  val registry
+  path registry
 
   output: val 'ok'
 
@@ -251,7 +254,7 @@ process run_variation_set_2 {
   val wait
   val var_set_script_2
   val species
-  val registry
+  path registry
 
   output: val 'ok'
 
@@ -284,8 +287,8 @@ process run_citations {
   val wait
   path citations_script
   val species
-  val registry
-  val file
+  path registry
+  path file
 
   output: val 'ok'
 
@@ -300,9 +303,9 @@ process run_citations {
 workflow {
   prepare_tables(copy_tables_script, params.host, params.port, params.pass, params.user, params.dbname, params.old_dbname)
 
-  run_eva(prepare_tables.out, file(eva_script), command_to_run, params.merge_all_types, params.fork, params.sort_vf, params.chr_synonyms, params.remove_prefix, params.skipped_variants_file)
+  run_eva(prepare_tables.out, file(eva_script), command_to_run, input_file, input_file_tbi, params.merge_all_types, params.fork, params.sort_vf, file(params.chr_synonyms), params.remove_prefix, params.skipped_variants_file)
 
-  run_variant_synonyms(run_eva.out, file(var_syn_script), params.source, params.species, params.var_syn_file, registry, params.old_host, params.old_port, params.old_dbname)
+  run_variant_synonyms(run_eva.out, file(var_syn_script), params.source, params.species, file(params.var_syn_file), registry, params.old_host, params.old_port, params.old_dbname)
 
   if(set_names[params.species]) {
     my_species_set = Channel.fromList(set_names.get(params.species))
@@ -312,7 +315,7 @@ workflow {
   }
 
   if(params.citations_file) {
-    run_citations(run_variant_synonyms.out, file(citations_script), params.species, registry, params.citations_file)
+    run_citations(run_variant_synonyms.out, file(citations_script), params.species, registry, file(params.citations_file))
   }
 }
 

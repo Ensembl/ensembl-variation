@@ -39,6 +39,7 @@ use HTTP::Tiny;
 use Getopt::Long;
 use DBI qw(:sql_types);
 use Time::Piece;
+use File::Spec;
 
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Variation::Source;
@@ -73,6 +74,7 @@ $species ||= 'homo_sapiens';
 die("ERROR: source 'rat' can only be used for species rat\n") if($source_name eq 'rat' && $species !~ /rat/);
 
 my $reg = 'Bio::EnsEMBL::Registry';
+$registry_file = File::Spec->rel2abs($registry_file);
 $reg->load_all($registry_file);
 my $dba = $reg->get_DBAdaptor($species, 'variation');
 
