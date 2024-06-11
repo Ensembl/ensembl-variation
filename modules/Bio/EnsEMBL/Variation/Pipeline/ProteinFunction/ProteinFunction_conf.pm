@@ -68,7 +68,7 @@ sub default_options {
         hive_root_dir           => $ENV{'HOME'} . '/src/ensembl-hive',
         
         pipeline_name           => 'protein_function',
-        pipeline_dir            => '/hps/nobackup/production/ensembl/'.$ENV{USER}.'/'.$self->o('pipeline_name'),
+        pipeline_dir            => '/hps/nobackup/flicek/ensembl/variation/'.$ENV{USER}.'/'.$self->o('pipeline_name'),
         species_dir             => $self->o('pipeline_dir').'/'.$self->o('species'),
         # directory used for the hive's own output files
 
