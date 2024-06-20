@@ -86,11 +86,13 @@ use Bio::EnsEMBL::Variation::DBSQL::VariationFeatureAdaptor;
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use Bio::EnsEMBL::Variation::Utils::Sequence qw(unambiguity_code SO_variation_class);
+use Bio::EnsEMBL::Variation::Utils::Config qw(%SO_TERMS);
 use Bio::EnsEMBL::Variation::Utils::EnsEMBL2GFF3;
 use Bio::EnsEMBL::Variation::StructuralVariationFeature;
 use Bio::EnsEMBL::Variation::DBSQL::StructuralVariationFeatureAdaptor;
 use Bio::EnsEMBL::Variation::TranscriptStructuralVariation;
 use Bio::EnsEMBL::Variation::Source;
+use Bio::EnsEMBL::VEP::Parser qw(get_SO_term &check_format);
 
 # we need to manually include all these modules for caching to work
 use Bio::EnsEMBL::CoordSystem;
@@ -113,8 +115,6 @@ use vars qw(@ISA @EXPORT_OK);
 @ISA = qw(Exporter);
 
 @EXPORT_OK = qw(
-    &_valid_region_regex
-    &check_format
     &detect_format
     &parse_line
     &vf_to_consequences
@@ -384,68 +384,6 @@ sub parse_line {
     return $vfs;
 }
 
-sub _valid_region_regex {
-  return qr/^([^:]+):(\d+)-(\d+)(:[-\+]?1)?[\/:]([a-z0-9:]{3,}|[ACGTN-]+)$/i;
-}
-
-# sub-routine to check format of string
-sub check_format {
-    my @line = @_;
-    my $format;
-
-    # any changes here must be copied to the JavaScript file to run instant VEP:
-    # public-plugins/tools/htdocs/components/20_VEPForm.js
-
-    # region: chr21:10-10:1/A
-    if ( scalar @line == 1 && $line[0] =~ &_valid_region_regex() ) {
-        $format = 'region';
-    }
-
-    # SPDI: NC_000016.10:68684738:G:A
-    elsif ( scalar @line == 1 && $line[0] =~ /^(.*?\:){2}([^\:]+|)$/i ) {
-        $format = 'spdi';
-    }
-
-    # CAID: CA9985736
-    elsif ( scalar @line == 1 && $line[0] =~ /^CA\d{1,}$/i ) {
-        $format = 'caid';
-    }
-
-    # HGVS: ENST00000285667.3:c.1047_1048insC
-    elsif (
-        scalar @line == 1 &&
-        $line[0] =~ /^([^\:]+)\:.*?([cgmrp]?)\.?([\*\-0-9]+.*)$/i
-    ) {
-        $format = 'hgvs';
-    }
-
-    # variant identifier: rs123456
-    elsif ( scalar @line == 1 ) {
-        $format = 'id';
-    }
-
-    # VCF: 20  14370  rs6054257  G  A  29  0  NS=58;DP=258;AF=0.786;DB;H2  GT:GQ:DP:HQ
-    elsif (
-        $line[0] =~ /(chr)?\w+/ &&
-        $line[1] =~ /^\d+$/ &&
-        $line[3] && $line[3] =~ /^[ACGTN\-\.]+$/i &&
-        $line[4]
-    ) {
-        $format = 'vcf';
-    }
-
-    # ensembl: 20  14370  14370  A/G  +
-    elsif (
-        $line[0] =~ /\w+/ &&
-        $line[1] =~ /^\d+$/ &&
-        $line[2] && $line[2] =~ /^\d+$/ &&
-        $line[3] && $line[3] =~ /([a-z]{2,})|([ACGTN-]+\/[ACGTN-]+)/i
-    ) {
-        $format = 'ensembl';
-    }
-    return $format;
-}
-
 # sub-routine to detect format of input
 sub detect_format {
     my $line = shift;
@@ -478,12 +416,7 @@ sub parse_ensembl {
         my $so_term;
 
         # convert to SO term
-        my %terms = (
-            INS  => 'insertion',
-            DEL  => 'deletion',
-            TDUP => 'tandem_duplication',
-            DUP  => 'duplication'
-        );
+        my %terms = %SO_TERMS;
 
         $so_term = defined $terms{$allele_string} ? $terms{$allele_string} : $allele_string;
 
@@ -631,14 +564,7 @@ sub parse_vcf {
 
         if(defined($type)) {
             # convert to SO term
-            my %terms = (
-                INS  => 'insertion',
-                DEL  => 'deletion',
-                TDUP => 'tandem_duplication',
-                DUP  => 'duplication'
-            );
-
-            $so_term = defined $terms{$type} ? $terms{$type} : $type;
+            $so_term = get_SO_term($type) || $type;
         }
 
         my $svf = Bio::EnsEMBL::Variation::StructuralVariationFeature->new_fast({
@@ -933,14 +859,16 @@ sub convert_to_vcf {
     else {
 
         # convert to SO term
-        my %terms = (
-            'insertion' => 'INS',
-            'deletion' => 'DEL',
-            'tandem_duplication' => 'TDUP',
-            'duplication' => 'DUP'
-        );
+        my %terms = reverse %SO_TERMS;
+        my $abbrev = $terms{$vf->class_SO_term} || $vf->class_SO_term;
 
-        my $alt = '<'.($terms{$vf->class_SO_term} || $vf->class_SO_term).'>';
+        $abbrev = "DUP:TANDEM" if $abbrev eq "TDUP";
+        $abbrev = "CNV:TR" if $abbrev eq "TREP";
+        $abbrev =~ s/_/:/ if $abbrev =~ /^(INS|DEL)_ME$/;
+        $abbrev =~ s/_/:ME:/ if $abbrev =~ /^(INS|DEL)_[A-Z0-9]+$/;
+
+        my $alt = '<'.$abbrev.'>';
+        $alt = ( split(/\//, $vf->allele_string, 2) )[1] if ($alt eq "BND");
 
         return [
             $vf->{chr} || $vf->seq_region_name,
