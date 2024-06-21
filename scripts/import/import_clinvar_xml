@@ -471,21 +471,37 @@ sub get_feature{
     ## position on required assembly
     next unless defined $measure->{SequenceLocation};
     my $seqLocs = to_array($measure->{SequenceLocation});
+
+    my $feature_found;
+
     foreach my $loc(@{$seqLocs}){
 
       next unless ref($loc) eq  'HASH'; 
       next unless $loc->{Assembly} eq $assembly;
 
-      $feature{Chr}    = $loc->{Chr} ; 
-      $feature{start}  = $loc->{start} ; 
-      $feature{end}    = $loc->{stop} ; 
+      if($feature_found) {
+        $feature{ypar}{Chr} = $loc->{Chr};
+        $feature{ypar}{start} = $loc->{start};
+        $feature{ypar}{end} = $loc->{stop};
+        $feature{ypar}{accession} = $loc->{Accession};
+      }
+      else{
+        $feature{Chr}       = $loc->{Chr};
+        $feature{start}     = $loc->{start};
+        $feature{end}       = $loc->{stop};
+        $feature{accession} = $loc->{Accession};
 
-      $feature{measureXrefs}{$measure->{ID}}{Chr}   = $loc->{Chr}    if $type eq $haplotype_type;
-      $feature{measureXrefs}{$measure->{ID}}{start} = $loc->{start}  if $type eq $haplotype_type;
-      $feature{measureXrefs}{$measure->{ID}}{end}   = $loc->{stop}   if $type eq $haplotype_type;
+        if($type eq $haplotype_type) {
+          $feature{measureXrefs}{$measure->{ID}}{Chr}   = $loc->{Chr};
+          $feature{measureXrefs}{$measure->{ID}}{start} = $loc->{start};
+          $feature{measureXrefs}{$measure->{ID}}{end}   = $loc->{stop};
+        }
+        $feature_found = 1;
+      }
     }
 
     ## save SPDI canonical
+    ## For Y PAR variants there is only one canonical spdi
     $feature{canonicalSPDI} = $measure->{CanonicalSPDI} if defined $measure->{CanonicalSPDI};
 
     ## HGVS genomic - used for allele extraction for novel variants 
@@ -500,8 +516,15 @@ sub get_feature{
 
       next unless (defined $attrib->{Attribute}->{Type} &&
                            $attrib->{Attribute}->{Type} =~ /HGVS,\s+genomic,\s+top\s+level/ );
-	
-      $feature{hgvs_g} =  $attrib->{Attribute}->{Change};
+
+      # Make sure the chr matches the hgvs chromosome
+      if($feature{accession} =~ $attrib->{Attribute}->{Accession}) {
+        $feature{hgvs_g} = $attrib->{Attribute}->{Change};
+      }
+      elsif(defined $feature{ypar} && $feature{ypar}{accession} =~ $attrib->{Attribute}->{Accession}) {
+        $feature{ypar}{hgvs_g} = $attrib->{Attribute}->{Change};
+      }
+
       $feature{measureXrefs}{$measure->{ID}}{hgvs_g} = $attrib->{Attribute}->{Change} if $type eq $haplotype_type;
     }
 
@@ -744,7 +767,9 @@ sub import{
         @{$record->{feature_info}}{qw/hgvs_g Chr start end gene/} = @{$record->{feature_info}->{$rsID}}{qw/hgvs_g Chr start end gene/};
       }
 
+      # Get variant - insert if not found
       ($feature_object, $feat, $alt_allele) = get_variant($record, $rs);
+
       next unless defined $feature_object;
 
       add_clinvar_data($feature_object, $feat, $alt_allele, $record);
@@ -1203,14 +1228,14 @@ sub get_variant_by_slice_allele{
 
   return undef unless defined $cv_allele;
 
-  my $location_string = $record->{feature_info}->{Chr} .":" . $record->{feature_info}->{start}."-".$record->{feature_info}->{end};
-
   if(!defined $record->{feature_info}->{end} || $record->{feature_info}->{start} != $record->{feature_info}->{end}) {
-     print "too long for slice look up: $location_string\n" if $DEBUG == 1;
+     print "too long for slice look up: ", $record->{feature_info}->{hgvs_g}, "\n" if $DEBUG == 1;
      return undef;
    }
 
-   my $slice =  $slice_adaptor->fetch_by_region( 'chromosome',
+  my $location_string = $record->{feature_info}->{Chr} .":" . $record->{feature_info}->{start}."-".$record->{feature_info}->{end};
+
+  my $slice =  $slice_adaptor->fetch_by_region( 'chromosome',
                                                   $record->{feature_info}->{Chr},
                                                   $record->{feature_info}->{start},
                                                   $record->{feature_info}->{end} );
@@ -1286,62 +1311,12 @@ sub enter_var{
   ## strand not reported - assumes forward
   my $slice = $slice_adaptor->fetch_by_region( 'chromosome', $data->{feature_info}->{Chr} );
 
-  if ($ref_allele eq '-' && $allele_str ne '-/') {
-    if ($vf_start == $vf_end){
-      $vf_start = $vf_end+1 ;
-    } elsif ( $vf_start +1 == $vf_end) {
-      $vf_start = $data->{feature_info}->{end} ;
-      $vf_end = $data->{feature_info}->{start} ;
-    } elsif ($data->{feature_info}->{hgvs_g} =~ /\d+dup/){ #old style formated hgvs_g ..3-6dupGAGA
-      $vf_start = $vf_end + 1;
-    }
-  } elsif ($allele_str eq '-/' && $data->{feature_info}->{hgvs_g} =~ /\d+dup/){ #new style formated hgvs_g ..3-6dup
-    my $ref_slice = $slice_adaptor->fetch_by_region( 'chromosome', $data->{feature_info}->{Chr},
-              $data->{feature_info}->{start}, $data->{feature_info}->{end});
-    my $ref_seq = $ref_slice->seq();
-    $allele_str = "-/".$ref_seq;
-    $vf_start= $vf_end + 1;
-  } elsif ($alt_allele =~/^$ref_allele/ && $data->{feature_info}->{hgvs_g} =~ m/\[/i ) {
-    # check if HGVS was a repeat and reference already contains the a repeat and the number of inserted repeats has to be adjusted
-    # eg. rs1555092425 (11:g.108282799A[5]) -> get_hgvs_alleles produces -> A(1) -> A(5) while correct is: ref AAA(3) -> alt AAAAA(5)
-    my $refSlice = $slice_adaptor->fetch_by_region( 'chromosome', $data->{feature_info}->{Chr},
-                    $vf_start, $vf_start + length($alt_allele) - 1);
+  # Get the allele_string, vf start/end based on the type of variant
+  ($allele_str, $vf_start, $vf_end) = format_coords($ref_allele, $alt_allele, $allele_str, $vf_start, $vf_end, $data->{feature_info});
 
-    my @refSeq = split //, $refSlice->seq;
-    my @altSeq = split //, $alt_allele;
-    my ($i,$match) = (0,1);
-
-    # skip duplications that don't have start coinciding with hgvs parsed elements
-    if ($refSeq[0] ne $altSeq[0]) {
-      print "INFO: skipping variation (duplications) with ref[0] ne alt[0] for $data->{feature_info}->{hgvs_g} \n" if $DEBUG == 1;
-      return undef;
-    }
-
-    while ($i< scalar @altSeq && $match){
-      $match=0 if ($refSeq[$i] ne $altSeq[$i]);
-      $i++;
-    }
-    $ref_allele = substr($refSlice->seq, 0, $i-1);
-    $allele_str = $ref_allele ."/". $alt_allele;
-  }
-
-  # case eg. NC_000009.12:g.137233961_137234061del
-  elsif ($allele_str eq '/-' && $data->{feature_info}->{hgvs_g} =~ /\d+_\d+del$/){
-      my ($start, $end) = $data->{feature_info}->{hgvs_g} =~ m/(\d+)_(\d+)del$/i;
-      print "WARNING: HGVS contains different start/end for deletion ($data->{feature_info}->{hgvs_g})\n" if ($start ne $vf_start || $end != $vf_end );
-      my $refSlice = $slice_adaptor->fetch_by_region( 'chromosome', $data->{feature_info}->{Chr}, $vf_start, $vf_end);
-      $ref_allele = $refSlice->seq;
-      $allele_str = $ref_allele ."/". $alt_allele;
-  }
-
-  # case eg. NC_000007.14:g.5978687_5978689delinsC
-  elsif ($data->{feature_info}->{hgvs_g} =~ /\d+_\d+delins[A-Z]+/i){
-      my ($start, $end, $alt) = $data->{feature_info}->{hgvs_g} =~ m/(\d+)_(\d+)delins([A-Z]+)$/i;
-      print "WARNING: HGVS contains different start/end/alt for delins ($data->{feature_info}->{hgvs_g})\n" if ($start ne $vf_start || $end != $vf_end  || $alt ne $alt_allele);
-      my $refSlice = $slice_adaptor->fetch_by_region( 'chromosome', $data->{feature_info}->{Chr},
-                      $vf_start, $vf_end);
-      $ref_allele = $refSlice->seq;
-      $allele_str = $ref_allele ."/". $alt_allele;
+  # Skip duplications that don't have a start coinciding with the hgvs parsed elements
+  if(!$allele_str || !$vf_start || !$vf_end) {
+    return undef;
   }
 
   my $so_term = SO_variation_class($allele_str);
@@ -1362,6 +1337,8 @@ sub enter_var{
     );
   $variation_adaptor->store($var);
 
+  my @vfs; #return vfs to attach phenotype feature to
+
   # Create the variation feature
   my $vf = Bio::EnsEMBL::Variation::VariationFeature->new
     (-start           => $vf_start,
@@ -1379,71 +1356,176 @@ sub enter_var{
     );
 
   $var_feat_adaptor->store($vf);
+  push @vfs, $vf;
 
-if($insert_tv) {
-    my $count_tv = 0;
-    my $all_tv = $vf->get_all_TranscriptVariations();
-    foreach my $tv (@{$all_tv}) {
-      # Do not include upstream and downstream consequences
-      next unless overlap($vf->start, $vf->end, $tv->transcript->start - 0, $tv->transcript->end + 0);
+  # If variant in Y PAR region store the two variation features
+  #  One of the vf has already been checked
+  #  The other vf can have different chr, start, end and/or alleles (from hgvs genomic)
+  if($data->{feature_info}->{ypar} && $data->{feature_info}->{ypar}->{hgvs_g} ne "unknown:") {
+    $slice = $slice_adaptor->fetch_by_region( 'chromosome', $data->{feature_info}->{ypar}->{Chr} );
 
-      $count_tv += 1;
+    my ($ref_allele_ypar, $alt_allele_ypar) = get_hgvs_alleles( $data->{feature_info}->{ypar}->{Chr}.":".$data->{feature_info}->{ypar}->{hgvs_g} );
+    $allele_str = $ref_allele_ypar ."/". $alt_allele_ypar;
 
-      # only include valid biotypes in MTMP_transcript_variation
-      my $write_biotype = $biotypes_to_skip{$tv->transcript->biotype} ? 0 : 1;
+    ($allele_str, $vf_start, $vf_end) = format_coords($ref_allele_ypar, $alt_allele_ypar, $allele_str, $data->{feature_info}->{ypar}->{start}, $data->{feature_info}->{ypar}->{end}, $data->{feature_info}->{ypar});
 
-      # write to MTMP table if transcript is MANE (GRCh38)
-      my $write_mane = $tv->transcript->is_mane ? 1 : 0;
-      my $mtmp = $write_mane && $write_biotype;
+    $so_term = SO_variation_class($allele_str);
 
-      # MANE is not available for GRCh37
-      if($assembly =~ /GRCh37/) {
-        $mtmp = $write_biotype;
+    my $vf_par = Bio::EnsEMBL::Variation::VariationFeature->new(
+        -start           => $vf_start,
+        -end             => $vf_end,
+        -strand          => 1,
+        -slice           => $slice,
+        -variation_name  => $dbSNP,
+        -map_weight      => 1,
+        -allele_string   => $allele_str,
+        -variation       => $var,
+        -source          => $source,
+        -is_somatic      => 0,
+        -adaptor         => $var_feat_adaptor,
+        -class_so_term   => $so_term,
+        );
+
+      $var_feat_adaptor->store($vf_par);
+      push @vfs, $vf_par;
+  }
+
+  if($insert_tv) {
+    for my $var_feat (@vfs) {
+      my $count_tv = 0;
+      my $all_tv = $var_feat->get_all_TranscriptVariations();
+      foreach my $tv (@{$all_tv}) {
+        # Do not include upstream and downstream consequences
+        next unless overlap($var_feat->start, $var_feat->end, $tv->transcript->start - 0, $tv->transcript->end + 0);
+
+        $count_tv += 1;
+
+        # only include valid biotypes in MTMP_transcript_variation
+        my $write_biotype = $biotypes_to_skip{$tv->transcript->biotype} ? 0 : 1;
+
+        # write to MTMP table if transcript is MANE (GRCh38)
+        my $write_mane = $tv->transcript->is_mane ? 1 : 0;
+        my $mtmp = $write_mane && $write_biotype;
+
+        # MANE is not available for GRCh37
+        if($assembly =~ /GRCh37/) {
+          $mtmp = $write_biotype;
+        }
+
+        $tva->store($tv, $mtmp);
       }
 
-      $tva->store($tv, $mtmp);
-    }
+      # get variation_feature_id
+      my $vf_dbid = $var_feat->dbID;
 
-    # get variation_feature_id
-    my $vf_dbid = $vf->dbID;
+      my $update_vf_smt = qq { UPDATE variation_feature
+                              SET consequence_types = ?
+                              WHERE variation_feature_id = ?
+                            };
 
-    my $update_vf_smt = qq { UPDATE variation_feature
-                            SET consequence_types = ?
-                            WHERE variation_feature_id = ?
-                          };
+      # If variation_feature has no entry in transcript_variation then we need to set the consequence_types to default
+      if(!$count_tv) {
+        my $vf_sth = $dba->dbc()->prepare($update_vf_smt);
+        $vf_sth->execute('intergenic_variant', $var_feat->dbID) or die "Error updating consequence_types to default in table variation_feature\n";
+      }
 
-    # If variation_feature has no entry in transcript_variation then we need to set the consequence_types to default
-    if(!$count_tv) {
-      my $vf_sth = $dba->dbc()->prepare($update_vf_smt);
-      $vf_sth->execute('intergenic_variant', $vf->dbID) or die "Error updating consequence_types to default in table variation_feature\n";
-    }
+      # By default group_concat has maximum length 1024
+      # some variants have consequence_types longer than 1024
+      my $stmt_len = qq {set session group_concat_max_len = 100000};
+      my $sth_len = $dbh->prepare($stmt_len);
+      $sth_len->execute();
 
-    # By default group_concat has maximum length 1024
-    # some variants have consequence_types longer than 1024
-    my $stmt_len = qq {set session group_concat_max_len = 100000};
-    my $sth_len = $dbh->prepare($stmt_len);
-    $sth_len->execute();
+      # Update consequence_types in variation_feature table
+      my $tv_sth    = $dba->dbc()->prepare(qq[ SELECT variation_feature_id, GROUP_CONCAT(DISTINCT(consequence_types))
+                                                        FROM transcript_variation
+                                                        WHERE variation_feature_id = ?
+                                                        GROUP BY variation_feature_id;
+                                                  ]);
 
-    # Update consequence_types in variation_feature table
-    my $tv_sth    = $dba->dbc()->prepare(qq[ SELECT variation_feature_id, GROUP_CONCAT(DISTINCT(consequence_types))
-                                                      FROM transcript_variation
-                                                      WHERE variation_feature_id = ?
-                                                      GROUP BY variation_feature_id;
-                                                ]);
-
-    $tv_sth->execute($vf_dbid) or die "Error selecting consequence_types from transcript_variation\n";
-    my $data_tv = $tv_sth->fetchall_arrayref();
-    if (defined $data_tv->[0]->[0]) {
-      my $update_vf_sth = $dba->dbc()->prepare($update_vf_smt);
-      $update_vf_sth->execute($data_tv->[0]->[1], $data_tv->[0]->[0]) or die "Error updating consequence_types in table variation_feature\n";
+      $tv_sth->execute($vf_dbid) or die "Error selecting consequence_types from transcript_variation\n";
+      my $data_tv = $tv_sth->fetchall_arrayref();
+      if (defined $data_tv->[0]->[0]) {
+        my $update_vf_sth = $dba->dbc()->prepare($update_vf_smt);
+        $update_vf_sth->execute($data_tv->[0]->[1], $data_tv->[0]->[0]) or die "Error updating consequence_types in table variation_feature\n";
+      }
     }
   }
 
-  my @vf; #return vf to attach phenotype feature to
-  push @vf, $vf;
-  return ($var, \@vf);
+  return ($var, \@vfs);
 }
 
+=head2 format_coords
+
+  - Return the allele string, vf start and vf end based on the HGVS genomic
+  - Return undef if a duplication doesn't have a start coinciding with the hgvs parsed elements
+=cut
+sub format_coords {
+  my $ref_allele = shift;
+  my $alt_allele = shift;
+  my $allele_str = shift;
+  my $vf_start = shift;
+  my $vf_end = shift;
+  my $data = shift;
+
+  if ($ref_allele eq '-' && $allele_str ne '-/') {
+    if ($vf_start == $vf_end){
+      $vf_start = $vf_end+1 ;
+    } elsif ( $vf_start +1 == $vf_end) {
+      $vf_start = $data->{end};
+      $vf_end = $data->{start};
+    } elsif ($data->{hgvs_g} =~ /\d+dup/){ # "3-6dupGAGA"
+      $vf_start = $vf_end + 1;
+    }
+  } elsif ($allele_str eq '-/' && $data->{hgvs_g} =~ /g\.\d+dup/){ #new style formated "g.123dup"
+    my $ref_slice = $slice_adaptor->fetch_by_region( 'chromosome', $data->{Chr}, $data->{end}, $data->{end});
+    my $ref_seq = $ref_slice->seq();
+    $allele_str = "-/".$ref_seq;
+    $vf_start= $vf_end + 1;
+  } elsif ($allele_str eq '-/' && $data->{hgvs_g} =~ /g\.\d+\_\d+dup/){ #new style formated "g.123_126dup"
+    my $ref_slice = $slice_adaptor->fetch_by_region( 'chromosome', $data->{Chr}, $data->{start}, $data->{end});
+    my $ref_seq = $ref_slice->seq();
+    $allele_str = "-/".$ref_seq;
+    $vf_start= $vf_end + 1;
+  } elsif ($alt_allele =~/^$ref_allele/ && $data->{hgvs_g} =~ m/\[/i ) {
+    # check if HGVS was a repeat and reference already contains the a repeat and the number of inserted repeats has to be adjusted
+    # eg. rs1555092425 (11:g.108282799A[5]) -> get_hgvs_alleles produces -> A(1) -> A(5) while correct is: ref AAA(3) -> alt AAAAA(5)
+    my $refSlice = $slice_adaptor->fetch_by_region( 'chromosome', $data->{Chr}, $vf_start, $vf_start + length($alt_allele) - 1);
+    my @refSeq = split //, $refSlice->seq;
+    my @altSeq = split //, $alt_allele;
+    my ($i,$match) = (0,1);
+
+    # skip duplications that don't have start coinciding with hgvs parsed elements
+    if ($refSeq[0] ne $altSeq[0]) {
+      print "INFO: skipping variation (duplications) with ref[0] ne alt[0] for $data->{hgvs_g} \n" if $DEBUG == 1;
+      return undef;
+    }
+
+    while ($i< scalar @altSeq && $match){
+      $match=0 if ($refSeq[$i] ne $altSeq[$i]);
+      $i++;
+    }
+    $ref_allele = substr($refSlice->seq, 0, $i-1);
+    $allele_str = $ref_allele ."/". $alt_allele;
+  }
+  # case eg. NC_000009.12:g.137233961_137234061del
+  elsif ($allele_str eq '/-' && $data->{hgvs_g} =~ /\d+_\d+del$/){
+      my ($start, $end) = $data->{hgvs_g} =~ m/(\d+)_(\d+)del$/i;
+      print "WARNING: HGVS contains different start/end for deletion ($data->{hgvs_g})\n" if ($start ne $vf_start || $end != $vf_end );
+      my $refSlice = $slice_adaptor->fetch_by_region( 'chromosome', $data->{Chr}, $vf_start, $vf_end);
+      $ref_allele = $refSlice->seq;
+      $allele_str = $ref_allele ."/". $alt_allele;
+  }
+  # case eg. NC_000007.14:g.5978687_5978689delinsC
+  elsif ($data->{hgvs_g} =~ /\d+_\d+delins[A-Z]+/i){
+      my ($start, $end, $alt) = $data->{hgvs_g} =~ m/(\d+)_(\d+)delins([A-Z]+)$/i;
+      print "WARNING: HGVS contains different start/end/alt for delins ($data->{hgvs_g})\n" if ($start ne $vf_start || $end != $vf_end  || $alt ne $alt_allele);
+      my $refSlice = $slice_adaptor->fetch_by_region( 'chromosome', $data->{Chr}, $vf_start, $vf_end);
+      $ref_allele = $refSlice->seq;
+      $allele_str = $ref_allele ."/". $alt_allele;
+  }
+
+  return ($allele_str, $vf_start, $vf_end);
+}
 
 
 =head2 get_structural_variant
