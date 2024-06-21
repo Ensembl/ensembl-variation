@@ -186,12 +186,12 @@ workflow {
   translated = translated.unique { it.md5 }
 
   // Run protein function prediction
-  errors = Channel.empty()
+  errors = Channel.of("# failure reasons")
   if ( params.sift_run_type != "NONE" ) errors = errors.concat(run_sift_pipeline( translated ))
   if ( params.pph_run_type  != "NONE" ) errors = errors.concat(run_pph2_pipeline( translated ))
 
   errors
-    .collectFile(name: 'failure_reason.tsv', newLine: true, storeDir: ${params.outdir})
+    .collectFile(name: 'failure_reason.tsv', newLine: true, storeDir: params.outdir)
     .subscribe { println "Errors saved to file $it" }
 }
 

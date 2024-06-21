@@ -29,7 +29,10 @@ process run_pph2_on_all_aminoacid_substitutions {
   tag "${peptide.md5}"
   container "ensemblorg/polyphen-2:2.2.3"
   containerOptions "--bind ${params.pph_data}:/opt/pph2/data"
-  label 'retry_before_ignoring'
+
+  memory { peptide.size() * 100.MB + 4.GB }
+  errorStrategy 'ignore'
+  maxRetries 1
 
   input:
     val peptide
@@ -95,6 +98,9 @@ process store_pph2_scores {
   tag "${peptide.md5} ${model}"
   container "ensemblorg/ensembl-vep:latest"
   label 'retry_before_ignoring'
+  queue 'short'
+
+  cache false
 
   input:
     val ready

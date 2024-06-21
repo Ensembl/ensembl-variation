@@ -31,7 +31,10 @@ process align_peptides {
 
   tag "${peptide.md5}"
   container "ensemblorg/sift:6.2.1"
-  label 'retry_before_ignoring'
+
+  memory { peptide.size() * 40.MB + 4.GB }
+  errorStrategy 'ignore'
+  maxRetries 1
 
   input:
     val peptide
@@ -49,7 +52,7 @@ process align_peptides {
   cat > ${peptide.md5}.fa << EOL
 ${peptide.text}EOL
 
-  setenv error 0
+  set error=0
   setenv tmpdir "."
   #setenv NCBI "/opt/blast/bin/"
   setenv NCBI "/hps/software/users/ensembl/ensw/C8-MAR21-sandybridge/linuxbrew/Cellar/blast/2.2.30/bin"
@@ -57,7 +60,8 @@ ${peptide.text}EOL
                                   ${blastdb_dir}/${blastdb_name} \\
                                   ${params.median_cutoff} || setenv error \$status
   # Capture expected errors to avoid failing job
-  capture_expected_errors.sh ${peptide.md5} sift_align .command.err \$error expected_error.txt
+  set nonomatch=1
+  if ( -f *.error ) capture_expected_errors.sh ${peptide.md5} sift_align *.error \$error expected_error.txt
   """
 }
 
@@ -73,8 +77,11 @@ process run_sift_on_all_aminoacid_substitutions {
 
   tag "${peptide.md5}"
   container "ensemblorg/sift:6.2.1"
-  label 'retry_before_ignoring'
   publishDir "${params.outdir}/sift"
+
+  memory { peptide.size() * 40.MB + 4.GB }
+  errorStrategy 'ignore'
+  maxRetries 1
 
   input:
     tuple val(peptide), path(aln)
@@ -90,7 +97,7 @@ process run_sift_on_all_aminoacid_substitutions {
   create_aa_substitutions.sh sift ${peptide.id} "${peptide.seqString}" > \${subs}
 
   error=0
-  info_on_seqs ${aln} \${subs} protein.SIFTprediction || error=$?
+  info_on_seqs ${aln} \${subs} protein.SIFTprediction || error=\$?
 
   # Capture expected errors to avoid failing job
   capture_expected_errors.sh ${peptide.md5} sift .command.err \$error expected_error.txt
@@ -100,6 +107,9 @@ process run_sift_on_all_aminoacid_substitutions {
 process store_sift_scores {
   tag "${peptide.id}"
   container "ensemblorg/ensembl-vep:latest"
+  queue 'short'
+
+  cache false
 
   input:
     val ready
