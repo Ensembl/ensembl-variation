@@ -84,7 +84,10 @@ if (params.help) {
 // Module imports
 include { decompress }                from './nf_modules/utils.nf'
 include { translate_fasta }           from './nf_modules/translations.nf'
-include { store_translation_mapping } from './nf_modules/database_utils.nf'
+include { clear_assemblies;
+          store_assemblies;
+          drop_translation_mapping; 
+          store_translation_mapping } from './nf_modules/database.nf'
 include { run_sift_pipeline }         from './nf_modules/sift.nf'
 include { run_pph2_pipeline }         from './nf_modules/polyphen2.nf'
 
@@ -159,6 +162,7 @@ workflow {
   } else {
     translated = getFiles(params.translated)
   }
+  files = translated
 
   // Parse translation FASTA file
   translated = translated
@@ -172,18 +176,33 @@ workflow {
                               md5: it.seqString.replaceAll(/\*/, "").md5() ]}
 
   // Write translation mapping with transcript ID and MD5 hashes to database
+  if ( params.sift_run_type == "FULL" && params.pph_run_type == "FULL" ) {
+    drop_translation_mapping()
+    translation_mapping_wait = drop_translation_mapping.out
+    clear_assemblies()
+    assemblies_wait = clear_assemblies.out
+  } else {
+    translation_mapping_wait = "ready"
+    assemblies_wait = "ready"
+  }
   translation_mapping = translated.collectFile(
                           name: "translation_mapping.tsv",
                           storeDir: params.outdir,
                           newLine: true) { it.id + "\t" + it.md5 }
-  store_translation_mapping(translation_mapping)
+  store_translation_mapping(translation_mapping, translation_mapping_wait)
+  store_assemblies(files.collect(), assemblies_wait)
 
   // Get unique translations based on MD5 hashes of their sequences
   translated = translated.unique { it.md5 }
 
   // Run protein function prediction
-  if ( params.sift_run_type != "NONE" ) run_sift_pipeline( translated )
-  if ( params.pph_run_type  != "NONE" ) run_pph2_pipeline( translated )
+  errors = Channel.of("# failure reasons")
+  if ( params.sift_run_type != "NONE" ) errors = errors.concat(run_sift_pipeline( translated ))
+  if ( params.pph_run_type  != "NONE" ) errors = errors.concat(run_pph2_pipeline( translated ))
+
+  errors
+    .collectFile(name: 'failure_reason.tsv', newLine: true, storeDir: params.outdir)
+    .subscribe { println "Errors saved to file $it" }
 }
 
 // Print summary
@@ -201,4 +220,8 @@ workflow.onComplete {
         exit status : ${workflow.exitStatus}
         """
     )
+}
+
+workflow.onError {
+  log.info "Execution halted: ${workflow.errorMessage}"
 }
