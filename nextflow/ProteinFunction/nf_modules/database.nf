@@ -44,6 +44,42 @@ process store_translation_mapping {
   """
 }
 
+process clear_assemblies {
+  output: stdout
+  cache false
+
+  """
+  mysql --host=${params.host} --port=${params.port} \
+        --user=${params.user} --password=${params.pass} \
+        ${params.database} <<'EOF'
+
+    DELETE FROM meta WHERE meta_key = 'assembly';
+
+  EOF
+  """
+}
+
+process store_assemblies {
+  input:
+    path files
+    val wait
+  output: stdout
+  cache false
+
+  """
+  ls * | grep -Eo "GCA_[0-9]+(\\.[0-9]+)?|GRCh3[7-8]" | awk '{print "assembly\t"\$1}' > assemblies.txt
+
+  mysql --host=${params.host} --port=${params.port} \
+        --user=${params.user} --password=${params.pass} \
+        ${params.database} --local-infile=1 <<'EOF'
+
+    LOAD DATA LOCAL INFILE 'assemblies.txt'
+    IGNORE INTO TABLE meta (meta_key, meta_value);
+
+  EOF
+  """
+}
+
 process delete_prediction_data {
   input: val value
   output: stdout

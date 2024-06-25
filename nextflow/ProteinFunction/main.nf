@@ -84,7 +84,9 @@ if (params.help) {
 // Module imports
 include { decompress }                from './nf_modules/utils.nf'
 include { translate_fasta }           from './nf_modules/translations.nf'
-include { drop_translation_mapping; 
+include { clear_assemblies;
+          store_assemblies;
+          drop_translation_mapping; 
           store_translation_mapping } from './nf_modules/database.nf'
 include { run_sift_pipeline }         from './nf_modules/sift.nf'
 include { run_pph2_pipeline }         from './nf_modules/polyphen2.nf'
@@ -160,6 +162,7 @@ workflow {
   } else {
     translated = getFiles(params.translated)
   }
+  files = translated
 
   // Parse translation FASTA file
   translated = translated
@@ -175,12 +178,19 @@ workflow {
   // Write translation mapping with transcript ID and MD5 hashes to database
   if ( params.sift_run_type == "FULL" && params.pph_run_type == "FULL" ) {
     drop_translation_mapping()
+    translation_mapping_wait = drop_translation_mapping.out
+    clear_assemblies()
+    assemblies_wait = clear_assemblies.out
+  } else {
+    translation_mapping_wait = "ready"
+    assemblies_wait = "ready"
   }
   translation_mapping = translated.collectFile(
                           name: "translation_mapping.tsv",
                           storeDir: params.outdir,
                           newLine: true) { it.id + "\t" + it.md5 }
-  store_translation_mapping(translation_mapping, drop_translation_mapping)
+  store_translation_mapping(translation_mapping, translation_mapping_wait)
+  store_assemblies(files.collect(), assemblies_wait)
 
   // Get unique translations based on MD5 hashes of their sequences
   translated = translated.unique { it.md5 }
