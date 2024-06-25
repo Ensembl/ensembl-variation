@@ -27,12 +27,12 @@
             "sample_prefix": "1000GENOMES:phase_3:"
         },
         {
-            "id": "gnomADg_GRCh37",
-            "description": "Genome Aggregation Database genomes r2.1",
+            "id": "gnomADg_v4.1_GRCh37",
+            "description": "Genome Aggregation Database genomes v4.1",
             "species": "homo_sapiens",
             "assembly": "GRCh37",
             "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh37/variation_genotype/gnomad/r2.1/genomes/gnomad.genomes.r2.1.sites.chr###CHR###_noVEP.vcf.gz",
+            "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh37/variation_genotype/gnomad/v4.1/genomes/gnomad.genomes.v4.1.sites.grch37.chr###CHR###_trimmed_liftover.vcf.gz",
             "chromosomes": [
                 "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", 
                 "15", "16", "17", "18", "19", "20", "21", "22", "X" 
@@ -73,18 +73,30 @@
                     "description": "Non-Finnish European"
                 },
                 "9900007": {
-                    "name": "oth",
-                    "description": "Other"
+                    "name": "remaining",
+                    "description": "Remaining"
+                },
+                "9900020": {
+                    "name": "ami",
+                    "description": "Amish"
+                },
+                "9900021": {
+                    "name": "mid",
+                    "description": "Middle Eastern"
+                },
+                "9900022": {
+                    "name": "sas",
+                    "description": "South Asian"
                 }
             }
         },
         {
-            "id": "gnomADe_GRCh37",
-            "description": "Genome Aggregation Database exomes r2.1",
+            "id": "gnomADe_v4.1_GRCh37",
+            "description": "Genome Aggregation Database exomes v4.1",
             "species": "homo_sapiens",
             "assembly": "GRCh37",
             "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh37/variation_genotype/gnomad/r2.1/exomes/gnomad.exomes.r2.1.sites.chr###CHR###_noVEP.vcf.gz",
+            "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh37/variation_genotype/gnomad/v4.1/exomes/gnomad.exomes.v4.1.sites.grch37.chr###CHR###_trimmed_liftover.vcf.gz",
             "chromosomes": [
                 "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", 
                 "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y" 
@@ -125,12 +137,16 @@
                     "description": "Non-Finnish European"
                 },
                 "9900017": {
-                    "name": "oth",
-                    "description": "Other"
+                    "name": "remaining",
+                    "description": "Remaining"
                 },
                 "9900018": {
                     "name": "sas",
                     "description": "South Asian"
+                },
+                "9900019": {
+                    "name": "mid",
+                    "description": "Middle Eastern"
                 }
             }
         },
