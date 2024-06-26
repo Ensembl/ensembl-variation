@@ -372,7 +372,6 @@ sub _create_vf {
 =cut
 
 sub _fetch_cache_vars {
-  # fetch variants from VEP cache
   my ($self, $chr, $start, $end) = @_;
 
   my ($as, $variants);
@@ -439,7 +438,6 @@ sub _fetch_cache_vars {
 =cut
 
 sub _fetch_database_vars {
-  # fetch variants from Ensembl API
   my ($self, $chr, $start, $end) = @_;
 
   my $config  = $self->{config};
