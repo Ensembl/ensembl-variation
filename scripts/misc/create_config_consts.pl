@@ -86,9 +86,10 @@ die "Failed to import required data structures from config module '$config':\n$@
 
 my $hdr = q{package Bio::EnsEMBL::Variation::Utils::Constants;
 
-#####################################################################
-# NB: THIS FILE HAS BEEN AUTOMATICALLY GENERATED, EDIT WITH CAUTION #
-#####################################################################
+##############################################################################
+#   NB: AUTOMATICALLY GENERATED; AVOID MANUAL EDITING! EDIT Constants.pm     #
+#   AND THEN RUN perl scripts/misc/create_config_consts.pl > Config.pm       #
+##############################################################################
 
 use strict;
 use warnings;
