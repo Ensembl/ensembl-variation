@@ -307,7 +307,7 @@ workflow {
 
   run_variant_synonyms(run_eva.out, file(var_syn_script), params.source, params.species, file(params.var_syn_file), registry, params.old_host, params.old_port, params.old_dbname)
 
-  # check if the species starts with any of the keys in set_names, such as 'ovis_aries_rambouillet' matching 'ovis_aries'
+  // check if the species starts with any of the keys in set_names, such as 'ovis_aries_rambouillet' matching 'ovis_aries'
   set_names_key = set_names.keySet().find{ params.species =~ /^${it}/ }
   if(set_names_key) {
     my_species_set = Channel.fromList(set_names.get(set_names_key))
