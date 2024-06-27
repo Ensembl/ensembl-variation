@@ -77,8 +77,6 @@ use Bio::EnsEMBL::Variation::Utils::Sequence qw(hgvs_variant_notation format_hgv
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap within_cds within_intron stop_lost start_lost frameshift stop_retained);
 
-use Data::Dumper;
-
 use base qw(Bio::EnsEMBL::Variation::VariationFeatureOverlapAllele Bio::EnsEMBL::Variation::BaseTranscriptVariationAllele);
 
 
@@ -1441,14 +1439,6 @@ sub hgvs_transcript {
 
   if(scalar @edit_attrs > 0) {
     my $ref = $tv->get_reference_TranscriptVariationAllele;
-
-    # print "Edit HGVSc alleles!!\n";
-
-    # print "-> (HGVSc) ref variation_feature_seq: ", $ref->variation_feature_seq, "\n";
-    # print "-> (HGVSc) self variation_feature_seq: ", $self->variation_feature_seq, "\n";
-    # print "-> (HGVSg) ref feature_seq: ", $ref->feature_seq, "\n";
-    # print "-> (HGVSg) self feature_seq: ", $self->feature_seq, "\n";
-
     $hgvs_notation->{ref} = $ref->variation_feature_seq;
     $hgvs_notation->{alt} = $self->variation_feature_seq;
   }
@@ -2593,7 +2583,7 @@ sub _hgvs_generic {
   my $self = shift;
   my $reference = pop;
   my $notation = shift;
-  
+
   #The rna and mitochondrial modes have not yet been implemented, so return undef in case we get a call to these
   return undef if ($reference =~ m/rna|mitochondrial/);
   

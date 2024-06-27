@@ -1985,25 +1985,6 @@ sub hgvs_genomic {
     # Skip if e.g. allele is identical to the reference slice
     next if (!defined($hgvs_notation));
 
-    # Check if there are mismatches between refseq transcripts and the reference genome
-    # These mismatches are tracked in transcript attributes
-    # If there are mismatches then edit the HGVSg alleles
-    my $tv_test = $self->get_all_TranscriptVariations->[0];
-
-    if(defined $tv_test) {
-	    my @edit_attrs = grep {$_->code =~ /^_rna_edit/} @{$tv_test->transcript->get_all_Attributes()};
-
-      if(scalar(@edit_attrs) > 0) {
-        # print "Going to edit HGVSg alleles!!\n";
-        # Edit ref allele
-        my $tva_test = $tv_test->get_reference_TranscriptVariationAllele;
-        $hgvs_notation->{ref} = $tva_test->feature_seq;
-        # Edit alt allele
-        my $tva_alts_test = @{$tv_test->get_all_alternate_TranscriptVariationAlleles}[0];
-        $hgvs_notation->{alt} = $tva_alts_test->feature_seq;
-        }
-    }
-
     ## alleles may need trimming if the type is reported as a delins
     $hgvs_notation = _clip_alleles($hgvs_notation) if( $hgvs_notation->{type} eq 'delins');
 
