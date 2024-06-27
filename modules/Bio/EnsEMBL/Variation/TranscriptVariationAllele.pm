@@ -832,7 +832,7 @@ sub codon {
       my $refseq_ref = $edit_attrs[0]->value;
       $refseq_ref =~ s/\d+\s\d+\s//;
       if ($refseq_ref eq $seq) {
-        $self->{alleles_mismatch} = 1;
+        $self->{invalid_alleles} = 1;
       }
     }
 
