@@ -1,8 +1,20 @@
 # Create MaveDB plugin data
 
-This Nextflow pipeline creates data for the VEP [MaveDB plugin](https://github.com/Ensembl/VEP_plugins/blob/main/MaveDB.pm).
+This Nextflow pipeline prepares data for the VEP [MaveDB plugin][].
 
-To generate the plugin data, we require MaveDB mappings. MaveDB scores are automatically downloaded using the [MaveDB API](https://api.mavedb.org/docs).
+The pipeline requires a list of MaveDB URNs. MaveDB mappings and scores are
+automatically downloaded using the [MaveDB API][] and then MaveDB data is mapped
+to genomic variants using:
+- [pyliftover][] to convert genomic coordinates to GRCh38/hg38
+- [Variant Recoder][] to map protein variants
+
+By default, containers are downloaded to perform all actions, so there is no
+need to install extra software.
+
+[MaveDB plugin]: https://github.com/Ensembl/VEP_plugins/blob/main/MaveDB.pm
+[MaveDB API]: https://api.mavedb.org/docs
+[pyliftover]: https://pypi.org/project/pyliftover
+[Variant Recoder]: https://www.ensembl.org/info/docs/tools/vep/recoder
 
 ## Requirements
 
@@ -13,35 +25,47 @@ Any Docker images used are automatically downloaded if using Docker or Singulari
 
 ## Running the pipeline
 
-Create a folder in your working directory and run:
+Create a file listing the MaveDB URNs to process, such as:
+
+```
+urn:mavedb:00000001-a-1
+urn:mavedb:00000001-b-1
+urn:mavedb:00000001-b-2
+urn:mavedb:00000002-a-1
+urn:mavedb:00000003-a-1
+urn:mavedb:00000003-b-1
+```
+
+Run this pipeline with that file:
 
 ```bash
-[path_to]/ensembl-variation/nextflow/MaveDB/main.nf \
-  -profile lsf -resume \
-  --mappings [folder_containing_MaveDB_mappings]
+nextflow run [path_to]/ensembl-variation/nextflow/MaveDB/main.nf \
+  -profile slurm -resume \
+  --urn urn.txt
 ```
 
 ### Arguments
 
 | Argument     | Description |
 | ------------ | ----------- |
-| `--mappings` | Path to directory containing MaveDB mapping files in JSON format (mandatory) |
+| `--urn`      | Path to file listing MaveDB URNs (mandatory) |
 | `--ensembl`  | Path to Ensembl root directory (default: `${ENSEMBL_ROOT_DIR}`) |
 | `--output`   | Path to output file (default: `output/MaveDB_variants.tsv.gz`) |
+| `--registry` | Path to Ensembl registry file used for [Variant Recoder][] (default: none) |
 | `--licences` | Comma-separated list of accepted licences (default: `CC0`) |
 | `--round`    | Decimal places to round floats in MaveDB data (default: `4`)
 
 ## Pipeline steps
 
-1. For each MaveDB mapping file, check if corresponding MaveDB scores file is open-access (licence CC0) using MaveDB API
+1. For each MaveDB URN, download respective metadata and check if it is using open-access licence (CC0 by default)
 2. Split MaveDB mapping files by HGVS type: either **HGVSg** or **HGVSp**
 3. If HGVSg:
 	1. Map MaveDB scores to genomic variants using MaveDB mappings file
-        - Scores file is automatically downloaded using MaveDB API
-	3. LiftOver to hg38 (if needed)
+      - Scores file is automatically downloaded using MaveDB API
+	3. LiftOver genomic coordinates to GRCh38/hg38 (if needed) with [pyliftover][]
 4. If HGVSp:
 	1. Get all unique HGVSp from MaveDB mappings file
-	2. Run Variant Recoder (VR) to get possible genomic coordinates for HGVSp
+	2. Run [Variant Recoder][] (VR) to get possible genomic coordinates for HGVSp
 	    - Can take up to 6 hours + 70 GB of RAM for a single run with many HGVSp
 	    - Given that it uses the online Ensembl database, it may fail due to too many connections
 	4. Map MaveDB scores to genomic variants using VR output and MaveDB mappings file
@@ -51,44 +75,45 @@ Create a folder in your working directory and run:
 
 Notes:
 - The MaveDB API may return `502: Proxy error` when under stress, resulting in failed jobs.
-- Variant Recoder uses an online connection to Ensembl database that can refuse if we ask for too many connections.
+- [Variant Recoder][] uses an online connection to Ensembl database that can refuse if we ask for too many connections.
 
 ## Pipeline diagram
 
 ```mermaid
 flowchart TD
-    p0(( ))
-    p1[get_files_by_licence:get_licence]
-    p3([filter by licence])
-    p4([warn about files with\nnon-matching licences])
-    p7([branch])
-    p11[map_scores_to_HGVSg_variants]
-    p12[download_chain_files]
-    p13[liftover_to_hg38]
-    p14[get_hgvsp]
-    p15([filter HGVSp files with size > 0])
-    p18[run_variant_recoder]
-    p19[map_scores_to_HGVSp_variants]
-    p20([mix + collect])
-    p22[concatenate_files]
-    p23[tabix]
-    p0 --> |files| p1
-    p1 --> p3
-    p3 --> p4
-    p4 --> p7
+    start(( ))
+    metadata(download metadata)
+    licence(filter by licence)
+    download(download MaveDB scores and mapping)
+    warn([warn about files with\nnon-matching licences])
+    p7([branch files])
+    p11[map scores to\ngenomic variants]
+    chain[download chain files]
+    liftover[LiftOver to\nGRCh38/hg38]
+    p14[get HGVSp identifiers]
+    discard([discard if no\nHGVSp identifiers])
+    vr[run Variant Recoder\nto map protein variants]
+    p19[map scores to\ngenomic variants]
+    concat[concatenate files]
+    tabix[tabix]
+
+    start --> |urn| metadata
+    metadata --> licence
+    licence --> download
+    licence --> warn
+    download --> p7
     p7 --> p14
     p7 --> p11
     subgraph hgvsg ["HGVSg: genomic variants"]
-    p11 --> p13
-    p12 --> p13
+    p11 --> liftover
+    chain --> liftover
     end
-    p13 --> p20
+    liftover --> concat
     subgraph hgvsp ["HGVSp: protein variants"]
-    p14 --> p15
-    p15 --> p18
-    p18 --> p19
+    p14 --> discard
+    discard --> vr
+    vr --> p19
     end
-    p19 --> p20
-    p20 --> p22
-    p22 --> p23
+    p19 --> concat
+    concat --> tabix
 ```

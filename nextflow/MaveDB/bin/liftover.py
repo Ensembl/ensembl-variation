@@ -1,23 +1,35 @@
 #!/usr/bin/env python3
 import os, json
 from pyliftover import LiftOver
-
 import argparse
-parser = argparse.ArgumentParser(
-                    description='Lift-over variants associated with MaveDB scores')
-parser.add_argument('--mappings', type=str,
-                    help="path to file with MaveDB mappings")
-parser.add_argument('--mapped_variants', type=str,
-                    help="path to file with variants mapped to MaveDB scores")
-parser.add_argument('--reference', type=str, default="hg38",
-                    help="genome to use as default (default: 'hg38')")
-args = parser.parse_args()
 
-reference = args.reference
-mapped    = args.mapped_variants
-mappings  = args.mappings
+def main():
+  parser = argparse.ArgumentParser(
+             description='Lift-over variants associated with MaveDB scores')
+  parser.add_argument('--metadata', type=str,
+                      help="path to file with MaveDB metadata")
+  parser.add_argument('--mapped_variants', type=str,
+                      help="path to file with variants mapped to MaveDB scores")
+  parser.add_argument('--reference', type=str, default="hg38",
+                      help="genome (default: 'hg38')")
+  args = parser.parse_args()
 
-res = json.load(open(mappings))
+  reference = args.reference
+  mapped    = args.mapped_variants
+  metadata  = json.load(open(args.metadata))
+
+  if 'reference' in metadata['extraMetadata']:
+    genome = metadata['extraMetadata']['reference']
+  else:
+    genome = 'hg38'
+
+  if genome == reference:
+    # just rename file if variants are already mapped to reference genome
+    os.rename(mapped, f"liftover_{mapped}")
+  else:
+    liftover_variants(mapped, genome, reference)
+
+  return True
 
 def liftover_variants (mapped, genome, reference):
   # write file information with lifted-over coordinates to new file
@@ -47,13 +59,5 @@ def liftover_variants (mapped, genome, reference):
       out.write('\t'.join(l))
   out.close()
 
-if 'reference' in res['metadata']['extraMetadata']:
-  genome = res['metadata']['extraMetadata']['reference']
-else:
-  genome = 'hg38'
-
-if genome == reference:
-  # just rename file if variants are already mapped to reference genome
-  os.rename(mapped, f"liftover_{mapped}")
-else:
-  liftover_variants(mapped, genome, reference)
+if __name__ == "__main__":
+  main()
