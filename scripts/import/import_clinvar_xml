@@ -230,13 +230,17 @@ sub process_clinvar_set {
     }
 
     ## clinical significance
-    $record{Desc} = get_clinsig ($set->{ReferenceClinVarAssertion}->{ClinicalSignificance});
+    $record{Desc} = get_clinsig ($set->{ReferenceClinVarAssertion}->{Classifications}->{GermlineClassification});
+    # Skip invalid clinical significance
+    if($record{Desc} =~ "no classifications from unflagged records") {
+      return undef;
+    }
 
     ## confidence of assertation
-    $record{Status} = $set->{ReferenceClinVarAssertion}->{ClinicalSignificance}->{ReviewStatus};
+    $record{Status} = $set->{ReferenceClinVarAssertion}->{Classifications}->{GermlineClassification}->{ReviewStatus};
 
     ## date of assertion
-    $record{DateLastEvaluated} =  $set->{ReferenceClinVarAssertion}->{ClinicalSignificance}->{DateLastEvaluated};
+    $record{DateLastEvaluated} =  $set->{ReferenceClinVarAssertion}->{Classifications}->{GermlineClassification}->{Description}->{DateLastEvaluated};
 
     ## check for somatic, Autosomal dominant, etc.
     $record{inheritance_type} = get_inheritance($set->{ReferenceClinVarAssertion}->{AttributeSet});
@@ -246,8 +250,6 @@ sub process_clinvar_set {
 
     ## extract arrayref of PMIDs for citations
     $record{citations} = get_citations($set->{ReferenceClinVarAssertion}->{ObservedIn}, "ObservedData");
-    my $extra_citations = get_citations($set->{ClinVarAssertion}, "ClinicalSignificance");
-    push(@{$record{citations}}, @{$extra_citations});
 
     ## Variant name, HGVS, OMIM id and location
     if(defined $set->{ReferenceClinVarAssertion}->{GenotypeSet} && $DEBUG == 1) {
@@ -259,6 +261,7 @@ sub process_clinvar_set {
         print "WARNING: No MeasureSet Type found for $record{Acc}.\n" if $DEBUG == 1;
         return undef;
     }
+
     if ( $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type} ne "Variant" &&
       $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type} ne $haplotype_type ) {
         print "WARNING: Unsupported MeasureSet Type found for $record{Acc}: $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type} .\n" if $DEBUG == 1;
@@ -373,17 +376,17 @@ sub get_clinsig{
   my $ClinicalSignificance = shift;
   my $desc;
 
-  if ($ClinicalSignificance->{Description} =~/conflict/){
+  if ($ClinicalSignificance->{Description}->{content} =~/Conflicting interpretations of pathogenicity/){
     ## Description = 'conflicting data from submitters' - the values are in the explanation
     defined $ClinicalSignificance->{Explanation} ?
-    $desc = "\L$ClinicalSignificance->{Explanation}->[0]" :
+    $desc = "\L$ClinicalSignificance->{Explanation}->{content}" :
     print "warning: conflicting ClinicalSignificance but no Explanation\n";
     $desc |='';
     $desc =~ s/\(\d+\)//g; ## remove bracketed counts
     $desc =~ s/\;/\,/g;    ## switch to comma delimited for set
   }
   else{
-    $desc = "\L$ClinicalSignificance->{Description}";
+    $desc = "\L$ClinicalSignificance->{Description}->{content}";
   }
   return $desc;
 }
@@ -649,7 +652,8 @@ sub get_citations{
 
   my @citations;
  
-  my $observed_in = to_array($structure );
+  my $observed_in = to_array($structure);
+
   foreach my $observed_in (@{$observed_in}){
 
     my $observed_data = to_array($observed_in->{$label});
