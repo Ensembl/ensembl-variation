@@ -1,7 +1,26 @@
 #!/usr/bin/env nextflow
 
+process drop_translation_mapping {
+  output: stdout
+
+  cache false
+
+  """
+  mysql --host=${params.host} --port=${params.port} \
+        --user=${params.user} --password=${params.pass} \
+        ${params.database} <<'EOF'
+
+    DROP TABLE IF EXISTS translation_mapping;
+
+  EOF
+  """
+
+}
+
 process store_translation_mapping {
-  input: path translation_mapping
+  input:
+    path translation_mapping
+    val wait
   output: stdout
 
   cache false
@@ -11,9 +30,7 @@ process store_translation_mapping {
         --user=${params.user} --password=${params.pass} \
         ${params.database} --local-infile=1 <<'EOF'
 
-    DROP TABLE IF EXISTS translation_mapping;
-
-    CREATE TABLE translation_mapping (
+    CREATE TABLE IF NOT EXISTS translation_mapping (
       stable_id   VARCHAR(255),
       md5         CHAR(32),
       PRIMARY KEY (stable_id),
@@ -21,7 +38,43 @@ process store_translation_mapping {
     );
 
     LOAD DATA LOCAL INFILE '${translation_mapping}'
-    INTO TABLE translation_mapping;
+    IGNORE INTO TABLE translation_mapping;
+
+  EOF
+  """
+}
+
+process clear_assemblies {
+  output: stdout
+  cache false
+
+  """
+  mysql --host=${params.host} --port=${params.port} \
+        --user=${params.user} --password=${params.pass} \
+        ${params.database} <<'EOF'
+
+    DELETE FROM meta WHERE meta_key = 'assembly';
+
+  EOF
+  """
+}
+
+process store_assemblies {
+  input:
+    path files
+    val wait
+  output: stdout
+  cache false
+
+  """
+  ls * | grep -Eo "GCA_[0-9]+(\\.[0-9]+)?|GRCh3[7-8]" | awk '{print "assembly\t"\$1}' > assemblies.txt
+
+  mysql --host=${params.host} --port=${params.port} \
+        --user=${params.user} --password=${params.pass} \
+        ${params.database} --local-infile=1 <<'EOF'
+
+    LOAD DATA LOCAL INFILE 'assemblies.txt'
+    IGNORE INTO TABLE meta (meta_key, meta_value);
 
   EOF
   """
@@ -30,8 +83,6 @@ process store_translation_mapping {
 process delete_prediction_data {
   input: val value
   output: stdout
-
-  cache false
 
   """
   mysql --host=${params.host} --port=${params.port} \
@@ -55,8 +106,6 @@ process update_meta {
     val key
     val value
   output: stdout
-
-  cache false
 
   """
   mysql --host=${params.host} --port=${params.port} \
