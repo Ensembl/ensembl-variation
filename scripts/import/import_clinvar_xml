@@ -1373,6 +1373,11 @@ sub enter_var{
 
     ($allele_str, $vf_start, $vf_end) = format_coords($ref_allele_ypar, $alt_allele_ypar, $allele_str, $data->{feature_info}->{ypar}->{start}, $data->{feature_info}->{ypar}->{end}, $data->{feature_info}->{ypar});
 
+    # Skip duplications that don't have a start coinciding with the hgvs parsed elements
+    if(!$allele_str || !$vf_start || !$vf_end) {
+      return undef;
+    }
+
     $so_term = SO_variation_class($allele_str);
 
     my $vf_par = Bio::EnsEMBL::Variation::VariationFeature->new(
