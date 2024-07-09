@@ -97,8 +97,7 @@ process run_weka {
 process store_pph2_scores {
   tag "${peptide.md5} ${model}"
   container "ensemblorg/ensembl-vep:latest"
-  label 'retry_before_ignoring'
-  queue 'short'
+  time '10m'
 
   cache false
 

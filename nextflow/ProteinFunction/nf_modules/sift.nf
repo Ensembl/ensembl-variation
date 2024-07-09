@@ -107,7 +107,7 @@ process run_sift_on_all_aminoacid_substitutions {
 process store_sift_scores {
   tag "${peptide.id}"
   container "ensemblorg/ensembl-vep:latest"
-  queue 'short'
+  time '10m'
 
   cache false
 
