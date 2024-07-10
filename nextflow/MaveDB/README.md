@@ -80,40 +80,60 @@ Notes:
 ## Pipeline diagram
 
 ```mermaid
+%%{
+  init: {
+    'theme': 'base',
+    'themeVariables': {
+      'primaryColor': '#2BA75D',
+      'primaryTextColor': '#fff',
+      'primaryBorderColor': '#2BA75D',
+      'lineColor': '#2BA75D',
+      'secondaryColor': '#2BA75D',
+      'secondaryBorderColor': '#2BA75D',
+      'secondaryTextColor': '#2BA75D',
+      'tertiaryColor': '#E9F6EE',
+      'tertiaryBorderColor': '#2BA75D',
+      'tertiaryTextColor': '#2BA75D'
+    }
+  }
+}%%
+
 flowchart TD
     start(( ))
-    metadata(download metadata)
-    licence(filter by licence)
-    download(download MaveDB scores and mapping)
-    warn([warn about files with\nnon-matching licences])
-    p7([branch files])
-    p11[map scores to\ngenomic variants]
-    chain[download chain files]
-    liftover[LiftOver to\nGRCh38/hg38]
-    p14[get HGVSp identifiers]
-    discard([discard if no\nHGVSp identifiers])
-    vr[run Variant Recoder\nto map protein variants]
-    p19[map scores to\ngenomic variants]
-    concat[concatenate files]
-    tabix[tabix]
+    metadata(fa:fa-download download metadata)
+    licence(fa:fa-filter filter by licence)
+    download(fa:fa-download download MaveDB\nscores and mapping)
+    warn([fa:fa-warning warn about files with\nnon-matching licences])
+    split([fa:fa-right-left split by mapping type])
+    parse1[fa:fa-diagram-predecessor parse scores per\ngenetic variant]
+    chain[fa:fa-download download\nchain files]
+    liftover[fa:fa-diamond-turn-right LiftOver to\nGRCh38/hg38]
+    unique[fa:fa-fingerprint get unique HGVSp identifiers]
+    discard([fa:fa-trash discard if no\nHGVSp identifiers])
+    vr[fa:fa-map-location-dot run Variant Recoder\nto map protein variants]
+    parse2[fa:fa-diagram-predecessor parse scores per\ngenetic variant]
+    concat[fa:fa-layer-group concatenate files]
+    tabix[fa:fa-compass-drafting tabix]
 
     start --> |urn| metadata
     metadata --> licence
     licence --> download
     licence --> warn
-    download --> p7
-    p7 --> p14
-    p7 --> p11
+    download --> for
+    subgraph for["For each pair of MaveDB score and mapping files"]
+    split --> unique
+    split --> parse1
     subgraph hgvsg ["HGVSg: genomic variants"]
-    p11 --> liftover
+    parse1 --> liftover
     chain --> liftover
     end
-    liftover --> concat
     subgraph hgvsp ["HGVSp: protein variants"]
-    p14 --> discard
-    discard --> vr
-    vr --> p19
+    unique --> discard
+    unique --> vr
+    vr --> parse2
     end
-    p19 --> concat
+    end
+    liftover --> concat
+    parse2 --> concat
     concat --> tabix
 ```
