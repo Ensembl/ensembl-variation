@@ -415,6 +415,7 @@ sub _fetch_cache_vars {
         chomp $line;
         # ignore non-overlapping variants
         my $var = $as->parse_variation($line);
+        $var->{chr} = $c;
         next unless overlap($start, $end, $var->{start}, $var->{end});
         push @$variants, $self->_create_vf($var);
       }
