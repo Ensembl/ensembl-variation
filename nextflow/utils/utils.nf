@@ -32,7 +32,7 @@ def print_params(description, separator="-"*description.length(), indent=4,
     // print parameter
     log.info "${indent}${i.key.padRight(max)} : ${i.value}"
 
-    if (nullable && !i.value) {
+    if (nullable && i.value == null) {
       // raise error if param is null
       exit 1, "ERROR: parameter --${i.key} not defined"
     }
