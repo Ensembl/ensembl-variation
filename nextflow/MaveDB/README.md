@@ -59,19 +59,19 @@ nextflow run [path_to]/ensembl-variation/nextflow/MaveDB/main.nf \
 
 1. For each MaveDB URN, download respective metadata and check if it is using open-access licence (CC0 by default)
 2. Split MaveDB mapping files by HGVS type: either **HGVSg** or **HGVSp**
-3. If HGVSg:
-	1. Map MaveDB scores to genomic variants using MaveDB mappings file
-      - Scores file is automatically downloaded using MaveDB API
-	3. LiftOver genomic coordinates to GRCh38/hg38 (if needed) with [pyliftover][]
-4. If HGVSp:
-	1. Get all unique HGVSp from MaveDB mappings file
-	2. Run [Variant Recoder][] (VR) to get possible genomic coordinates for HGVSp
-	    - Can take up to 6 hours + 70 GB of RAM for a single run with many HGVSp
-	    - Given that it uses the online Ensembl database, it may fail due to too many connections
-	4. Map MaveDB scores to genomic variants using VR output and MaveDB mappings file
-	    - Scores file is automatically downloaded using MaveDB API
-5. Concatenate all output files into a single file
-6. Sort, bgzip and tabix
+3. Download scores and mappings files using MaveDB API
+4. For each pair of scores and mappings files:
+    - If genomic variants (HGVSg):
+        - Map MaveDB scores to genomic variants using MaveDB mappings file
+        - LiftOver genomic coordinates to GRCh38/hg38 (if needed) with [pyliftover][]
+    - If protein variants (HGVSp):
+        - Get all unique HGVSp from MaveDB mappings file
+        - Run [Variant Recoder][] (VR) to get possible genomic coordinates for HGVSp
+ 		    - Can take up to 6 hours + 70 GB of RAM for a single run with many HGVSp
+   		    - Given that it uses the online Ensembl database, it may fail due to too many connections
+     	- Map MaveDB scores to genomic variants using VR output and MaveDB mappings file
+6. Concatenate all output files into a single file
+7. Sort, bgzip and tabix
 
 Notes:
 - The MaveDB API may return `502: Proxy error` when under stress, resulting in failed jobs.
