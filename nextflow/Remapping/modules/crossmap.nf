@@ -25,7 +25,7 @@ process crossmap {
   """
 }
 
-process tabix {
+process rename_and_tabix {
   tag "$id"
   memory '4GB'
   time '1h'
@@ -34,14 +34,19 @@ process tabix {
 
   input:
     tuple val(id), path(vcf), path(unmap)
+    val lookup
+
   output:
     path("*.vcf.gz*")
 
+  script:
+    def assembly = !params.keep_id && lookup[id] ?: id
   """
   for file in $vcf $unmap; do
-    sort -k1,1d -k2,2n \${file} -o \${file}
-    bgzip \${file}
-    tabix -p vcf \${file}.gz
+    final=\${file/$id/$assembly}
+    sort -k1,1d -k2,2n \${file} -o \${final}
+    bgzip \${final}
+    tabix -p vcf \${final}.gz
   done
   """
 }
@@ -54,16 +59,29 @@ process report {
 
   input:
     path report
+    val lookup
   output:
     path "${params.report}"
 
+  script:
+    def mapping = lookup.collect { "['${it.key}']=\"${it.value}\"" }.join(' ')
   """
-  echo "#ID\tFailed\tTotal\tPercentage" > ${params.report}
+  declare -A arr=(${mapping})
   for i in `echo ${report} | tr " " "\n" | sort`; do
+    id=\${i/_report.txt/}
     total=`grep -Eo "Total entries: .*" \$i | grep -Eo "[0-9]+"`
     failed=`grep -Eo "Failed to map: .*" \$i | grep -Eo "[0-9]+"`
     percentage=`bc <<< "scale=2; \$failed * 100 / \$total"`
-    echo "\${i/_report.txt/}\t\$failed\t\$total\t\$percentage" >> ${params.report}
+
+    # set assembly to empty string if no match is found
+    assembly=`[ -v arr[\$id] ] && echo \${arr[\$id]} || echo ''`
+    echo "\$id\t\$assembly\t\$failed\t\$total\t\$percentage" >> ${params.report}
   done
+
+  # sort by percentage of failed variants (descending)
+  sort -k5,5nr ${params.report} -o ${params.report}
+
+  # add header
+  sed -ie '1i\\#ID\tAssembly\tFailed\tTotal\tPercentage' ${params.report}
   """
 }
