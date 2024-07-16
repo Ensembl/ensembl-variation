@@ -20,8 +20,10 @@ params.keep_id   = false
 params.out_dir = 'output'
 params.report  = 'crossmap_report.txt'
 
+// Rapid Release FTP dir (and example of --rr_path below)
 params.rr_root = null
-params.rr_path = 'species/Homo_sapiens/$assembly/ensembl/variation/2022_10/vcf/2024_07/'
+params.rr_path = null
+// params.rr_path = 'species/Homo_sapiens/$assembly/ensembl/variation/2022_10/vcf/`date +%Y_%m`/'
 
 lookup = [
   "HG02257.1"    : "GCA_018466835.1",
@@ -151,7 +153,8 @@ include { crossmap; tabix; report } from './modules/crossmap.nf'
 include { copy_to_rapid_release_ftp } from './modules/copy.nf'
 include { print_params; print_summary } from '../utils/utils.nf'
 
-print_params(description=description, separator=separator, nullable=['rr_root'])
+print_params(description=description, separator=separator,
+             nullable=['rr_root', 'rr_path'])
 print_summary()
 
 workflow {
@@ -166,6 +169,9 @@ workflow {
   report(crossmap.out.report.collect(), lookup)
 
   if (params.rr_root) {
+    if (!params.rr_path) {
+      error "ERROR: --rr_path is required to provide the full path of the Rapid Release FTP directory"
+    }
     copy_to_rapid_release_ftp(tabix.out, lookup)
   }
 }
