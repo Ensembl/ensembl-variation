@@ -1,7 +1,7 @@
 #!/usr/bin/env nextflow
 
-def print_params(description, separator="-"*description.length(), indent=4,
-                 params=params, sort=false, nullable=true, skip=['help']) {
+def print_params(description, separator="-"*description.length(), nullable=true,
+                 indent=4, params=params, sort=false, skip=['help']) {
   /*
     Print script parameters
 
@@ -11,8 +11,8 @@ def print_params(description, separator="-"*description.length(), indent=4,
     @param indent      Number of spaces used to indent the message (default: 4)
     @param params      Map of params (default: script params)
     @param sort        Boolean to sort params alphabetically (default: false)
-    @param nullable    Boolean to allow null params; if false, raises an error
-                       if any param is null (default: true)
+    @param nullable    List of params allowed to be null; raises an error for
+                       null params that are not in this list (default: [])
     @param skip        List of params not to print; if null, all params are
                        printed (default: ['help'])
   */
@@ -32,7 +32,7 @@ def print_params(description, separator="-"*description.length(), indent=4,
     // print parameter
     log.info "${indent}${i.key.padRight(max)} : ${i.value}"
 
-    if (nullable && i.value == null) {
+    if (i.key !in nullable && i.value == null) {
       // raise error if param is null
       exit 1, "ERROR: parameter --${i.key} not defined"
     }

@@ -142,7 +142,7 @@ if (params.help) {
 include { crossmap; rename_and_tabix; report } from './modules/crossmap.nf'
 include { print_params; print_summary } from '../utils/utils.nf'
 
-print_params(description, separator)
+print_params(description=description, separator=separator, nullable=['rr_root'])
 print_summary()
 
 workflow {
