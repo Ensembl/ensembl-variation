@@ -25,22 +25,22 @@ process crossmap {
   """
 }
 
-process rename_and_tabix {
+process tabix {
   tag "$id"
   memory '4GB'
   time '1h'
 
-  publishDir "${params.out_dir}", mode: 'move'
+  publishDir "${params.out_dir}", mode: 'copy'
 
   input:
     tuple val(id), path(vcf), path(unmap)
     val lookup
 
   output:
-    path("*.vcf.gz*")
+    tuple val(id), path("*.vcf.gz*")
 
   script:
-    def assembly = !params.keep_id && lookup[id] ?: id
+    def assembly = !params.keep_id && lookup[id] ? lookup[id] : id
   """
   for file in $vcf $unmap; do
     final=\${file/$id/$assembly}
@@ -55,7 +55,7 @@ process report {
   memory '1GB'
   time '1h'
 
-  publishDir "${params.out_dir}", mode: 'move'
+  publishDir "${params.out_dir}", mode: 'copy'
 
   input:
     path report

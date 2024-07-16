@@ -18,7 +18,10 @@ params.fasta_dir = null
 params.keep_id   = false
 
 params.out_dir = 'output'
-params.report = 'crossmap_report.txt'
+params.report  = 'crossmap_report.txt'
+
+params.rr_root = null
+params.rr_path = 'species/Homo_sapiens/$assembly/ensembl/variation/2022_10/vcf/2024_07/'
 
 lookup = [
   "HG02257.1"    : "GCA_018466835.1",
@@ -128,18 +131,24 @@ if (params.help) {
   Mandatory arguments:
     --vcf        VCF file to remap
     --ids        File containing IDs of genomes
-    --chain_dir  Path to chain directory (filenames must have the ID given in --ids)
-    --fasta_dir  Path to fasta directory (filenames must have the ID given in --ids)
+    --chain_dir  Path to chain directory (filenames must contain ID from --ids)
+    --fasta_dir  Path to fasta directory (filenames must contain ID from --ids)
 
   Optional arguments:
     --out_dir    Path to output directory (default: 'output')
-    --report     Filename with remapping statistics (default: 'crossmap_report.txt')
-    --keep_id    Boolean: rename filename based on hard-coded lookup table (default) or keep original ID?
+    --report     Filename with remapping stats (default: 'crossmap_report.txt')
+    --keep_id    Boolean: keep original ID in output filenames (true) or use
+                 respective assembly from lookup table (false; default)?
+
+  Optional arguments to copy output files to Rapid Release (RR) FTP:
+    --rr_root    Root path of RR; if null (default), data is not copied to RR
+    --rr_path    Path to RR subdirectory; the \${assembly} variable is supported
   """
   exit 1
 }
 
-include { crossmap; rename_and_tabix; report } from './modules/crossmap.nf'
+include { crossmap; tabix; report } from './modules/crossmap.nf'
+include { copy_to_rapid_release_ftp } from './modules/copy.nf'
 include { print_params; print_summary } from '../utils/utils.nf'
 
 print_params(description=description, separator=separator, nullable=['rr_root'])
@@ -153,6 +162,10 @@ workflow {
   fasta_dir = Channel.fromPath(params.fasta_dir, checkIfExists: true)
 
   crossmap(vcf, ids, chain_dir, fasta_dir)
-  rename_and_tabix(crossmap.out.vcf, lookup)
+  tabix(crossmap.out.vcf, lookup)
   report(crossmap.out.report.collect(), lookup)
+
+  if (params.rr_root) {
+    copy_to_rapid_release_ftp(tabix.out, lookup)
+  }
 }
