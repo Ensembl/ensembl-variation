@@ -4899,7 +4899,7 @@ sub clean_transcript {
     # clean attributes
     if(defined($tr->{attributes})) {
         my @new_atts;
-        my %keep = map {$_ => 1} qw(gencode_basic miRNA ncRNA cds_start_NF cds_end_NF TSL appris rseq_mrna_match rseq_mrna_nonmatch rseq_5p_mismatch rseq_cds_mismatch rseq_3p_mismatch rseq_nctran_mismatch rseq_no_comparison rseq_ens_match_wt rseq_ens_match_cds rseq_ens_no_match enst_refseq_compare);
+        my %keep = map {$_ => 1} qw(gencode_basic gencode_primary miRNA ncRNA cds_start_NF cds_end_NF TSL appris rseq_mrna_match rseq_mrna_nonmatch rseq_5p_mismatch rseq_cds_mismatch rseq_3p_mismatch rseq_nctran_mismatch rseq_no_comparison rseq_ens_match_wt rseq_ens_match_cds rseq_ens_no_match enst_refseq_compare);
         foreach my $att(@{$tr->{attributes}}) {
             delete $att->{description};
             push @new_atts, $att if defined($keep{$att->{code}});
