@@ -88,6 +88,10 @@ include { store_translation_mapping } from './nf_modules/database_utils.nf'
 include { run_sift_pipeline }         from './nf_modules/sift.nf'
 include { run_pph2_pipeline }         from './nf_modules/polyphen2.nf'
 
+include { check_JVM_mem; print_summary } from '../utils/utils.nf'
+check_JVM_mem(min=4)
+print_summary()
+
 // Check input data
 if (!params.translated) {
   if (!params.fasta && !params.gtf) {
@@ -184,21 +188,4 @@ workflow {
   // Run protein function prediction
   if ( params.sift_run_type != "NONE" ) run_sift_pipeline( translated )
   if ( params.pph_run_type  != "NONE" ) run_pph2_pipeline( translated )
-}
-
-// Print summary
-workflow.onComplete {
-    println ( workflow.success ? """
-        Workflow summary
-        ----------------
-        Completed at: ${workflow.complete}
-        Duration    : ${workflow.duration}
-        Success     : ${workflow.success}
-        workDir     : ${workflow.workDir}
-        exit status : ${workflow.exitStatus}
-        """ : """
-        Failed: ${workflow.errorReport}
-        exit status : ${workflow.exitStatus}
-        """
-    )
 }
