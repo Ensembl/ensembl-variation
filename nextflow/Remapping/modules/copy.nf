@@ -2,7 +2,7 @@
 
 process copy_to_rapid_release_ftp {
   memory '1GB'
-  time '10m'
+  time '1h'
 
   errorStrategy 'terminate'
   cache false
