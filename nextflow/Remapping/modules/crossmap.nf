@@ -45,7 +45,7 @@ process tabix {
   """
   for file in $vcf $unmap; do
     final=\${file/$id/$assembly}
-    sort -k1,1d -k2,2n \${file} -o \${final}
+    (grep "^#" \${file} && grep -v "^#" \${file} | sort -k1,1d -k2,2n) > \${final}
     bgzip \${final}
     tabix -p vcf \${final}.gz
   done
