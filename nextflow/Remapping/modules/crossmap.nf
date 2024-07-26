@@ -9,18 +9,19 @@ process crossmap {
   input:
     path vcf
     each id
-    path chain_dir
-    path fasta_dir
+    path chain_dir, stageAs: 'chain'
+    path fasta_dir, stageAs: 'fasta'
 
   output:
     tuple val(id), path("*.vcf"), path("*.unmap"), emit: vcf
     path("*_report.txt"), emit: report
 
   script:
-    def chain = "${chain_dir}/*${id}*"
-    def fasta = "${fasta_dir}/*${id}*.bgz"
+    def chain = "${chain_dir}/*${id}*.chain{,.gz,.bgz}"
+    def fasta = "${fasta_dir}/*${id}*.{fa,fasta}{,.gz,.bgz}"
     def out   = "${vcf.simpleName}_${id}.vcf"
   """
+  shopt -s nullglob # do not expand glob on non-matching files
   CrossMap vcf ${chain} ${vcf} ${fasta} ${out} 2> ${id}_report.txt
   """
 }
