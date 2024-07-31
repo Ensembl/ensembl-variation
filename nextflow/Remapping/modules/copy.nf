@@ -25,7 +25,6 @@ process copy_to_rapid_release_ftp {
 
   # Add or update checksums
   become ensrapid rm -f ${outdir}/md5sum* ${outdir}/CHECKSUMS
-  become ensrapid \
-    bash -c 'assembly=${assembly} && cd ${outdir} && md5sum * > CHECKSUMS'
+  become ensrapid bash -c "cd ${outdir} && md5sum * > CHECKSUMS"
   """
 }
