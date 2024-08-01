@@ -160,6 +160,8 @@ sub configure {
     'skip_tables=s',
     'add_tables=s',
     'version=i',
+    'url=s',
+    'data_types=s',
 
     'only_existing',
     'no_merge',
@@ -1645,11 +1647,13 @@ sub get_seq_region_ids{
 
 # gets source_id - retrieves if name already exists, otherwise inserts
 sub get_source_id{
-  my $config = shift;
-  my $dbVar  = $config->{dbVar};
-  my $source = $config->{source};
-  my $desc   = $config->{source_description};
+  my $config  = shift;
+  my $dbVar   = $config->{dbVar};
+  my $source  = $config->{source};
+  my $desc    = $config->{source_description};
   my $version = $config->{version};
+  my $url     = $config->{url};
+  my $types   = $config->{data_types};
 
   my $source_id;
 
@@ -1665,8 +1669,8 @@ sub get_source_id{
       debug($config, "(TEST) Writing source name $source to source table");
     }
     else {
-      $sth = $dbVar->prepare(qq{insert into source(name, version, description) values(?,?,?)});
-      $sth->execute($source, $version, $desc);
+      $sth = $dbVar->prepare(qq{insert into source(name, version, description, url, data_types) values(?,?,?,?,?)});
+      $sth->execute($source, $version, $desc, $url, $types);
       $sth->finish();
       $source_id = $dbVar->last_insert_id(undef, undef, qw(source source_id));
     }
