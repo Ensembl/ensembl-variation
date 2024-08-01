@@ -24,7 +24,7 @@ params.input_file      = ""
 input_file_tbi         = "${params.input_file}.tbi"
 params.source          = "EVA"
 params.description     = "Short variant data imported from EVA"
-params.version         = 4
+params.version         = null
 params.remove_prefix   = false
 params.chr_synonyms    = ""
 params.merge_all_types = true
@@ -130,6 +130,10 @@ if(!params.host || !params.dbname || !params.port || !params.user || !params.pas
 // Check input params
 if(!params.species) {
   exit 1, "ERROR: species name (--species) must be provided when running EVA import"
+}
+
+if(!params.version) {
+  exit 1, "ERROR: EVA version (--version) must be provided when running EVA import"
 }
 
 if(params.input_file == "" || !file(params.input_file).exists() || !file(input_file_tbi).exists()) {
