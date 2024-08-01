@@ -43,6 +43,7 @@ use Bio::EnsEMBL::Variation::SampleGenotype;
 # use this for remapping
 use Bio::EnsEMBL::SimpleFeature;
 
+use File::Spec;
 use Getopt::Long;
 use FileHandle;
 use Socket;
@@ -1311,6 +1312,7 @@ sub connect_to_dbs {
       $reg->load_registry_from_db(-host => $config->{host}, -port => $config->{port}, -user => $config->{user}, -pass => $config->{password});
     }
     else {
+      $config->{registry} = File::Spec->rel2abs( $config->{registry} );
       if(-e $config->{registry}) {
         $reg->load_all($config->{registry});
       }
@@ -1321,7 +1323,7 @@ sub connect_to_dbs {
 
     # connect to DB
     my $vdba = $reg->get_DBAdaptor($config->{species},'variation')
-      || usage( "Cannot find variation db for ".$config->{species}." in ".$config->{registry_file} );
+      || usage( "Cannot find variation db for ".$config->{species}." in ".$config->{registry} );
     $config->{dbVar} = $vdba->dbc->db_handle;
 
     debug($config, "Connected to database ", $vdba->dbc->dbname, " on ", $vdba->dbc->host, " as user ", $vdba->dbc->username);
