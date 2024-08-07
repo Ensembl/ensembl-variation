@@ -131,7 +131,7 @@ while (my ($dbname) = $sth_h->fetchrow_array) {
   my %reg_config = (reg => $registry, species => $s_name, assembly => $assembly,
                     quiet => $quiet );
   my @params = ($output_dir);
-  my %db_config = (config => \%reg_config, params => \@params );
+  my %db_config = (config => \%reg_config, params => \@params, match => 'transcript' );
   mkdir $output_dir unless -d $output_dir;
   my $dumpFile = $output_dir . "/" . GO::_prepare_filename(\%db_config, $registry);
   
