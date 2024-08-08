@@ -96,7 +96,7 @@ my %project_urls = (
   'Gambian Genome Variation Project' => 'https://www.internationalgenome.org/data-portal/data-collection/ggvp-grch38',
   'NCBI ALFA'       => 'https://www.ncbi.nlm.nih.gov/snp/docs/gsr/alfa/',
   'GEM-J'           => 'https://grch38.togovar.org/doc/datasets/gem_j_wga/',
-  'NHLBI Exome Sequencing Project' => 'https://www.ncbi.nlm.nih.gov/projects/gap/cgi-bin/study.cgi?study_id=phs000403.v3.p3/',
+  'NHLBI Exome Sequencing Project' => 'https://www.ncbi.nlm.nih.gov/projects/gap/cgi-bin/study.cgi?study_id=phs000403.v3.p3',
   'ISGC'            => 'http://www.sheephapmap.org/'
 );
 
