@@ -1,8 +1,9 @@
 package Bio::EnsEMBL::Variation::Utils::Constants;
 
-#####################################################################
-# NB: THIS FILE HAS BEEN AUTOMATICALLY GENERATED, EDIT WITH CAUTION #
-#####################################################################
+##############################################################################
+#   NB: AUTOMATICALLY GENERATED; AVOID MANUAL EDITING! EDIT Constants.pm     #
+#   AND THEN RUN perl scripts/misc/create_config_consts.pl > Config.pm       #
+##############################################################################
 
 use strict;
 use warnings;
@@ -53,6 +54,7 @@ our @EXPORT_OK = qw(
   SO_TERM_5_PRIME_UTR_VARIANT
   SO_TERM_ALU_DELETION
   SO_TERM_ALU_INSERTION
+  SO_TERM_CHROMOSOME_BREAKPOINT
   SO_TERM_CODING_SEQUENCE_VARIANT
   SO_TERM_CODING_TRANSCRIPT_VARIANT
   SO_TERM_COMPLEX_CHROMOSOMAL_REARRANGEMENT
@@ -133,6 +135,7 @@ our %EXPORT_TAGS = (
   SO_class_terms => [qw(
     SO_TERM_ALU_DELETION
     SO_TERM_ALU_INSERTION
+    SO_TERM_CHROMOSOME_BREAKPOINT
     SO_TERM_COMPLEX_CHROMOSOMAL_REARRANGEMENT
     SO_TERM_COMPLEX_STRUCTURAL_ALTERATION
     SO_TERM_COMPLEX_SUBSTITUTION
@@ -307,6 +310,7 @@ use constant SO_TERM_COMPLEX_STRUCTURAL_ALTERATION => 'complex_structural_altera
 use constant SO_TERM_TANDEM_DUPLICATION => 'tandem_duplication';
 use constant SO_TERM_MOBILE_ELEMENT_INSERTION => 'mobile_element_insertion';
 use constant SO_TERM_MOBILE_ELEMENT_DELETION => 'mobile_element_deletion';
+use constant SO_TERM_CHROMOSOME_BREAKPOINT => 'chromosome_breakpoint';
 use constant SO_TERM_INTERCHROMOSOMAL_BREAKPOINT => 'interchromosomal_breakpoint';
 use constant SO_TERM_INTRACHROMOSOMAL_BREAKPOINT => 'intrachromosomal_breakpoint';
 use constant SO_TERM_TRANSLOCATION => 'translocation';
@@ -484,6 +488,13 @@ our %VARIATION_CLASSES = (
   'SO_accession' => 'SO:0002066',
   'display_term' => 'mobile element deletion',
   'somatic_display_term' => 'somatic mobile element deletion',
+  'type' => 'sv'
+}
+,
+'chromosome_breakpoint' => {
+  'SO_accession' => 'SO: 0001021',
+  'display_term' => 'chromosome breakpoint',
+  'somatic_display_term' => 'somatic chromosome breakpoint',
   'type' => 'sv'
 }
 ,
