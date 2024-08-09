@@ -13,16 +13,6 @@ params.user    = null
 params.host    = null
 params.port    = null
 
-log.info "\nCreate GO and Phenotype annotations for pangenomes"
-log.info "=================================================="
-for (a in params) {
-  // print param
-  log.info "  ${a.getKey().padRight(8)} : ${a.getValue()}"
-  // raise error if param is null
-  if (!a.getValue()) exit 1, "ERROR: parameter --${a.getKey()} not defined"  
-}
-log.info ""
-
 include { fetch_gene_symbol_lookup;
           list_assemblies; 
           download_pangenomes_data } from './modules/download.nf'
@@ -32,6 +22,11 @@ include { create_latest_annotation;
           create_pangenomes_annotation } from './modules/annotation.nf'
 include { tabix_gtf; decompress_fasta } from './modules/utils.nf'
 include { test_annotation } from './modules/test.nf'
+
+include { check_JVM_mem; print_params; print_summary } from '../utils/utils.nf'
+print_params('Create GO and Phenotype annotations for pangenomes')
+check_JVM_mem(min=0.4)
+print_summary()
 
 workflow create_go_annotations {
   take:
