@@ -6,6 +6,7 @@ use warnings;
 use DBI;
 use Getopt::Long;
 use Bio::EnsEMBL::Registry;
+use File::Spec;
 
 =head1 import_set_from_file.pl 
 
@@ -40,6 +41,7 @@ die "\n Usage: import_set_from_file.pl -load_file [rs list] -variation_set [shor
 my $done = load_done($done_file) if $done_file;
 
 my $registry = 'Bio::EnsEMBL::Registry';
+$registry_file = File::Spec->rel2abs($registry_file);
 $registry->load_all($registry_file);
 
 my $dba  = $registry->get_DBAdaptor($species, 'variation');

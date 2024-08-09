@@ -43,6 +43,7 @@ use Bio::EnsEMBL::Variation::SampleGenotype;
 # use this for remapping
 use Bio::EnsEMBL::SimpleFeature;
 
+use File::Spec;
 use Getopt::Long;
 use FileHandle;
 use Socket;
@@ -160,6 +161,8 @@ sub configure {
     'skip_tables=s',
     'add_tables=s',
     'version=i',
+    'url=s',
+    'data_types=s',
 
     'only_existing',
     'no_merge',
@@ -1309,6 +1312,7 @@ sub connect_to_dbs {
       $reg->load_registry_from_db(-host => $config->{host}, -port => $config->{port}, -user => $config->{user}, -pass => $config->{password});
     }
     else {
+      $config->{registry} = File::Spec->rel2abs( $config->{registry} );
       if(-e $config->{registry}) {
         $reg->load_all($config->{registry});
       }
@@ -1319,7 +1323,7 @@ sub connect_to_dbs {
 
     # connect to DB
     my $vdba = $reg->get_DBAdaptor($config->{species},'variation')
-      || usage( "Cannot find variation db for ".$config->{species}." in ".$config->{registry_file} );
+      || usage( "Cannot find variation db for ".$config->{species}." in ".$config->{registry} );
     $config->{dbVar} = $vdba->dbc->db_handle;
 
     debug($config, "Connected to database ", $vdba->dbc->dbname, " on ", $vdba->dbc->host, " as user ", $vdba->dbc->username);
@@ -1645,11 +1649,13 @@ sub get_seq_region_ids{
 
 # gets source_id - retrieves if name already exists, otherwise inserts
 sub get_source_id{
-  my $config = shift;
-  my $dbVar  = $config->{dbVar};
-  my $source = $config->{source};
-  my $desc   = $config->{source_description};
+  my $config  = shift;
+  my $dbVar   = $config->{dbVar};
+  my $source  = $config->{source};
+  my $desc    = $config->{source_description};
   my $version = $config->{version};
+  my $url     = $config->{url};
+  my $types   = $config->{data_types};
 
   my $source_id;
 
@@ -1665,8 +1671,8 @@ sub get_source_id{
       debug($config, "(TEST) Writing source name $source to source table");
     }
     else {
-      $sth = $dbVar->prepare(qq{insert into source(name, version, description) values(?,?,?)});
-      $sth->execute($source, $version, $desc);
+      $sth = $dbVar->prepare(qq{insert into source(name, version, description, url, data_types) values(?,?,?,?,?)});
+      $sth->execute($source, $version, $desc, $url, $types);
       $sth->finish();
       $source_id = $dbVar->last_insert_id(undef, undef, qw(source source_id));
     }
