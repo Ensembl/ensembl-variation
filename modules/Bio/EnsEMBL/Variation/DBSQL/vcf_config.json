@@ -1417,7 +1417,7 @@
             "species": "homo_sapiens",
             "assembly": "GRCh37",
             "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh37/variation_annotation/CADD_GRCh37_1.6_whole_genome_SNVs.tsv.gz",
+            "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh37/variation_annotation/CADD_GRCh37_1.7_whole_genome_SNVs.tsv.gz",
             "annotation_type": "cadd"
         },
         {
@@ -1425,7 +1425,7 @@
             "species": "homo_sapiens",
             "assembly": "GRCh38",
             "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_annotation/CADD_GRCh38_1.6_whole_genome_SNVs.tsv.gz",
+            "filename_template": "https://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/variation_annotation/CADD_GRCh38_1.7_whole_genome_SNVs.tsv.gz",
             "annotation_type": "cadd"
         },
         {
