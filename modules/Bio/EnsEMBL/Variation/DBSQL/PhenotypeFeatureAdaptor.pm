@@ -1530,6 +1530,7 @@ sub _obj_from_row {
         '_source_id'     => $row->{source_id},
         '_source_name'   => $row->{name}, 
         'is_significant' => $row->{is_significant},
+        'clin_sig_type' => $row->{clin_sig_type},
       }
     );
 
@@ -1591,8 +1592,9 @@ sub store{
             seq_region_id,
             seq_region_start,
             seq_region_end,
-            seq_region_strand            
-        ) VALUES (?,?,?,?,?,?,?,?,?,?)
+            seq_region_strand,
+            clin_sig_type
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?)
     });
 
     $sth->execute(
@@ -1605,7 +1607,8 @@ sub store{
         defined($pf->{slice}) ? $pf->slice()->get_seq_region_id() : undef,
         defined($pf->{start}) ? $pf->{start} :undef,
         defined($pf->{end})   ? $pf->{end} : undef,
-        defined($pf->{strand})? $pf->{strand} : undef         
+        defined($pf->{strand})? $pf->{strand} : undef,
+        defined($pf->{clin_sig_type})? $pf->{clin_sig_type} : undef
     );
   
    $sth->finish;

@@ -195,11 +195,13 @@ sub update_variation{
 
   print "Starting update_variation...\n" if $DEBUG == 1;
 
+  # Fetch 'clinvar_clin_sig' which is the germline classification
   my $clinvar_ext_sth = $dbh->prepare(qq[ select variation.variation_id, phenotype_feature_attrib.value
                                             from   variation, phenotype_feature, phenotype_feature_attrib, source, attrib_type
                                             where source.name = ?
                                             and phenotype_feature.source_id = source.source_id
                                             and phenotype_feature.phenotype_feature_id = phenotype_feature_attrib.phenotype_feature_id
+                                            and phenotype_feature.clin_sig_type = 'Germline'
                                             and phenotype_feature_attrib.attrib_type_id = attrib_type.attrib_type_id 
                                             and attrib_type.code = 'clinvar_clin_sig'
                                             and variation.name = phenotype_feature.object_id

@@ -157,12 +157,12 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
 
-  my ($dbID,$adaptor,$phenotype_id,$phenotype,$type,$object,$object_id,$source_name,$source_id,$source,$study,$study_id,$is_significant,$attribs, $ontology_accessions) =
+  my ($dbID,$adaptor,$phenotype_id,$phenotype,$type,$object,$object_id,$source_name,$source_id,$source,$study,$study_id,$is_significant,$clin_sig_type,$attribs, $ontology_accessions) =
     rearrange([qw(
       dbID ADAPTOR _PHENOTYPE_ID PHENOTYPE
       TYPE OBJECT _OBJECT_ID
       SOURCE_NAME _SOURCE_ID SOURCE STUDY _STUDY_ID
-      IS_SIGNIFICANT
+      IS_SIGNIFICANT CLIN_SIG_TYPE
       ATTRIBS ONTOLOGY_ACCESSIONS
     )], @_);
 
@@ -207,6 +207,7 @@ sub new {
 
   $self->{type}                = $type;
   $self->{is_significant}      = $is_significant;
+  $self->{clin_sig_type}       = $clin_sig_type || undef;
   $self->{attribs}             = $attribs || {};
   $self->{ontology_accessions} = $ontology_accessions || undef;
 

@@ -53,6 +53,8 @@ use Date::Manip::Date;
 use XML::LibXML::Reader;
 use XML::Hash::XS qw();
 use Text::ParseWords;
+use Scalar::Util 'blessed';
+use List::MoreUtils qw(uniq);
 
 use Bio::EnsEMBL::Variation::Utils::Sequence qw( get_hgvs_alleles SO_variation_class);
 use Bio::EnsEMBL::Variation::Utils::SpecialChar qw(replace_char decode_text);
@@ -64,7 +66,7 @@ use Bio::EnsEMBL::Slice;
 use Bio::DB::Fasta;
 use Bio::EnsEMBL::Registry;
 
-our $DEBUG = 0;
+our $DEBUG = 1;
 
 my ($data_file, $registry_file, $assembly, $structvar, $done_file, $clean, $insert_tv);
 
@@ -155,9 +157,17 @@ my $haplotype_type = "Haplotype";
 ## the phenotype list includes a clean version of the descriptions
 my %phenotype_cache = %{get_phenotype_cache()};
 
-## accepted clinsig values
+## accepted clinsig values (germline)
 my $def_clinsig = $ATTRIBS{clinvar_clin_sig};
-my %known_clinsig = map { $_ => 1  } @{$def_clinsig} ;
+my %known_clinsig = map { $_ => 1  } @{$def_clinsig};
+
+## accepted clinsig values (somatic)
+my $def_clinsig_somatic = $ATTRIBS{clinvar_somatic};
+my %known_clinsig_somatic = map { $_ => 1  } @{$def_clinsig_somatic};
+
+## accepted clinsig values (oncogenic)
+my $def_clinsig_oncogenic = $ATTRIBS{clinvar_oncogenic};
+my %known_clinsig_oncogenic = map { $_ => 1  } @{$def_clinsig_oncogenic};
 
 ## handle incomplete runs - takes list of ClinVar RC accessions 
 my %done;
@@ -221,7 +231,7 @@ sub process_clinvar_set {
   eval{
     ## get accesion & version
     $record{Acc} = get_accession($set->{ReferenceClinVarAssertion}->{ClinVarAccession});
-    print "processing $record{Acc}\n" if $DEBUG == 1;
+    print "\nProcessing $record{Acc}\n" if $DEBUG == 1;
 
     ## recover from partial loads with file of accessions already loaded
     if ($done{$record{Acc}}){
@@ -229,27 +239,36 @@ sub process_clinvar_set {
       return undef;
     }
 
-    ## clinical significance
-    $record{Desc} = get_clinsig ($set->{ReferenceClinVarAssertion}->{Classifications}->{GermlineClassification});
-    # Skip invalid clinical significance
-    if($record{Desc} =~ "no classifications from unflagged records") {
+    ## clinical significance, confidence of assertation and date of assertion
+    $record{Classifications} = get_clinsig($set->{ReferenceClinVarAssertion}->{Classifications});
+
+    # Skip invalid clinical significance (germline)
+    if (defined $record{Classifications}->{germline} && 
+        ($record{Classifications}->{germline}->{clin_sign} =~ "no classifications from unflagged records" ||
+         $record{Classifications}->{germline}->{clin_sign} eq "")) {
       return undef;
     }
 
-    ## confidence of assertation
-    $record{Status} = $set->{ReferenceClinVarAssertion}->{Classifications}->{GermlineClassification}->{ReviewStatus};
-
-    ## date of assertion
-    $record{DateLastEvaluated} =  $set->{ReferenceClinVarAssertion}->{Classifications}->{GermlineClassification}->{Description}->{DateLastEvaluated};
-
     ## check for somatic, Autosomal dominant, etc.
     $record{inheritance_type} = get_inheritance($set->{ReferenceClinVarAssertion}->{AttributeSet});
+
+    # Some entries do not have mode of inheritance
+    # Try to get the somatic status from the sample origin
+    if(!$record{inheritance_type}) {
+      my $sample_origin = get_sample_origin($set->{ReferenceClinVarAssertion}->{ObservedIn});
+      if(defined $sample_origin && $sample_origin eq "somatic") {
+        $record{inheritance_type} = "Somatic mutation";
+      }
+    }
 
     ## trait info (using Acc for error logging)
     ($record{disease}, $record{ontology_accession}) = get_disease($set->{ReferenceClinVarAssertion}->{TraitSet}->{Trait}, $record{Acc});
 
     ## extract arrayref of PMIDs for citations
+    # The germline classification has the citations under ObservedData
+    # The somatic classification has the citations under ClinVarAssertion - Classification - "SomaticClinicalImpact"
     $record{citations} = get_citations($set->{ReferenceClinVarAssertion}->{ObservedIn}, "ObservedData");
+    $record{citations_somatic} = get_citations($set->{ClinVarAssertion}, "Classification");
 
     ## Variant name, HGVS, OMIM id and location
     if(defined $set->{ReferenceClinVarAssertion}->{GenotypeSet} && $DEBUG == 1) {
@@ -271,7 +290,7 @@ sub process_clinvar_set {
     $record{clinvar_variant_id} = $set->{ReferenceClinVarAssertion}->{MeasureSet}->{Acc};
     $record{feature_info} = get_feature($set->{ReferenceClinVarAssertion}->{MeasureSet}->{Measure}, $record{Acc},$set->{ReferenceClinVarAssertion}->{MeasureSet}->{Type});
 
-    $record{submitters} = get_submitters($set->{ClinVarAssertion}, $record{feature_info});
+    ($record{submitters}, $record{submitters_somatic}) = get_submitters($set->{ClinVarAssertion}, $record{feature_info});
 
     if (defined $structvar ){
       if( defined $record{feature_info}->{dbVar} && $record{feature_info}->{dbVar}->[0] =~/\d+/ ){
@@ -370,29 +389,121 @@ sub get_accession{
   return $accession;
 }
 
-## clean clinical significance
-sub get_clinsig{
+## Fetch and clean clinical significance
+## There are three types of classification:
+##   - GermlineClassification
+##   - SomaticClinicalImpact
+##   - OncogenicityClassification
+## A single submission can have more than one type of classification.
+sub get_clinsig {
+  my $classifications = shift;
 
-  my $ClinicalSignificance = shift;
   my $desc;
+  my $clinical_impact_assertion;
+  my $clinical_impact_clin_sig;
+  my $status;
+  my $date;
+  my $type;
+  my %result_by_type; # clinical significance by type
 
-  if ($ClinicalSignificance->{Description}->{content} =~/Conflicting interpretations of pathogenicity/){
-    ## Description = 'conflicting data from submitters' - the values are in the explanation
-    defined $ClinicalSignificance->{Explanation} ?
-    $desc = "\L$ClinicalSignificance->{Explanation}->{content}" :
-    print "warning: conflicting ClinicalSignificance but no Explanation\n";
-    $desc |='';
-    $desc =~ s/\(\d+\)//g; ## remove bracketed counts
-    $desc =~ s/\;/\,/g;    ## switch to comma delimited for set
+  # Check by type of classification
+  if (defined $classifications->{GermlineClassification}) {
+    $type = "germline";
+    # Clinical significance - conflicting interpretations need an explanation
+    if ($classifications->{GermlineClassification}->{Description}->{content} =~/Conflicting interpretations of pathogenicity/) {
+      ## Description = 'conflicting data from submitters' - the values are in the explanation
+      defined $classifications->{GermlineClassification}->{Explanation} ?
+      $desc = "\L$classifications->{GermlineClassification}->{Explanation}->{content}" :
+      print "warning: conflicting ClinicalSignificance but no Explanation\n";
+      $desc |='';
+      $desc =~ s/\(\d+\)//g; ## remove bracketed counts
+      $desc =~ s/\;/\,/g;    ## switch to comma delimited for set
+    }
+    else {
+      $desc = "\L$classifications->{GermlineClassification}->{Description}->{content}";
+    }
+
+    # Remove empty space from beginning and end of the description
+    $desc =~ s/^\s*(.*?)\s*$/$1/;
+
+    my %germline_data = (
+      "clin_sign" => $desc,
+      "status" => $classifications->{GermlineClassification}->{ReviewStatus},
+      "date" => $classifications->{GermlineClassification}->{Description}->{DateLastEvaluated}
+    );
+
+    $result_by_type{$type} = \%germline_data;
   }
-  else{
-    $desc = "\L$ClinicalSignificance->{Description}->{content}";
+
+  # Somatic classification
+  if (defined $classifications->{SomaticClinicalImpact}) {
+    my @somatic_desc;
+    my @dates;
+    my @clinical_assertions;
+    my @clinical_impact_cs;
+    $type = "somatic";
+    # {SomaticClinicalImpact}->{Description} can be array or hash
+    if (ref($classifications->{SomaticClinicalImpact}->{Description}) eq "ARRAY") {
+      for my $description (@{$classifications->{SomaticClinicalImpact}->{Description}}) {
+        # clinical significance
+        push @somatic_desc, $description->{content};
+        # date last evaluated
+        push @dates, $description->{DateLastEvaluated};
+        # clinical impact assertion type
+        push @clinical_assertions, $description->{ClinicalImpactAssertionType};
+        # clinical impact clinical significance
+        push @clinical_impact_cs, $description->{ClinicalImpactClinicalSignificance};
+      }
+      $desc = join(",", @somatic_desc);
+      $date = join(",", @dates);
+      $clinical_impact_assertion = join(",", @clinical_assertions);
+      $clinical_impact_clin_sig = join(",", @clinical_impact_cs);
+    }
+    else {
+        $desc = $classifications->{SomaticClinicalImpact}->{Description}->{content};
+        $date = $classifications->{SomaticClinicalImpact}->{Description}->{DateLastEvaluated};
+        $clinical_impact_assertion = $classifications->{SomaticClinicalImpact}->{Description}->{ClinicalImpactAssertionType};
+        $clinical_impact_clin_sig = $classifications->{SomaticClinicalImpact}->{Description}->{ClinicalImpactClinicalSignificance};
+    }
+
+    # Remove empty space from beginning and end of the description
+    $desc =~ s/^\s*(.*?)\s*$/$1/;
+
+    my %somatic_data = (
+      "clin_sign" => $desc,
+      "status" => $classifications->{SomaticClinicalImpact}->{ReviewStatus},
+      "date" => $date,
+      "impact_assertion" => $clinical_impact_assertion,
+      "impact_clin_sig" => $clinical_impact_clin_sig
+    );
+
+    $result_by_type{$type} = \%somatic_data;
   }
-  return $desc;
+
+  # Oncogenic classification
+  if (defined $classifications->{OncogenicityClassification}) {
+    $type = "oncogenicity";
+    $desc = $classifications->{OncogenicityClassification}->{Description}->{content};
+
+    # Remove empty space from beginning and end of the description
+    $desc =~ s/^\s*(.*?)\s*$/$1/;
+
+    my %oncogenic_data = (
+      "clin_sign" => $desc,
+      "status" => $classifications->{OncogenicityClassification}->{ReviewStatus},
+      "date" => $classifications->{OncogenicityClassification}->{Description}->{DateLastEvaluated}
+    );
+
+    $result_by_type{$type} = \%oncogenic_data;
+  }
+
+  return \%result_by_type;
 }
 
 =head2 get_inheritance
-- mode of inheritance attribute holds somatic status
+Mode of inheritance attribute holds somatic status.
+The 'ModeOfInheritance' depends on the submitter,
+most of the submitters do not provide a value.
 =cut
 sub get_inheritance{
 
@@ -407,7 +518,28 @@ sub get_inheritance{
 
     $moi = $attribute->{Attribute}->{content};
   }
+
   return $moi;
+}
+
+=head2 get_sample_origin
+Method to fetch the origin of the sample:
+germline, somatic
+=cut
+sub get_sample_origin {
+  my $observed_in = shift;
+
+  my $origin;
+
+  my $attributes = to_array($observed_in);
+
+  foreach my $attribute(@{$attributes}){
+    next unless defined $attribute->{Sample} && defined $attribute->{Sample}->{Origin};
+
+    $origin = $attribute->{Sample}->{Origin};
+  }
+
+  return $origin;
 }
 
 =head2 get_feature
@@ -659,6 +791,10 @@ sub get_citations{
     my $observed_data = to_array($observed_in->{$label});
     foreach my $obs( @{$observed_data} ){
 
+      if($label eq "Classification" && $obs->{GermlineClassification}) {
+        next;
+      }
+
       if ($obs->{Citation}){
         my $citations = to_array($obs->{Citation});
         foreach my $cit(@{$citations}){
@@ -671,7 +807,9 @@ sub get_citations{
     }
   }
 
-  return \@citations;
+  my @citations_uniq = uniq @citations;
+
+  return \@citations_uniq;
 }
 
 =head2 get_submitters
@@ -685,12 +823,26 @@ sub get_submitters{
   my $mainXrefs = shift;
 
   my @submitters;
+  my @submitters_somatic;
 
   my $assertions = to_array($structure);
   foreach my $assert(@{$assertions}){
-    push @submitters, $assert->{ClinVarSubmissionID}->{submitter};
+    my $submitter_id = $assert->{ClinVarSubmissionID}->{submitter};
+    my $submitter_type;
+
+    if($assert->{Classification}->{GermlineClassification}) {
+      push @submitters, $submitter_id;
+      $submitter_type = "germline";
+    }
+    else {
+      push @submitters_somatic, $submitter_id;
+      $submitter_type = "somatic";
+    }
+
     # if submitter OMIM then get OMIM allelic variant ID and corresponding rsID from reference record
-    next unless $assert->{ClinVarSubmissionID}->{submitter} eq $omimstr;
+    # TODO update to support all submitter types
+    next unless $submitter_id eq $omimstr && $submitter_type eq "germline";
+
     if (defined $assert->{ExternalID} && $assert->{ExternalID}->{DB} eq $omimstr) {
       my $omimAlleleID = $assert->{ExternalID}->{ID};
 
@@ -727,7 +879,7 @@ sub get_submitters{
     @{$mainXrefs->{'dbSNP'}} = keys {map { $_ => 1 } @{$mainXrefs->{'dbSNP'}} } if defined $mainXrefs->{'dbSNP'};
   }
 
-  return \@submitters;
+  return \@submitters, \@submitters_somatic;
 }
 
 sub to_array{
@@ -763,7 +915,7 @@ sub import{
   my $alt_allele; ## disease associated allele from HGVS
   my $feat;       ## use stored *variation_features where possible
 
-  if(defined $record->{feature_info}->{dbSNP} && !defined $structvar){
+  if(defined $record->{feature_info}->{dbSNP}){
     foreach my $rs (@{ $record->{feature_info}->{dbSNP} }){
       my $rsID = 'rs'.$rs;
       # for haplotypes (multiple rsIDs) each rsID has it's own hgvs_g string
@@ -780,26 +932,18 @@ sub import{
 
     }
   }
-  elsif(!defined $structvar && $try_match ){
+  elsif($try_match ){
+    print "try to match ", $record->{Acc}, "\n" if $DEBUG == 1;
     ($feature_object, $feat, $alt_allele) = get_variant($record, undef);
     if (! defined $feature_object){
       print "no variation found for $record->{Acc}, $record->{clinvar_variant_id}\n" if $DEBUG == 1;
       return undef;
     }
-
     add_clinvar_data($feature_object, $feat, $alt_allele, $record);
   }
-  elsif(defined $record->{feature_info}->{dbVar} && defined $structvar){
-    ($feature_object, $feat) = get_structural_variant($record);
-
-    if ( defined $feature_object){
-      ## add phenotype_feature & attrib
-      import_phenotype_feature($record, $feature_object, 'StructuralVariation', $feat, $alt_allele);
-    }
-  } elsif ($DEBUG == 1){
-    print "Can't import ". $record->{Acc} ." as no dbSNP or location or SV\n" if $DEBUG == 1;
+  elsif ($DEBUG == 1){
+    print "Can't import ". $record->{Acc} ." as no dbSNP or location\n" if $DEBUG == 1;
   }
-
 }
 
 sub add_clinvar_data{
@@ -820,6 +964,8 @@ sub add_clinvar_data{
   add_synonyms($variation_object, $record->{feature_info}{$omimstr}, $omim_source) if defined $record->{feature_info}{$omimstr};
 
   ## add phenotype_feature & attrib (there may not be an alt_allele)
+
+  print "Add clinvar data import phenotype feature\n";
   import_phenotype_feature($record, $variation_object, 'Variation', $feat, $alt_allele);
 
 }
@@ -844,16 +990,19 @@ sub import_phenotype_feature{
   $record->{disease} = $default_pheno if $record->{disease} eq "not specified";
 
   ## check for new clin_sig
-  my $found = check_known_clinsig($record->{Desc});
-  if ( ! $found ){
-    warn "clin_sig not known: >". $record->{Desc} ."< feature: ". $feature_object->name ."\n";
+  my ($found, $term) = check_known_clinsig($record->{Classifications});
+
+  if (!$found && $term) {
+    warn "clin_sig not known: >". $term ."< feature: ". $feature_object->name ."\n";
   }
 
   # Remove special characters from the phenotype description and submitter name
   $record->{disease} = decode_text( $record->{disease});
   $record->{disease} = replace_char( $record->{disease});
+
+  # TODO: fix
   foreach my $sub (@{$record->{submitters}}){
-    $sub = replace_char( $sub);
+    $sub = replace_char($sub);
   }
 
   ## look for existing or enter new phenotype object
@@ -866,61 +1015,123 @@ sub import_phenotype_feature{
     return;
   }
 
-  my %attribs;
-  $attribs{review_status}    = $record->{Status};
-  $attribs{external_id}      = $record->{Acc};
-  $attribs{clinvar_clin_sig} = $record->{Desc} if $record->{Desc} ne ''; #avoids empty entry if explanation is missing for conflicting evidence
-  $attribs{risk_allele}      = $alt_allele if defined $alt_allele && $alt_allele ne "-" && $alt_allele ne '';
-  $attribs{associated_gene}  = $record->{feature_info}->{gene} if defined $record->{feature_info}->{gene};
-  $attribs{MIM}              = $record->{feature_info}->{MIM} if defined $record->{feature_info}->{MIM};
-  $attribs{pubmed_id}        = join(",", @{$record->{citations}}) if $record->{citations} && exists $record->{citations}->[0];
-  if (defined $attribs{pubmed_id} && length($attribs{pubmed_id}) > 255) {
-    $attribs{pubmed_id}      = substr($attribs{pubmed_id}, 0, 255);
-    $attribs{pubmed_id}      = substr($attribs{pubmed_id}, 0,rindex($attribs{pubmed_id}, ","));
-  }
-  $attribs{inheritance_type} = $record->{inheritance_type} if defined $record->{inheritance_type};
-  $attribs{DateLastEvaluated} = $record->{DateLastEvaluated} if defined $record->{DateLastEvaluated};
-  $attribs{variation_names}  = join(",", @{$record->{feature_info}->{haplo}->{$feature_object->name}}) if defined $record->{feature_info}->{haplo} && defined $record->{feature_info}->{haplo}->{$feature_object->name};
-  my %submitter_ids;
-  foreach my $sub (@{$record->{submitters}}){
-    ##enter submitter unless already available
-    unless ($submitters->{$sub}){
-      $submitters->{$sub} = add_submitter($sub);
-      print "Added submitter $sub id " . $submitters->{$sub}  ." for sub\n" if $DEBUG == 1;
+  for my $classification (keys %{$record->{Classifications}}) {
+    my %attribs;
+    my %submitter_ids;
+    my $clin_sig_type = undef;
+
+    # Germline classification
+    if ($classification eq "germline") {
+      # avoids empty entry if explanation is missing for conflicting evidence
+      $attribs{clinvar_clin_sig} = $record->{Classifications}->{germline}->{clin_sign};
+      $clin_sig_type = "Germline";
+      $attribs{review_status} = $record->{Classifications}->{germline}->{status};
+
+      if(defined $record->{Classifications}->{germline}->{date}){
+        $attribs{DateLastEvaluated} = $record->{Classifications}->{germline}->{date};
+      }
     }
-    $submitter_ids{ $submitters->{$sub} } = 1;
+    # Somatic classification
+    elsif ($classification eq "somatic") {
+      # avoids empty entry if explanation is missing for conflicting evidence
+      $attribs{somatic_clin_sig} = $record->{Classifications}->{somatic}->{clin_sign};
+      $clin_sig_type = "Somatic";
+      $attribs{somatic_status} = $record->{Classifications}->{somatic}->{status};
+
+      if(defined $record->{Classifications}->{somatic}->{date}){
+        $attribs{somatic_date} = $record->{Classifications}->{somatic}->{date};
+      }
+
+      # ClinicalImpactAssertionType
+      if(defined $record->{Classifications}->{somatic}->{impact_assertion}){
+        $attribs{impact_assertion} = $record->{Classifications}->{somatic}->{impact_assertion};
+      }
+
+      # ClinicalImpactClinicalSignificance
+      if(defined $record->{Classifications}->{somatic}->{impact_clin_sig}){
+        $attribs{impact_clin_sig} = $record->{Classifications}->{somatic}->{impact_clin_sig};
+      }
+    }
+    # Oncogenicity classification
+    elsif ($classification eq "oncogenicity") {
+      # avoids empty entry if explanation is missing for conflicting evidence
+      $attribs{oncogenic_clin_sig} = $record->{Classifications}->{oncogenicity}->{clin_sign};
+      $clin_sig_type = "SomaticOncogenicity";
+      $attribs{oncogenic_status} = $record->{Classifications}->{oncogenicity}->{status};
+
+      if($record->{Classifications}->{oncogenicity}->{date}) {
+        $attribs{oncogenic_date} = $record->{Classifications}->{oncogenicity}->{date};
+      }
+    }
+    else {
+      print "Warning: no classification type\n";
+    }
+
+    $attribs{external_id}      = $record->{Acc};
+    $attribs{risk_allele}      = $alt_allele if defined $alt_allele && $alt_allele ne "-" && $alt_allele ne '';
+    $attribs{associated_gene}  = $record->{feature_info}->{gene} if defined $record->{feature_info}->{gene};
+    $attribs{MIM}              = $record->{feature_info}->{MIM} if defined $record->{feature_info}->{MIM};
+
+    # Prepare the citations
+    # Germline and somatic have publications in different places
+    my $citations_data = $classification eq "germline" ? $record->{citations} : $record->{citations_somatic};
+    $attribs{pubmed_id} = join(",", @{$citations_data}) if $citations_data && exists $citations_data->[0];    
+
+    if (defined $attribs{pubmed_id} && length($attribs{pubmed_id}) > 255) {
+      $attribs{pubmed_id} = substr($attribs{pubmed_id}, 0, 255);
+      $attribs{pubmed_id} = substr($attribs{pubmed_id}, 0,rindex($attribs{pubmed_id}, ","));
+    }
+
+    $attribs{inheritance_type} = $record->{inheritance_type} if defined $record->{inheritance_type};
+    $attribs{variation_names}  = join(",", @{$record->{feature_info}->{haplo}->{$feature_object->name}}) if defined $record->{feature_info}->{haplo} && defined $record->{feature_info}->{haplo}->{$feature_object->name};
+
+    # Submitters
+    my $submitters_data = $classification eq "germline" ? $record->{submitters} : $record->{submitters_somatic};
+    foreach my $sub (@{$submitters_data}){
+      ##enter submitter unless already available
+      unless ($submitters->{$sub}){
+        $submitters->{$sub} = add_submitter($sub);
+        print "Added submitter $sub id " . $submitters->{$sub}  ." for sub\n" if $DEBUG == 1;
+      }
+      $submitter_ids{ $submitters->{$sub} } = 1;
+    }
+    $attribs{submitter_id} = join(",", keys %submitter_ids) if (keys %submitter_ids) >0;
+
+    #if OMIM is a submitter save the variation in the ph_omim variation_set_variation
+    if (exists $submitters->{$omimstr} &&
+        exists $submitter_ids{$submitters->{$omimstr}} &&
+        ! defined $omimVarSet{$feature_object->dbID()}){
+      update_variation_set($feature_object->dbID());
+    }
+
+    # feat is the VariationFeature which contains the genome coordinates for this variation
+    foreach my $feature (@{$feat}){
+      print "entering phenotype_feature type : $type & object id: ".  $feature_object->dbID() . ", position " .$feature->seq_region_start() . "-".  $feature->seq_region_end() . "\n" if $DEBUG == 1;
+
+      ## add evidence and variation_set_id to variation_feature
+      if ($classification eq "germline") {
+        update_variation_feature($feature, $attribs{clinvar_clin_sig});
+      }
+
+      my $phenofeat = Bio::EnsEMBL::Variation::PhenotypeFeature->new(
+        -slice          => $feature->slice(),
+        -start          => $feature->seq_region_start(),
+        -strand         => $feature->seq_region_strand(),
+        -end            => $feature->seq_region_end(),
+        -phenotype      => $pheno,
+        -is_significant => 1,
+        -type           => $type,
+        -object         => $feature_object,
+        -source         => $source,
+        -clin_sig_type  => $clin_sig_type,
+        -attribs        => \%attribs
+        );
+        $pheno_feat_adaptor->store($phenofeat);
+
+    }
+
   }
-  $attribs{submitter_id} = join(",", keys %submitter_ids) if (keys %submitter_ids) >0;
 
-  #if OMIM is a submitter save the variation in the ph_omim variation_set_variation
-  if ($type ne 'StructuralVariation' &&
-      exists $submitters->{$omimstr} &&
-      exists $submitter_ids{$submitters->{$omimstr}} &&
-      ! defined $omimVarSet{$feature_object->dbID()}){
-    update_variation_set($feature_object->dbID());
-  }
-
-  foreach my $feature (@{$feat}){ #feat is the VariationFeature which contains the genome coordonates for this variation
-    print "entering phenotype_feature type : $type & object id: ".  $feature_object->dbID() . ", position " .$feature->seq_region_start() . "-".  $feature->seq_region_end() . "\n" if $DEBUG == 1;
-
-    ## add evidence and variation_set_id to variation_feature
-    update_variation_feature($feature, $attribs{clinvar_clin_sig});
-
-    my $phenofeat = Bio::EnsEMBL::Variation::PhenotypeFeature->new(
-      -slice          => $feature->slice(),
-      -start          => $feature->seq_region_start(),
-      -strand         => $feature->seq_region_strand(),
-      -end            => $feature->seq_region_end(),
-      -phenotype      => $pheno,
-      -is_significant => 1,
-      -type           => $type,
-      -object         => $feature_object,
-      -source         => $source,
-      -attribs        => \%attribs
-      );
-      $pheno_feat_adaptor->store($phenofeat);
-
-  }
 }
 
 
@@ -1076,6 +1287,7 @@ sub add_submitter{
 
   - look up or enter variation
   - returns variation & variation_feature objects & associated allele (from HGVS)
+  - TODO: return $ref_allele
 
 =cut
 sub get_variant{
@@ -1571,13 +1783,13 @@ sub get_structural_variant{
 =cut
 
 sub get_source{
-  my $file = shift;  ##/path_to_file/ClinVarFullRelease_2016-10.xml
+  my $file = shift;  ##/path_to_file/ClinVarRCVRelease_2016-10.xml
   my $source_name = shift;
 
   my $version = $file;
   # The file name can include the full path - remove everything until file name
   # File can be compressed (.xml.gz) or not (.xml)
-  $version =~ s/.*ClinVarFullRelease_|.xml|.gz|-//g;
+  $version =~ s/.*ClinVarRCVRelease_|.xml|.gz|-//g;
   warn "VERSION looks suspicious: $version\n" if length($version) >6;
 
   my $source_adaptor  = $reg->get_adaptor('homo_sapiens', 'variation', 'source');
@@ -1734,26 +1946,71 @@ sub clean_old_data{
   print "Old data deleted!\n";
 }
 
+# Check if the clinical significance is known for each type of classification
 sub check_known_clinsig {
-  my $current_clinsig = shift;
+  my $current_classifications = shift;
 
-  my $tmpClinsig = $current_clinsig;
-  $tmpClinsig  =~ s/\//\,/ ; # convert 'pathogenic/likely pathogenic' to 'pathogenic,likely pathogenic'
-  $tmpClinsig  =~ s/\,\s+/\,/ ; # convert 'likely benign, other' to 'likely benign,other'
-  #replace 'conflicting interpretations of pathogenicity' with 'uncertain significance'
-    #for the purpose of variation, variation_feature clin_sig entry
-  $tmpClinsig  =~ s/conflicting interpretations of pathogenicity/uncertain significance/g;
-  #similar replace of 'association not found' to 'other'
-  $tmpClinsig  =~ s/association not found/other/g;
-  #remove comma from accepted values
-  $tmpClinsig  =~ s/pathogenic,low penetrance/pathogenic low penetrance/;
-  my @tmpClinsigs = split(",", $tmpClinsig);
-  my $found = 1;
-  foreach my $clinsig (@tmpClinsigs) {
-     $found = 0 if ( ! defined $known_clinsig{ $clinsig } ) ;
+  my $found;
+  my $term = undef;
+
+  foreach my $type (keys %{$current_classifications}) {
+    my $tmpClinsig = $current_classifications->{$type}->{clin_sign};
+
+    # Specific checks for germline classification
+    if ($type eq "germline") {
+      $tmpClinsig  =~ s/\//\,/ ; # convert 'pathogenic/likely pathogenic' to 'pathogenic,likely pathogenic'
+      $tmpClinsig  =~ s/\,\s+/\,/ ; # convert 'likely benign, other' to 'likely benign,other'
+      #replace 'conflicting interpretations of pathogenicity' with 'uncertain significance'
+      #for the purpose of variation, variation_feature clin_sig entry
+      $tmpClinsig  =~ s/conflicting interpretations of pathogenicity/uncertain significance/g;
+      #similar replace of 'association not found' to 'other'
+      $tmpClinsig  =~ s/association not found/other/g;
+      #remove comma from accepted values
+      $tmpClinsig  =~ s/pathogenic,low penetrance/pathogenic low penetrance/;
+
+      my @tmpClinsigs = split(",", $tmpClinsig);
+      my $found = 1;
+      foreach my $clinsig (@tmpClinsigs) {
+        print "(check_known_clinsig) germline: $clinsig\n";
+        if (!defined $known_clinsig{$clinsig}) {
+          print "Not defined germline!!\n";
+          $found = 0;
+          $term = $clinsig;
+        }
+      }
+    }
+
+    # Somatic classifications
+    elsif ($type eq "somatic") {
+      my @tmpClinsigs = split(",", $tmpClinsig);
+      my $found = 1;
+      foreach my $clinsig (@tmpClinsigs) {
+        print "(check_known_clinsig) somatic: $clinsig\n";
+        if (!defined $known_clinsig_somatic{$clinsig}) {
+          print "Not defined somatic!!\n";
+          $found = 0;
+          $term = $clinsig;
+        }
+      }
+    }
+
+    # Oncogenicity classifications
+    elsif ($type eq "oncogenicity") {
+      my @tmpClinsigs = split(",", $tmpClinsig);
+      my $found = 1;
+      foreach my $clinsig (@tmpClinsigs) {
+        print "(check_known_clinsig) oncogenicity: $clinsig\n";
+        if (!defined $known_clinsig_oncogenic{$clinsig}) {
+          print "Not defined oncogenicity!!\n";
+          $found = 0;
+          $term = $clinsig;
+        }
+      }
+    }
+
   }
 
-  return $found;
+  return $found, $term;
 }
 
 sub get_phenotype_cache {
