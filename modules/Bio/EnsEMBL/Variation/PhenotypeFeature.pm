@@ -82,7 +82,7 @@ use Exporter;
 use vars qw(@EXPORT_OK @ISA);
 
 our @ISA = ('Bio::EnsEMBL::Feature', 'Exporter');
-@EXPORT_OK = qw(%TYPES);
+@EXPORT_OK = qw(%TYPES %CLIN_SIG_TYPES);
 
 # define valid object types
 # this must correspond to the types defined in the type column of
@@ -94,6 +94,12 @@ our %TYPES = (
   'QTL'                           => 1,
   'Gene'                          => 1,
   'RegulatoryFeature'             => 1,
+);
+
+our %CLIN_SIG_TYPES = (
+  'Germline'            => 1,
+  'Somatic'             => 1,
+  'SomaticOncogenicity' => 1,
 );
 
 =head2 new
@@ -511,6 +517,30 @@ sub type {
   return $self->{'type'};
 }
 
+=head2 clin_sig_type
+
+  Arg [1]    : string $type (optional)
+               The new value to set the clinical significance type attribute to
+  Example    : $type = $obj->clin_sig_type()
+  Description: Getter/Setter for the object clin_sig_type of the PhenotypeFeature.
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub clin_sig_type {
+  my $self = shift;
+  my $type = shift;
+  
+  if(defined($type)) {
+    throw("$type is not a valid object type, valid types are: ".(join ", ", sort %CLIN_SIG_TYPES)) unless defined($CLIN_SIG_TYPES{$type});
+    $self->{'clin_sig_type'} = $type;
+  }
+  
+  return $self->{'clin_sig_type'};
+}
 
 =head2 is_significant
 
