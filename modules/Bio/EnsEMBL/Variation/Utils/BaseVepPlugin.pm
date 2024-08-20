@@ -391,8 +391,8 @@ sub _fetch_cache_vars {
     }
   } elsif (defined($as = $self->_get_AnnotationSource('Variation'))) {
     warn("Using non-indexed VEP cache is slow; for optimal performance, please use indexed VEP cache\n")
-      unless $self->{slow_warning};
-    $self->{slow_warning} = 1;
+      unless $self->{skip_slow_warning};
+    $self->{skip_slow_warning} = 1;
 
     # code based on AnnotationSource::Cache::Variation and AnnotationSource
     my $cache_region_size = $as->{cache_region_size};
