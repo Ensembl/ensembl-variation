@@ -564,7 +564,7 @@ sub parse_vcf {
 
         if(defined($type)) {
             # convert to SO term
-            $so_term = get_SO_term($type) || $type;
+            $so_term = get_SO_term({}, $type) || $type;
         }
 
         my $svf = Bio::EnsEMBL::Variation::StructuralVariationFeature->new_fast({
