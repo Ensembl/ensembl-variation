@@ -39,8 +39,6 @@ use File::Path qw(mkpath rmtree);
 use FileHandle;
 use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 
-my $DEBUG = 0;
-my $DEBUG_GENE_IDS = 0;
 sub fetch_input {
    
     my $self = shift;
@@ -59,6 +57,20 @@ sub fetch_input {
     my @genes;
     my @gene_output_ids; 
     my $gene_count = 0;
+
+    # Check if debug mode switched on and just run pipeline on the genes in the array, exit the sub to prevent any other loading
+    if ($self->param('debug_genes')) {
+      my @gene_ids = qw/ENSG00000100697/; # slow: ENSG00000078328, fast: ENSG00000276644, others: ENSG00000078328 ENSG00000149972 ENSG00000182185
+      foreach my $gene_id (@gene_ids) {
+        if (!grep {$_->{gene_stable_id} eq $gene_id } @gene_output_ids) {
+          push @gene_output_ids, {
+            gene_stable_id => $gene_id,
+          }
+        }
+      }
+      $self->param('gene_output_ids', \@gene_output_ids);
+      return;
+    }
 
     # If update diff is activated, then only pass geneIDs forward for transcripts that are new/updated
     if (-e $self->param('update_diff')) {
@@ -93,21 +105,8 @@ sub fetch_input {
     for my $gene (@genes) {
       $gene_count++;
       push @gene_output_ids, {gene_stable_id  => $gene->stable_id,};
-      if ($DEBUG) {
-          last if $gene_count >= 500;
-      }
     }
 
-    if ($DEBUG_GENE_IDS) {
-      my @gene_ids = qw/ENSG00000078328 ENSG00000149972 ENSG00000182185/; # slow: ENSG00000078328, fast: ENSG00000276644
-      foreach my $gene_id (@gene_ids) {
-        if (!grep {$_->{gene_stable_id} eq $gene_id } @gene_output_ids) {
-          push @gene_output_ids, {
-            gene_stable_id => $gene_id,
-          };
-        }
-      }
-    } 
     $self->param('gene_output_ids', \@gene_output_ids);
 }
 

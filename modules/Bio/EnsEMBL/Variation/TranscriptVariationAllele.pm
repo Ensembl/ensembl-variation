@@ -820,7 +820,22 @@ sub codon {
     $self->shift_feature_seqs unless $shifting_offset == 0;
     my $seq = $self->feature_seq;
     $seq = '' if $seq eq '-';
-    
+
+    my $ref = $tv->get_reference_TranscriptVariationAllele;
+
+    # Mismatches between refseq transcripts and the reference genome are tracked in transcript attributes
+    my @edit_attrs = grep {$_->code =~ /^_rna_edit/} @{$tr->get_all_Attributes()};
+
+    # check if the refseq ref allele is the same as the alt allele
+    # this is an invalid variant - throw warning
+    if(!$self->{is_reference} && scalar @edit_attrs > 0) {
+      my $refseq_ref = $edit_attrs[0]->value;
+      $refseq_ref =~ s/\d+\s\d+\s//;
+      if ($refseq_ref eq $seq) {
+        $self->{invalid_alleles} = 1;
+      }
+    }
+
     # calculate necessary coords and lengths
     
     my $codon_cds_start = $tv_tr_start * 3 - 2;
@@ -842,27 +857,15 @@ sub codon {
       delete($tv->{_cds_coords});
     }
     my $cds;
-    if ($allele_len != $vf_nt_len) {
-      # sequence does not involve a non-CDS (eg: intron) sequence
-      if (abs($allele_len - $vf_nt_len) % 3) {
-        # this is a frameshift variation, we don't attempt to 
-        # calculate the resulting codon or peptide change as this 
-        # could get quite complicated 
-        # return undef;
-      }
 
-      ## Bioperl Seq object
-      my $cds_obj = $self->_get_alternate_cds();
-      return undef unless defined($cds_obj);
-      $cds = ( $self->{is_reference} ? $tv->_translateable_seq() : $cds_obj->seq() );
-    }
-
-    else {
-      # splice the allele sequence into the CDS
-      $cds = $tv->_translateable_seq;
-
-      substr($cds, $tv->cds_start(undef, $tr->strand * $shifting_offset) -1, $vf_nt_len) = $seq;
-    }
+    # if (abs($allele_len - $vf_nt_len) % 3)
+    # This is frameshift variation
+    # The resulting codon/peptide changed needs to be calculated
+   
+    ## Bioperl Seq object
+    my $cds_obj = $self->_get_alternate_cds();
+    return undef unless defined($cds_obj);
+    $cds = ( $self->{is_reference} ? $tv->_translateable_seq() : $cds_obj->seq() );
 
     # and extract the codon sequence
     my $codon = ( $self->{is_reference} ? substr($cds, $codon_cds_start-1, $codon_len ) : substr($cds, $codon_cds_start-1, $codon_len + ($allele_len - $vf_nt_len)));
@@ -874,7 +877,7 @@ sub codon {
        $self->{codon} = $codon;
     }
   }
-  
+
   return $self->{codon};
 }
 
@@ -1432,8 +1435,13 @@ sub hgvs_transcript {
   my $same_pos = $hgvs_notation->{start} == $hgvs_notation->{end};
   
   ## Mismatches between refseq transcripts and the reference genome are tracked in transcript attributes
-  my @attribs = @{$tr->get_all_Attributes()};
-  my @edit_attrs = grep {$_->code =~ /^_rna_edit/} @attribs;
+  my @edit_attrs = grep {$_->code =~ /^_rna_edit/} @{$tr->get_all_Attributes()};
+
+  if(scalar @edit_attrs > 0) {
+    my $ref = $tv->get_reference_TranscriptVariationAllele;
+    $hgvs_notation->{ref} = $ref->variation_feature_seq;
+    $hgvs_notation->{alt} = $self->variation_feature_seq;
+  }
 
   my $misalignment_offset = 0;
   $misalignment_offset = $self->get_misalignment_offset(\@edit_attrs) if (scalar(@edit_attrs) && (substr($tr->stable_id, 0,3) eq 'NM_' || substr($tr->stable_id, 0,3) eq 'XM_'));
@@ -2575,7 +2583,7 @@ sub _hgvs_generic {
   my $self = shift;
   my $reference = pop;
   my $notation = shift;
-  
+
   #The rna and mitochondrial modes have not yet been implemented, so return undef in case we get a call to these
   return undef if ($reference =~ m/rna|mitochondrial/);
   

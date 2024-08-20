@@ -74,14 +74,16 @@ sub new {
         my $feature = $self->feature;
         my $num = 0;
         for ($vf, @$breakends) {
-            next unless _close_to_feature($_, $feature);
-            $self->add_StructuralVariationOverlapAllele(
-                Bio::EnsEMBL::Variation::StructuralVariationOverlapAllele->new(
-                    -structural_variation_overlap => $self,
-                    -symbolic_allele              => $_->{string},
-                    -breakend                     => $_,
-                )
-            );
+            if (_close_to_feature($_, $feature)) {
+                $self->add_StructuralVariationOverlapAllele(
+                    Bio::EnsEMBL::Variation::StructuralVariationOverlapAllele->new(
+                        -structural_variation_overlap => $self,
+                        -symbolic_allele              => $_->{string},
+                        -breakend                     => $_,
+                        -allele_number                => $num,
+                    )
+                );
+            }
             $num++;
         }
     }

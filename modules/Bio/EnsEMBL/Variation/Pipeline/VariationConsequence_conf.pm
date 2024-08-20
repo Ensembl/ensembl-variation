@@ -109,11 +109,11 @@ sub default_options {
         medmem_lsf_options  => '-qproduction -R"select[mem>10000] rusage[mem=10000]" -M10000',
         highmem_lsf_options => '-qproduction -R"select[mem>20000] rusage[mem=20000] span[hosts=1]" -M20000 -n4',
 
-        default_slurm_options      => '--partition=production --time=24:00:00 --mem=8G',
+        default_slurm_options      => '--partition=production --time=48:00:00 --mem=8G',
         default_long_slurm_options => '--partition=production --time=140:00:00 --mem=8G',
-        medmem_slurm_options       => '--partition=production --time=24:00:00 --mem=10G',
+        medmem_slurm_options       => '--partition=production --time=48:00:00 --mem=10G',
         medmem_long_slurm_options  => '--partition=production --time=140:00:00 --mem=10G',
-        highmem_slurm_options      => '--partition=production --time=24:00:00 --mem=20G',
+        highmem_slurm_options      => '--partition=production --time=48:00:00 --mem=20G',
         highmem_long_slurm_options => '--partition=production --time=140:00:00 --mem=20G',
 
         # options controlling the number of workers used for the parallelisable analyses
@@ -154,6 +154,8 @@ sub default_options {
 
         # these flags control update running parts of pipeline
         update_diff             => undef,
+        gencode_primary         => 0,
+        debug_genes             => 0,
 
         # Human runs switch off run_var_class and set max_distance to 0 by default. To override
         # this behaviour, set this flag to 1
@@ -272,6 +274,7 @@ sub pipeline_analyses {
               include_lrg => $self->o('include_lrg'),
               limit_biotypes => $self->o('limit_biotypes'),
               update_diff => $self->o('update_diff'),
+              debug_genes => $self->o('debug_genes'),
               @common_params,
             },
             -rc_name   => 'default',
@@ -311,6 +314,7 @@ sub pipeline_analyses {
             -hive_capacity  => 50,
             -analysis_capacity  => 50,
             -parameters => {
+              gencode_primary => $self->o('gencode_primary'),
               @common_params,
             },
             -rc_name   => 'medmem',
@@ -330,6 +334,7 @@ sub pipeline_analyses {
               disambiguate_single_nucleotide_alleles => $self->o('disambiguate_single_nucleotide_alleles'),
               prevent_shifting => $self->o('prevent_shifting'),
               update_diff => $self->o('update_diff'),
+              gencode_primary => $self->o('gencode_primary'),
               @common_params,
             },
             -rc_name   => ($self->o('species') !~ /homo_sapiens|human/) ? 'default' : 'default_long',
@@ -346,6 +351,7 @@ sub pipeline_analyses {
               prevent_shifting => $self->o('prevent_shifting'),
               update_diff => $self->o('update_diff'),
               assembly => $self->o('assembly'),
+              gencode_primary => $self->o('gencode_primary'),
               @common_params,
             },
             -rc_name   => 'medmem',

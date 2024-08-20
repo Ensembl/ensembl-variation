@@ -68,7 +68,7 @@ sub default_options {
         hive_root_dir           => $ENV{'HOME'} . '/src/ensembl-hive',
         
         pipeline_name           => 'protein_function',
-        pipeline_dir            => '/hps/nobackup/production/ensembl/'.$ENV{USER}.'/'.$self->o('pipeline_name'),
+        pipeline_dir            => '/hps/nobackup/flicek/ensembl/variation/'.$ENV{USER}.'/'.$self->o('pipeline_name'),
         species_dir             => $self->o('pipeline_dir').'/'.$self->o('species'),
         # directory used for the hive's own output files
 
@@ -217,24 +217,24 @@ sub default_options {
         dbnsfp_max_workers      => 50,
         dbnsfp_working          => $self->o('species_dir').'/dbnsfp_working',
         dbnsfp_annotation       => { GRCh37 =>
-                                      { file => $self->o('variation_data') . '/dbNSFP/4.5c/dbNSFP4.5c_grch37.gz',
-                                        version => '4.5c',
+                                      { file => $self->o('variation_data') . '/dbNSFP/4.7c_AlphaMissense/dbNSFP4.7c_grch37.gz',
+                                        version => '4.7c',
                                       },
                                      GRCh38 =>
-                                      { file => $self->o('variation_data') . '/dbNSFP/4.5c/dbNSFP4.5c_grch38.gz',
-                                        version => '4.5c',
+                                      { file => $self->o('variation_data') . '/dbNSFP/4.7c_AlphaMissense/dbNSFP4.7c_grch38.gz',
+                                        version => '4.7c',
                                       } 
                                     },
         cadd_run_type         => NONE,
         cadd_max_workers      => 50,
         cadd_working          => $self->o('species_dir').'/cadd_working',
         cadd_annotation       => { GRCh37 =>
-                                      { file => $self->o('variation_data') . '/CADD/v1.6/grch37/CADD_GRCh37_1.6_whole_genome_SNVs.tsv.gz',
-                                        version => 'v1.6',
+                                      { file => $self->o('variation_data') . '/CADD/v1.7/grch37/CADD_GRCh37_1.7_whole_genome_SNVs.tsv.gz',
+                                        version => 'v1.7',
                                       },
                                    GRCh38 =>
-                                      { file => $self->o('variation_data') . '/CADD/v1.6/grch38/CADD_GRCh38_1.6_whole_genome_SNVs.tsv.gz',
-                                        version => 'v1.6',
+                                      { file => $self->o('variation_data') . '/CADD/v1.7/grch38/CADD_GRCh38_1.7_whole_genome_SNVs.tsv.gz',
+                                        version => 'v1.7',
                                       } 
                                   },
     };

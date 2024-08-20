@@ -8,9 +8,10 @@ nextflow.enable.dsl=2
 
 // Default params
 params.help     = false
-params.mappings = null
+params.urn      = null
 params.ensembl  = "${ENSEMBL_ROOT_DIR}"
 params.output   = "output/MaveDB_variants.tsv.gz"
+params.registry = null
 
 params.licences = "CC0" // Open-access only
 params.round    = 4
@@ -26,22 +27,22 @@ if (params.help) {
               --mappings [MaveDB_mappings_folder]
 
   Mandatory arguments:
-    --mappings  Path to directory containing MaveDB mapping files in JSON format
+    --urn       File with MaveDB URNs, such as 'urn:mavedb:00000001-a-1'
 
   Optional arguments:
     --ensembl   Path to Ensembl root directory (default: ${ENSEMBL_ROOT_DIR})
-    --output    Path to output file (default: 'output/MaveDB_variants.tsv.gz')
+    --output    Path to output file (default: output/MaveDB_variants.tsv.gz)
+    --registry  Path to Ensembl registry
+
     --licences  Comma-separated list of accepted licences (default: 'CC0')
     --round     Decimal places to round floats in MaveDB data (default: 4)
-
-  Note: the mappings must be named with the MaveDB accession, such as
-        '00000001-a-1.json'.
   """
   exit 1
 }
 
 // Module imports
 include { filter_by_licence } from './subworkflows/filter.nf'
+include { download_MaveDB_data } from './nf_modules/fetch.nf'
 include { split_by_mapping_type } from './subworkflows/split.nf'
 include { run_variant_recoder } from './nf_modules/variant_recoder.nf'
 include { get_hgvsp } from './nf_modules/utils.nf'
@@ -55,29 +56,38 @@ include { concatenate_files;
 log.info """
   Create MaveDB plugin data for VEP
   ---------------------------------
-  mappings : ${params.mappings}
+  urn      : ${params.urn}
   output   : ${params.output}
   ensembl  : ${params.ensembl}
+  registry : ${params.registry}
 
   licences : ${params.licences}
   round    : ${params.round}
   """
 
 workflow {
-  // prepare data based on licence
-  files = Channel.fromPath( params.mappings + "/*.json", checkIfExists: true )
+  // filter MaveDB URNs based on file-specific licence
+  urn = Channel
+          .fromPath( params.urn, checkIfExists: true )
+          .splitText()
+          .map { it.trim() }
   licences = params.licences.tokenize(",")
-  filtered = filter_by_licence(files, licences)
-  mapping_files = split_by_mapping_type( filtered )
+  urn = filter_by_licence(urn, licences)
+
+  // download mappings and scores from MaveDB
+  download_MaveDB_data(urn)
+  files = download_MaveDB_data.out
+            .map { [urn: it[0], mappings: it[1], scores: it[2], metadata: it[3]] }
+  files = split_by_mapping_type( files )
 
   // use MaveDB-prepared HGVSg mappings
-  map_scores_to_HGVSg_variants( mapping_files.hgvs_nt )
+  map_scores_to_HGVSg_variants( files.hgvs_nt )
   download_chain_files()
   liftover_to_hg38( map_scores_to_HGVSg_variants.out,
                     download_chain_files.out )
 
   // prepare HGVSp mappings
-  get_hgvsp( mapping_files.hgvs_pro )
+  get_hgvsp( files.hgvs_pro )
   hgvsp = get_hgvsp.out.filter { it.last().size() > 0 }
   run_variant_recoder( hgvsp )
   map_scores_to_HGVSp_variants( run_variant_recoder.out )

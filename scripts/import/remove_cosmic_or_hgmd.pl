@@ -41,11 +41,13 @@ STDOUT->autoflush(1); # flush STDOUT buffer immediately
 my $registry_file;
 my $source_name;
 my $help;
+my $remove_tv;
 
 GetOptions(
     "registry|r=s"  => \$registry_file,
     "source|s=s"    => \$source_name,
     "help|h"        => \$help,
+    "remove_tv=s"   => \$remove_tv
 );
 
 unless ($registry_file) {
@@ -59,9 +61,22 @@ unless ($source_name) {
 }
 
 if ($help) {
-    print "Usage: $0 --registry <reg_file> --source <source_name> --help\n";
-    print "\nDeletes all COSMIC or HGMD-PUBLIC data from an Ensembl variation database\n";
+    print "
+    Usage:
+        $0 --registry <reg_file> --source <source_name>
+        # Deletes all COSMIC or HGMD-PUBLIC data from an Ensembl variation database
+
+    To also remove data from transcript_variation:
+        $0 --registry <reg_file> --source <source_name> --remove_tv 1
+        \n";
     exit(0);
+}
+
+if($remove_tv) {
+    print "Going to remove entries from transcript_variation and MTMP_transcript_variation\n";
+}
+else {
+    print "NOT going to remove entries from transcript_variation and MTMP_transcript_variation\n";
 }
 
 $source_name = 'HGMD-PUBLIC' if ($source_name =~ /hgmd/i);
@@ -109,7 +124,8 @@ $dbh->do(qq{
 print "- 'failed_variation' entries deleted\n";
 
 
-# variation_feature, transcript_variation and MTMP_transcript_variation
+# Remove variation_feature
+# Optionally remove transcript_variation and MTMP_transcript_variation
 my $tv_del_sth = $dbh->prepare(qq[ SELECT vf.variation_feature_id from variation_feature vf
                                           WHERE vf.source_id = $source_id;
                                          ]);
@@ -124,10 +140,17 @@ my $del_mtmp_sth = $dbh->prepare(qq[ DELETE FROM MTMP_transcript_variation WHERE
 foreach my $to_del (@{$tv_to_del}){
   my $vf_id_del = $to_del->[0];
   $del_vf_sth->execute($vf_id_del) or die "Error deleting variation_feature_id $vf_id_del from variation_feature\n";
-  $del_sth->execute($vf_id_del) or die "Error deleting variation_feature_id = $vf_id_del from transcript_variation\n";
-  $del_mtmp_sth->execute($vf_id_del) or die "Error deleting variation_feature_id = $vf_id_del from MTMP_transcript_variation\n";
+  if($remove_tv){
+    $del_sth->execute($vf_id_del) or die "Error deleting variation_feature_id = $vf_id_del from transcript_variation\n";
+    $del_mtmp_sth->execute($vf_id_del) or die "Error deleting variation_feature_id = $vf_id_del from MTMP_transcript_variation\n";
+  }
 }
-print "- 'variation_feature', 'transcript_variation' and 'MTMP_transcript_variation' entries deleted\n";
+if($remove_tv) {
+    print "- 'variation_feature', 'transcript_variation' and 'MTMP_transcript_variation' entries deleted\n";
+}
+else {
+    print "- 'variation_feature' entries deleted\n";
+}
 
 # phenotype_feature_attrib
 $dbh->do(qq{

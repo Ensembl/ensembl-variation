@@ -49,13 +49,18 @@ use base qw(Bio::EnsEMBL::Variation::BaseVariationFeatureOverlapAllele);
     The symbolic allele string
 
   Arg [-BREAKEND] :
-    Breakend information 
+    Breakend information
+
+  Arg [-ALLELE_NUMBER] :
+    The order in which this allele appears in the BaseVariationFeature's
+    allele string
 
   Example : 
     my $vfoa = Bio::EnsEMBL::Variation::StructuralVariationOverlapAllele->new(
         -structural_variation_overlap   => $svfo,
         -symbolic_allele                => 'N[8:56445865[',
-        -breakend                       => $breakend
+        -breakend                       => $breakend,
+        -allele_number                  => 1,
     );
 
   Description: Constructs a new StructuralVariationOverlapAllele instance given a 
@@ -96,23 +101,28 @@ sub new {
     (
       $symbolic_allele,
       $breakend,
+      $allele_number,
     ) = (
       $args{-symbolic_allele},
       $args{-breakend},
+      $args{-allele_number},
     );
   }
   else {
     (
       $symbolic_allele,
       $breakend,
+      $allele_number
     ) = rearrange([qw(
       SYMBOLIC_ALLELE
       BREAKEND
+      ALLELE_NUMBER
     )], %args);
   }
 
   $self->{symbolic_allele} = $symbolic_allele;
   $self->{breakend} = $breakend if defined $breakend;
+  $self->{allele_number} = $allele_number;
 
   return $self;
 }

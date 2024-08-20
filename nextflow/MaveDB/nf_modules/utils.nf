@@ -1,16 +1,15 @@
 process get_hgvsp {
   // Get and sort all HGVSp identifiers from mappings file
 
-  tag "${mappings.simpleName}"
+  tag "${urn}"
   errorStrategy 'ignore'
-  input:  path mappings
-  output: tuple path(mappings), path('hgvsp.txt')
+  input:  tuple val(urn), path(mappings), path(scores), path(metadata), val(hgvs)
+  output: tuple val(urn), path(mappings), path(scores), path(metadata), path('hgvsp.txt')
 
   """
-  grep -Eo '".*:p..*"' $mappings |\
-    sed 's/"//g' |\
-    sed 's/value: //g' |\
-    sort -t":" -V -k2.6 |\
+  sed 's/"/\\n/g' $mappings |\\
+    grep -Eo '.*:p\\..*' |\\
+    sort -t":" -V -k2.6 |\\
     uniq > hgvsp.txt
   """
 }
