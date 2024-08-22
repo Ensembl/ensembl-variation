@@ -1,8 +1,8 @@
 package Bio::EnsEMBL::Variation::Utils::Constants;
 
 ##############################################################################
-#   NB: AUTOMATICALLY GENERATED; AVOID MANUAL EDITING! EDIT Config.pm     #
-#   AND THEN RUN perl scripts/misc/create_config_consts.pl > Constants.pm       #
+#   NB: AUTOMATICALLY GENERATED FILE; AVOID MANUAL EDITING! EDIT Config.pm   #
+#   AND THEN RUN perl scripts/misc/create_config_consts.pl > Constants.pm    #
 ##############################################################################
 
 use strict;
