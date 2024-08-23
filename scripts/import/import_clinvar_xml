@@ -1571,7 +1571,7 @@ sub get_structural_variant{
 =cut
 
 sub get_source{
-  my $file = shift;  ##/path_to_file/ClinVarRCVRelease_2016-10.xml
+  my $file = shift;  ##/path_to_file/ClinVarRCVRelease_2024-01.xml
   my $source_name = shift;
 
   my $version = $file;
