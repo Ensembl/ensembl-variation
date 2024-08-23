@@ -82,7 +82,7 @@ use Exporter;
 use vars qw(@EXPORT_OK @ISA);
 
 our @ISA = ('Bio::EnsEMBL::Feature', 'Exporter');
-@EXPORT_OK = qw(%TYPES %CLIN_SIG_TYPES);
+@EXPORT_OK = qw(%TYPES %DNA_TYPES);
 
 # define valid object types
 # this must correspond to the types defined in the type column of
@@ -96,10 +96,9 @@ our %TYPES = (
   'RegulatoryFeature'             => 1,
 );
 
-our %CLIN_SIG_TYPES = (
-  'Germline'            => 1,
-  'Somatic'             => 1,
-  'SomaticOncogenicity' => 1,
+our %DNA_TYPES = (
+  'Germline' => 1,
+  'Somatic'  => 1
 );
 
 =head2 new
@@ -163,12 +162,12 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
 
-  my ($dbID,$adaptor,$phenotype_id,$phenotype,$type,$object,$object_id,$source_name,$source_id,$source,$study,$study_id,$is_significant,$clin_sig_type,$attribs, $ontology_accessions) =
+  my ($dbID,$adaptor,$phenotype_id,$phenotype,$type,$object,$object_id,$source_name,$source_id,$source,$study,$study_id,$is_significant,$dna_type,$attribs, $ontology_accessions) =
     rearrange([qw(
       dbID ADAPTOR _PHENOTYPE_ID PHENOTYPE
       TYPE OBJECT _OBJECT_ID
       SOURCE_NAME _SOURCE_ID SOURCE STUDY _STUDY_ID
-      IS_SIGNIFICANT CLIN_SIG_TYPE
+      IS_SIGNIFICANT DNA_TYPE
       ATTRIBS ONTOLOGY_ACCESSIONS
     )], @_);
 
@@ -213,7 +212,7 @@ sub new {
 
   $self->{type}                = $type;
   $self->{is_significant}      = $is_significant;
-  $self->{clin_sig_type}       = $clin_sig_type || undef;
+  $self->{dna_type}            = $dna_type || undef;
   $self->{attribs}             = $attribs || {};
   $self->{ontology_accessions} = $ontology_accessions || undef;
 
@@ -517,12 +516,12 @@ sub type {
   return $self->{'type'};
 }
 
-=head2 clin_sig_type
+=head2 dna_type
 
   Arg [1]    : string $type (optional)
                The new value to set the clinical significance type attribute to
-  Example    : $type = $obj->clin_sig_type()
-  Description: Getter/Setter for the object clin_sig_type of the PhenotypeFeature.
+  Example    : $type = $obj->dna_type()
+  Description: Getter/Setter for the object dna_type of the PhenotypeFeature.
   Returntype : string
   Exceptions : none
   Caller     : general
@@ -530,16 +529,16 @@ sub type {
 
 =cut
 
-sub clin_sig_type {
+sub dna_type {
   my $self = shift;
   my $type = shift;
   
   if(defined($type)) {
-    throw("$type is not a valid object type, valid types are: ".(join ", ", sort %CLIN_SIG_TYPES)) unless defined($CLIN_SIG_TYPES{$type});
-    $self->{'clin_sig_type'} = $type;
+    throw("$type is not a valid object type, valid types are: ".(join ", ", sort %DNA_TYPES)) unless defined($DNA_TYPES{$type});
+    $self->{'dna_type'} = $type;
   }
   
-  return $self->{'clin_sig_type'};
+  return $self->{'dna_type'};
 }
 
 =head2 is_significant

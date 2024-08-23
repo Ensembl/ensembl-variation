@@ -66,7 +66,7 @@ use Bio::EnsEMBL::Slice;
 use Bio::DB::Fasta;
 use Bio::EnsEMBL::Registry;
 
-our $DEBUG = 1;
+our $DEBUG = 0;
 
 my ($data_file, $registry_file, $assembly, $structvar, $done_file, $clean, $insert_tv);
 
@@ -161,13 +161,9 @@ my %phenotype_cache = %{get_phenotype_cache()};
 my $def_clinsig = $ATTRIBS{clinvar_clin_sig};
 my %known_clinsig = map { $_ => 1  } @{$def_clinsig};
 
-## accepted clinsig values (somatic)
+## accepted clinsig values (somatic + somatic oncogenicity)
 my $def_clinsig_somatic = $ATTRIBS{clinvar_somatic};
 my %known_clinsig_somatic = map { $_ => 1  } @{$def_clinsig_somatic};
-
-## accepted clinsig values (oncogenic)
-my $def_clinsig_oncogenic = $ATTRIBS{clinvar_oncogenic};
-my %known_clinsig_oncogenic = map { $_ => 1  } @{$def_clinsig_oncogenic};
 
 ## handle incomplete runs - takes list of ClinVar RC accessions 
 my %done;
@@ -1018,13 +1014,13 @@ sub import_phenotype_feature{
   for my $classification (keys %{$record->{Classifications}}) {
     my %attribs;
     my %submitter_ids;
-    my $clin_sig_type = undef;
+    my $dna_type = undef;
 
     # Germline classification
     if ($classification eq "germline") {
       # avoids empty entry if explanation is missing for conflicting evidence
       $attribs{clinvar_clin_sig} = $record->{Classifications}->{germline}->{clin_sign};
-      $clin_sig_type = "Germline";
+      $dna_type = "Germline";
       $attribs{review_status} = $record->{Classifications}->{germline}->{status};
 
       if(defined $record->{Classifications}->{germline}->{date}){
@@ -1035,7 +1031,7 @@ sub import_phenotype_feature{
     elsif ($classification eq "somatic") {
       # avoids empty entry if explanation is missing for conflicting evidence
       $attribs{somatic_clin_sig} = $record->{Classifications}->{somatic}->{clin_sign};
-      $clin_sig_type = "Somatic";
+      $dna_type = "Somatic";
       $attribs{somatic_status} = $record->{Classifications}->{somatic}->{status};
 
       if(defined $record->{Classifications}->{somatic}->{date}){
@@ -1053,10 +1049,11 @@ sub import_phenotype_feature{
       }
     }
     # Oncogenicity classification
+    # In the phenotype feature this classification has DNA_type "Somatic"
     elsif ($classification eq "oncogenicity") {
       # avoids empty entry if explanation is missing for conflicting evidence
       $attribs{oncogenic_clin_sig} = $record->{Classifications}->{oncogenicity}->{clin_sign};
-      $clin_sig_type = "SomaticOncogenicity";
+      $dna_type = "Somatic";
       $attribs{oncogenic_status} = $record->{Classifications}->{oncogenicity}->{status};
 
       if($record->{Classifications}->{oncogenicity}->{date}) {
@@ -1123,7 +1120,7 @@ sub import_phenotype_feature{
         -type           => $type,
         -object         => $feature_object,
         -source         => $source,
-        -clin_sig_type  => $clin_sig_type,
+        -dna_type       => $dna_type,
         -attribs        => \%attribs
         );
         $pheno_feat_adaptor->store($phenofeat);
@@ -1968,46 +1965,26 @@ sub check_known_clinsig {
       #remove comma from accepted values
       $tmpClinsig  =~ s/pathogenic,low penetrance/pathogenic low penetrance/;
 
-      my @tmpClinsigs = split(",", $tmpClinsig);
+      my @tmpClinsigs = split(/,\s*|;\s*/, $tmpClinsig);
       my $found = 1;
       foreach my $clinsig (@tmpClinsigs) {
-        print "(check_known_clinsig) germline: $clinsig\n";
         if (!defined $known_clinsig{$clinsig}) {
-          print "Not defined germline!!\n";
           $found = 0;
           $term = $clinsig;
         }
       }
     }
-
-    # Somatic classifications
-    elsif ($type eq "somatic") {
-      my @tmpClinsigs = split(",", $tmpClinsig);
+    # Somatic classifications and somatic oncogenicity classifications
+    elsif ($type eq "somatic" || $type eq "oncogenicity") {
+      my @tmpClinsigs = split(/,\s*|;\s*/, $tmpClinsig);
       my $found = 1;
       foreach my $clinsig (@tmpClinsigs) {
-        print "(check_known_clinsig) somatic: $clinsig\n";
         if (!defined $known_clinsig_somatic{$clinsig}) {
-          print "Not defined somatic!!\n";
           $found = 0;
           $term = $clinsig;
         }
       }
     }
-
-    # Oncogenicity classifications
-    elsif ($type eq "oncogenicity") {
-      my @tmpClinsigs = split(",", $tmpClinsig);
-      my $found = 1;
-      foreach my $clinsig (@tmpClinsigs) {
-        print "(check_known_clinsig) oncogenicity: $clinsig\n";
-        if (!defined $known_clinsig_oncogenic{$clinsig}) {
-          print "Not defined oncogenicity!!\n";
-          $found = 0;
-          $term = $clinsig;
-        }
-      }
-    }
-
   }
 
   return $found, $term;

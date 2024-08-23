@@ -1530,7 +1530,7 @@ sub _obj_from_row {
         '_source_id'     => $row->{source_id},
         '_source_name'   => $row->{name}, 
         'is_significant' => $row->{is_significant},
-        'clin_sig_type' => $row->{clin_sig_type},
+        'dna_type'       => $row->{dna_type},
       }
     );
 
@@ -1593,7 +1593,7 @@ sub store{
             seq_region_start,
             seq_region_end,
             seq_region_strand,
-            clin_sig_type
+            dna_type
         ) VALUES (?,?,?,?,?,?,?,?,?,?,?)
     });
 
@@ -1608,7 +1608,7 @@ sub store{
         defined($pf->{start}) ? $pf->{start} :undef,
         defined($pf->{end})   ? $pf->{end} : undef,
         defined($pf->{strand})? $pf->{strand} : undef,
-        defined($pf->{clin_sig_type})? $pf->{clin_sig_type} : undef
+        defined($pf->{dna_type})? $pf->{dna_type} : undef
     );
   
    $sth->finish;
