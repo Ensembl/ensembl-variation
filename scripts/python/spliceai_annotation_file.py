@@ -30,26 +30,37 @@ def fetch_transcripts(species, assembly, release, host, port, user):
     gene_annotation = {}
     database = f"{species}_core_{release}_{assembly}"
 
-    sql_select = """
-                    SELECT ga.value,s.name,t.seq_region_strand,t.seq_region_start,t.seq_region_end,
-                    e.seq_region_start,e.seq_region_end FROM transcript t
-                    JOIN transcript_attrib ta ON t.transcript_id = ta.transcript_id
-                    JOIN attrib_type atr ON ta.attrib_type_id = atr.attrib_type_id
-                    JOIN seq_region s ON t.seq_region_id = s.seq_region_id
-                    JOIN gene g ON g.gene_id = t.gene_id
-                    JOIN gene_attrib ga ON g.gene_id = ga.gene_id
-                    JOIN exon_transcript et ON t.transcript_id = et.transcript_id
-                    JOIN exon e ON e.exon_id = et.exon_id
-                    WHERE t.stable_id like 'ENST%' and t.biotype = 'protein_coding' and ga.attrib_type_id = 4
-                """
-    # For human select 'MANE_Select' transcripts
+    # For human we select 'MANE_Select' transcripts and the gene name is a gene attrib
     if species == "homo_sapiens":
-        sql_select = f"{sql_select} and atr.code = 'MANE_Select'"
+        sql_select = """
+                        SELECT ga.value,s.name,t.seq_region_strand,t.seq_region_start,t.seq_region_end,
+                        e.seq_region_start,e.seq_region_end FROM transcript t
+                        JOIN transcript_attrib ta ON t.transcript_id = ta.transcript_id
+                        JOIN attrib_type atr ON ta.attrib_type_id = atr.attrib_type_id
+                        JOIN seq_region s ON t.seq_region_id = s.seq_region_id
+                        JOIN gene g ON g.gene_id = t.gene_id
+                        JOIN gene_attrib ga ON g.gene_id = ga.gene_id
+                        JOIN exon_transcript et ON t.transcript_id = et.transcript_id
+                        JOIN exon e ON e.exon_id = et.exon_id
+                        WHERE t.stable_id like 'ENST%' and t.biotype = 'protein_coding'
+                        and ga.attrib_type_id = 4 and atr.code = 'MANE_Select'
+                        order by ga.value,s.name,t.seq_region_start,t.seq_region_end,e.seq_region_start,e.seq_region_end
+                """
     else:
-        sql_select = f"{sql_select} and atr.code = 'is_canonical'"
-
-    # Sort results
-    sql_select = f"{sql_select} order by ga.value,s.name,t.seq_region_start,t.seq_region_end,e.seq_region_start,e.seq_region_end"
+        # For other species we select the canonical transcripts and the gene name is in xref
+        sql_select = """
+                        SELECT xr.display_label,t.gene_id,s.name,t.seq_region_strand,t.seq_region_start,t.seq_region_end,
+                        e.seq_region_start,e.seq_region_end FROM transcript t
+                        JOIN transcript_attrib ta ON t.transcript_id = ta.transcript_id
+                        JOIN attrib_type atr ON ta.attrib_type_id = atr.attrib_type_id
+                        JOIN seq_region s ON t.seq_region_id = s.seq_region_id
+                        JOIN gene g ON g.gene_id = t.gene_id
+                        JOIN exon_transcript et ON t.transcript_id = et.transcript_id
+                        JOIN exon e ON e.exon_id = et.exon_id
+                        JOIN xref xr ON g.display_xref_id = xr.xref_id
+                        WHERE t.stable_id like 'ENS%' and t.biotype = 'protein_coding' and atr.code = 'is_canonical'
+                        order by xr.display_label,s.name,t.seq_region_start,t.seq_region_end,e.seq_region_start,e.seq_region_end
+                     """
 
     connection = mysql.connector.connect(host=host,
                                          database=database,
