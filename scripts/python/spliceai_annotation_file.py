@@ -134,7 +134,7 @@ def write_output(transcripts_list, output_file):
             exons_start = (",").join(data["exons_start"])
             exons_end = (",").join(data["exons_end"])
 
-            f.write(f"{gene}\t{chr}\t{strand}\t{start}\t{end}\t{exons_start}\t{exons_end}\n")
+            f.write(f"{gene}\t{chr}\t{strand}\t{start}\t{end}\t{exons_start},\t{exons_end},\n")
 
 
 def main():
