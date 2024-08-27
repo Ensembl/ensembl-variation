@@ -221,7 +221,7 @@ sub process_clinvar_set {
   eval{
     ## get accesion & version
     $record{Acc} = get_accession($set->{ReferenceClinVarAssertion}->{ClinVarAccession});
-    print "processing $record{Acc}\n" if $DEBUG == 1;
+    print "\nProcessing $record{Acc}\n" if $DEBUG == 1;
 
     ## recover from partial loads with file of accessions already loaded
     if ($done{$record{Acc}}){
@@ -232,7 +232,7 @@ sub process_clinvar_set {
     ## clinical significance
     $record{Desc} = get_clinsig ($set->{ReferenceClinVarAssertion}->{Classifications}->{GermlineClassification});
     # Skip invalid clinical significance
-    if($record{Desc} =~ "no classifications from unflagged records") {
+    if(!defined $record{Desc} || $record{Desc} =~ "no classifications from unflagged records" || $record{Desc} eq "") {
       return undef;
     }
 
@@ -1571,13 +1571,13 @@ sub get_structural_variant{
 =cut
 
 sub get_source{
-  my $file = shift;  ##/path_to_file/ClinVarFullRelease_2016-10.xml
+  my $file = shift;  ##/path_to_file/ClinVarRCVRelease_2024-01.xml
   my $source_name = shift;
 
   my $version = $file;
   # The file name can include the full path - remove everything until file name
   # File can be compressed (.xml.gz) or not (.xml)
-  $version =~ s/.*ClinVarFullRelease_|.xml|.gz|-//g;
+  $version =~ s/.*ClinVarRCVRelease_|.xml|.gz|-//g;
   warn "VERSION looks suspicious: $version\n" if length($version) >6;
 
   my $source_adaptor  = $reg->get_adaptor('homo_sapiens', 'variation', 'source');
