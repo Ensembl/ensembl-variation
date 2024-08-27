@@ -49,7 +49,7 @@ def fetch_transcripts(species, assembly, release, host, port, user):
     else:
         # For other species we select the canonical transcripts and the gene name is in xref
         sql_select = """
-                        SELECT xr.display_label,t.gene_id,s.name,t.seq_region_strand,t.seq_region_start,t.seq_region_end,
+                        SELECT DISTINCT g.stable_id,s.name,t.seq_region_strand,t.seq_region_start,t.seq_region_end,
                         e.seq_region_start,e.seq_region_end FROM transcript t
                         JOIN transcript_attrib ta ON t.transcript_id = ta.transcript_id
                         JOIN attrib_type atr ON ta.attrib_type_id = atr.attrib_type_id
