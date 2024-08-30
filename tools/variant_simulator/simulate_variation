@@ -206,7 +206,9 @@ sub generateSNPs {
   my $fho = shift;
   my $spliceai = shift;
 
+  my %list_variants;
   my @bases = qw/A C T G/;
+
   while( my $part = shift (@$elements)){
     my $start = $part->seq_region_start - $edges;
     my $pos = $start;
@@ -216,8 +218,10 @@ sub generateSNPs {
     $partID = $part->display_id if $intronOnly;
     $partID = $part->display_id;
     my $seq = $slice_adaptor->fetch_by_region("chromosome", $chrom, $start ,$part->seq_region_end + $edges)->seq;
+
     my @seqAr = split("", $seq);
     my ($id, $qual, $filter, $info) = (".", ".", ".", ".");
+
     for ( my $i = 0; $i < @seqAr; $i++ ) {
          my $ref_seq = $seqAr[$i];
          my @tmp_alts = grep {$_ ne $ref_seq} @bases;
@@ -226,11 +230,18 @@ sub generateSNPs {
            $info = 'GENE='.$gene_name.';'.'FEATURE='.$partID;
          }
          while(my $tmp_alt = shift @tmp_alts) {
+           my $key = $chrom."-".$pos."-".$ref_seq."-".$tmp_alt;
+
            if(!$spliceai) {
-             $id = $chrom."-".$pos."-".$ref_seq."-".$tmp_alt;
+             $id = $key;
            }
-           printf $fho "%s\t%s\t%s\t%s\t%s\t", $chrom, $pos, $id, $ref_seq, $tmp_alt;
-           printf $fho "%s\t%s\t%s\n", $qual, $filter, $info;
+
+           # write to file only if variant is unique
+           if(!$list_variants{$key}) {
+            $list_variants{$key} = 1;
+            printf $fho "%s\t%s\t%s\t%s\t%s\t", $chrom, $pos, $id, $ref_seq, $tmp_alt;
+            printf $fho "%s\t%s\t%s\n", $qual, $filter, $info;
+           }
         }
     }
   }
