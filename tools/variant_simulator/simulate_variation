@@ -34,7 +34,7 @@ use Bio::EnsEMBL::Registry;
 use Getopt::Long qw(GetOptions);
 
 my ($help, $chromOnly, $gene, $registryFile,
-$exonOnly, $intronOnly, $codingOnly,$onlyMane,$refseq_genes,$spliceai
+$exonOnly, $intronOnly, $codingOnly, $canonicalOnly, $onlyMane, $refseq_genes, $spliceai
 );
 my ($species, $assembly, $edges, $outFile) = ("homo_sapiens", "grch38", 0, "simulated.vcf");
 
@@ -47,6 +47,7 @@ GetOptions( "species=s" => \$species,
     "output|o=s"  => \$outFile,
     "exonsOnly"   => \$exonOnly,
     "codingOnly"  => \$codingOnly,
+    "canonicalOnly" => \$canonicalOnly,
     "onlyMane"    => \$onlyMane,
     "intronsOnly" => \$intronOnly,
     "assembly=s"  => \$assembly,
@@ -61,7 +62,6 @@ usage() if ($help);
 die "Illegal arguments -exonsOnly -intronsOnly can't be used together !" if $exonOnly && $intronOnly;
 die "Illegal arguments -intronsOnly -codingsOnly can't be used together !" if $codingOnly && $intronOnly;
 die "Illegal arguments -onlyMane can only be used alone!" if $onlyMane && ($exonOnly || $codingOnly || $intronOnly);
-die "Missing arguments -spliceai has to be used with -onlyMane or -chromOnly!" if $spliceai && !$onlyMane && !$chromOnly;
 
 my $registry = 'Bio::EnsEMBL::Registry';
 if (defined $registryFile){
@@ -183,6 +183,13 @@ sub processGenes{
           @parts = ($transcript);
         }
       }
+    } elsif ($canonicalOnly) {
+      my @transc = @{ $geneID->get_all_Transcripts() };
+      while ( my $transcript = shift @transc ) {
+        if($transcript->is_canonical()) {
+          @parts = ($transcript);
+        }
+      }
     }
       else {
       @parts = ($geneID);
@@ -254,6 +261,7 @@ sub usage {
       -exonsOnly         Generate SNPs only for all exons of the genes
       -intronsOnly       Generate SNPs only for all introns of the genes
       -onlyMane          Generate SNPs only for MANE transcripts
+      -canonicalOnly     Generate SNPs only for canonical transcripts
 
       -edge              Length of flanking region in which to generate SNPs (Default: 0)
 
