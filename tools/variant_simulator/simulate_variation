@@ -89,6 +89,7 @@ my $slice_adaptor = $registry->get_adaptor( $species, $dbtype, 'slice' );
 my $gene_adaptor = $registry->get_adaptor( $species, $dbtype, "gene" );
 
 my $biotype = 'protein_coding';
+my %list_variants;
 
 my $FHO;
 open ($FHO, ">$outFile") or die "Can't open file to write: $outFile, $!\n";
@@ -206,7 +207,6 @@ sub generateSNPs {
   my $fho = shift;
   my $spliceai = shift;
 
-  my %list_variants;
   my @bases = qw/A C T G/;
 
   while( my $part = shift (@$elements)){
