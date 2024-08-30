@@ -1928,6 +1928,8 @@ sub hgvs_genomic {
 
   my @all_alleles = split(/\//,$tr_vf->allele_string());
   my $ref_allele = shift @all_alleles;  ## remove reference allele - not useful for HGVS
+  my $original_ref_allele = $ref_allele;
+  my $original_ref_start  = $ref_start;
 
   my $is_multi_allelic = scalar @all_alleles > 1;
   foreach my $original_allele ( @all_alleles ) {
@@ -1964,9 +1966,12 @@ sub hgvs_genomic {
 
     if ($is_multi_allelic) {
       # fix for multi-allelic variants
-      ($ref_allele, $allele, $chr_start, $chr_end, my $change) = @{trim_sequences($ref_allele, $allele, $chr_start)};
-      $ref_start += $change;
-      $allele ||= '-';      
+      my $old_chr_start = $chr_start;
+      ($ref_allele, $allele, $chr_start, $chr_end) = @{trim_sequences($original_ref_allele, $allele, $chr_start)};
+      $allele ||= '-';
+      $offset = $chr_start - $old_chr_start;
+      $ref_start = $original_ref_start + $offset;
+      $ref_allele ||= '-';
     }
     my $var_class  =  $self->var_allele_class($ref_allele . '/' . $allele);
     $var_class  =~ s/somatic_//;
