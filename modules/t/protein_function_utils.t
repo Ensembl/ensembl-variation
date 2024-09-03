@@ -75,7 +75,7 @@ my $triplet = {
   'aa' => 'G'
 };
 
-my @file_versions = ('3.5a', '4.0a', '4.1a', '4.2a', '4.3a', '4.4a', '4.5c', '4.6c', '4.7c');
+my @file_versions = ('3.5a', '4.0a', '4.1a', '4.2a', '4.3a', '4.4a', '4.5c', '4.6c', '4.7c', '4.8c', '4.9c');
 my @assemblies = ('GRCh37', 'GRCh38');
 my $expected_results = {
   'GRCh37' => {
@@ -95,6 +95,8 @@ my $expected_results = {
     '4.5c' => { 'dbnsfp_mutation_assessor' => { '21' => { 'A' => { 'high' => '0.99996' }, 'S' => { 'high' => '0.99244' }, 'D' => { 'high' => '0.99996' }, 'C' => { 'high' => '0.99996' }, 'R' => { 'high' => '0.99996' }, 'V' => { 'high' => '0.99996' }}}, 'dbnsfp_meta_lr' => { '21' => { 'A' => { 'damaging' => '0.9814' },'S' => {'damaging' => '0.9798'},'D' => {'damaging' => '0.9836'},'C' => {'damaging' => '0.9836'},'R' => {'damaging' => '0.9814'},'V' => {'damaging' => '0.9814'}}},},
     '4.6c' => { 'dbnsfp_mutation_assessor' => { '21' => { 'A' => { 'high' => '0.99996' }, 'S' => { 'high' => '0.99244' }, 'D' => { 'high' => '0.99996' }, 'C' => { 'high' => '0.99996' }, 'R' => { 'high' => '0.99996' }, 'V' => { 'high' => '0.99996' }}}, 'dbnsfp_meta_lr' => { '21' => { 'A' => { 'damaging' => '0.9814' },'S' => {'damaging' => '0.9798'},'D' => {'damaging' => '0.9836'},'C' => {'damaging' => '0.9836'},'R' => {'damaging' => '0.9814'},'V' => {'damaging' => '0.9814'}}},},
     '4.7c' => { 'dbnsfp_mutation_assessor' => { '21' => { 'A' => { 'high' => '0.99996' }, 'S' => { 'high' => '0.99244' }, 'D' => { 'high' => '0.99996' }, 'C' => { 'high' => '0.99996' }, 'R' => { 'high' => '0.99996' }, 'V' => { 'high' => '0.99996' }}}, 'dbnsfp_meta_lr' => { '21' => { 'A' => { 'damaging' => '0.9814' },'S' => {'damaging' => '0.9798'},'D' => {'damaging' => '0.9836'},'C' => {'damaging' => '0.9836'},'R' => {'damaging' => '0.9814'},'V' => {'damaging' => '0.9814'}}},},
+    '4.8c' => { 'dbnsfp_mutation_assessor' => { '21' => { 'A' => { 'high' => '0.99996' }, 'S' => { 'high' => '0.99244' }, 'D' => { 'high' => '0.99996' }, 'C' => { 'high' => '0.99996' }, 'R' => { 'high' => '0.99996' }, 'V' => { 'high' => '0.99996' }}}, 'dbnsfp_meta_lr' => { '21' => { 'A' => { 'damaging' => '0.9814' },'S' => {'damaging' => '0.9798'},'D' => {'damaging' => '0.9836'},'C' => {'damaging' => '0.9836'},'R' => {'damaging' => '0.9814'},'V' => {'damaging' => '0.9814'}}},},
+    '4.9c' => { 'dbnsfp_mutation_assessor' => { '21' => { 'A' => { 'high' => '0.99996' }, 'S' => { 'high' => '0.99244' }, 'D' => { 'high' => '0.99996' }, 'C' => { 'high' => '0.99996' }, 'R' => { 'high' => '0.99996' }, 'V' => { 'high' => '0.99996' }}}, 'dbnsfp_meta_lr' => { '21' => { 'A' => { 'damaging' => '0.9814' },'S' => {'damaging' => '0.9798'},'D' => {'damaging' => '0.9836'},'C' => {'damaging' => '0.9836'},'R' => {'damaging' => '0.9814'},'V' => {'damaging' => '0.9814'}}},},
   },
 
   'GRCh38' => {
@@ -114,6 +116,8 @@ my $expected_results = {
     '4.5c' => { 'dbnsfp_mutation_assessor' => { '21' => { 'A' => { 'high' => '0.99996' }, 'S' => { 'high' => '0.99244' }, 'D' => { 'high' => '0.99996' }, 'C' => { 'high' => '0.99996' }, 'R' => { 'high' => '0.99996' }, 'V' => { 'high' => '0.99996' }}}, 'dbnsfp_meta_lr' => { '21' => { 'A' => { 'damaging' => '0.9814' },'S' => {'damaging' => '0.9798'},'D' => {'damaging' => '0.9836'},'C' => {'damaging' => '0.9836'},'R' => {'damaging' => '0.9814'},'V' => {'damaging' => '0.9814'}}},},
     '4.6c' => { 'dbnsfp_mutation_assessor' => { '21' => { 'A' => { 'high' => '0.99996' }, 'S' => { 'high' => '0.99244' }, 'D' => { 'high' => '0.99996' }, 'C' => { 'high' => '0.99996' }, 'R' => { 'high' => '0.99996' }, 'V' => { 'high' => '0.99996' }}}, 'dbnsfp_meta_lr' => { '21' => { 'A' => { 'damaging' => '0.9814' },'S' => {'damaging' => '0.9798'},'D' => {'damaging' => '0.9836'},'C' => {'damaging' => '0.9836'},'R' => {'damaging' => '0.9814'},'V' => {'damaging' => '0.9814'}}},},
     '4.7c' => { 'dbnsfp_mutation_assessor' => { '21' => { 'A' => { 'high' => '0.99996' }, 'S' => { 'high' => '0.99244' }, 'D' => { 'high' => '0.99996' }, 'C' => { 'high' => '0.99996' }, 'R' => { 'high' => '0.99996' }, 'V' => { 'high' => '0.99996' }}}, 'dbnsfp_meta_lr' => { '21' => { 'A' => { 'damaging' => '0.9814' },'S' => {'damaging' => '0.9798'},'D' => {'damaging' => '0.9836'},'C' => {'damaging' => '0.9836'},'R' => {'damaging' => '0.9814'},'V' => {'damaging' => '0.9814'}}},},
+    '4.8c' => { 'dbnsfp_mutation_assessor' => { '21' => { 'A' => { 'high' => '0.99996' }, 'S' => { 'high' => '0.99244' }, 'D' => { 'high' => '0.99996' }, 'C' => { 'high' => '0.99996' }, 'R' => { 'high' => '0.99996' }, 'V' => { 'high' => '0.99996' }}}, 'dbnsfp_meta_lr' => { '21' => { 'A' => { 'damaging' => '0.9814' },'S' => {'damaging' => '0.9798'},'D' => {'damaging' => '0.9836'},'C' => {'damaging' => '0.9836'},'R' => {'damaging' => '0.9814'},'V' => {'damaging' => '0.9814'}}},},
+    '4.9c' => { 'dbnsfp_mutation_assessor' => { '21' => { 'A' => { 'high' => '0.99996' }, 'S' => { 'high' => '0.99244' }, 'D' => { 'high' => '0.99996' }, 'C' => { 'high' => '0.99996' }, 'R' => { 'high' => '0.99996' }, 'V' => { 'high' => '0.99996' }}}, 'dbnsfp_meta_lr' => { '21' => { 'A' => { 'damaging' => '0.9814' },'S' => {'damaging' => '0.9798'},'D' => {'damaging' => '0.9836'},'C' => {'damaging' => '0.9836'},'R' => {'damaging' => '0.9814'},'V' => {'damaging' => '0.9814'}}},},
   }
 };
 
