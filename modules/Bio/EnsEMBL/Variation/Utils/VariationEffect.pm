@@ -351,15 +351,17 @@ sub feature_truncation {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
     $bvf  ||= $bvfoa->base_variation_feature;
     $feat ||= $bvfoa->base_variation_feature_overlap->feature;
-    
+
     return 0 if $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele');
     
     if(chromosome_breakpoint(@_)) {
         return 1 if within_feature($bvfoa, $feat, $bvfo, $bvfoa->breakend, 1);
     }
 
+    # require transcripts (but not other feature types) to be within cDNA
+    return 0 if $feat->isa('Bio::EnsEMBL::Transcript') and not within_cdna(@_);
+
     return (
-        within_cdna(@_) and
         (
             partial_overlap_feature($bvfoa, $feat, $bvfo, $bvf) or
             complete_within_feature($bvfoa, $feat, $bvfo, $bvf)

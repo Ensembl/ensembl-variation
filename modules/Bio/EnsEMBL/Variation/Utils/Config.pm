@@ -223,11 +223,17 @@ our @VARIATION_CLASSES = (
         type => 'sv',
     },
     {
+        SO_accession => 'SO: 0001021',
+        SO_term => 'chromosome_breakpoint',
+        display_term => 'chromosome breakpoint',
+        type => 'sv',
+    },
+    {
         SO_accession => 'SO:0001873',
         SO_term => 'interchromosomal_breakpoint',
         display_term => 'interchromosomal breakpoint',
         type => 'sv',
-    },   
+    },
     {
         SO_accession => 'SO:0001874',
         SO_term => 'intrachromosomal_breakpoint',

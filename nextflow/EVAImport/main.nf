@@ -24,7 +24,10 @@ params.input_file      = ""
 input_file_tbi         = "${params.input_file}.tbi"
 params.source          = "EVA"
 params.description     = "Short variant data imported from EVA"
-params.version         = 4
+params.version         = null
+params.url             = 'https://www.ebi.ac.uk/eva/'
+params.data_types      = 'variation'
+
 params.remove_prefix   = false
 params.chr_synonyms    = ""
 params.merge_all_types = true
@@ -132,6 +135,10 @@ if(!params.species) {
   exit 1, "ERROR: species name (--species) must be provided when running EVA import"
 }
 
+if(!params.version) {
+  exit 1, "ERROR: EVA version (--version) must be provided when running EVA import"
+}
+
 if(params.input_file == "" || !file(params.input_file).exists() || !file(input_file_tbi).exists()) {
   exit 1, "ERROR: a valid input file (--input_file) must be provided when running EVA import. Please make sure the file is compressed and indexed."
 }
@@ -157,12 +164,22 @@ registry = file(params.registry)
 input_file = file(params.input_file)
 input_file_tbi = file(input_file_tbi)
 
-command_to_run = " -i ${input_file} --source ${params.source} --source_description '${params.description}' --version ${params.version} --registry ${registry} --species ${params.species} --skip_tables '${params.skip_tables}'"
+command_to_run = [
+  " -i ${input_file}",
+  params.source      ? "--source ${params.source}"                    : null,
+  params.description ? "--source_description '${params.description}'" : null,
+  params.version     ? "--version ${params.version}"                  : null,
+  params.url         ? "--url ${params.url}"                          : null,
+  params.data_types  ? "--data_types ${params.data_types}"            : null,
+  params.registry    ? "--registry ${params.registry}"                : null,
+  params.species     ? "--species ${params.species}"                  : null,
+  params.skip_tables ? "--skip_tables '${params.skip_tables}'"        : null
+].findAll { it != null }
 
-log.info """
-  Importing EVA data with the following parameters: \
-  ${command_to_run}
-"""
+log.info "\n  Importing EVA data with the following parameters:"
+log.info command_to_run.join("\n").indent(4)
+
+command_to_run = command_to_run.join(" ")
 
 process run_eva {
   cpus "${params.fork}"
@@ -199,6 +216,7 @@ process run_variant_synonyms {
   val wait
   path var_syn_script
   val source_name
+  val source_version
   val species
   path input_file
   path registry
@@ -209,22 +227,40 @@ process run_variant_synonyms {
   output: val 'ok'
   
   script:
-  
+  source_version_cmd = source_version ? "--source_version ${source_version}" : ""
+  cmd = """
+    perl ${var_syn_script} \\
+      --species ${species} \\
+      --data_file ${input_file} \\
+      --registry ${registry} \\
+      --source_name ${source_name} \\
+      ${source_version_cmd}
+  """
+
   if(species == "sus_scrofa")
-      """
-        perl ${var_syn_script} --source_name ${source_name} --species ${species} --data_file ${input_file} --registry ${registry}
-        perl ${var_syn_script} --source_name "pig_chip" --species ${species} --registry ${registry}
-      """
-  
+    """
+    ${cmd}
+    perl ${var_syn_script} \\
+      --source_name "pig_chip" \\
+      --species ${species} \\
+      --registry ${registry}
+    """
   else if(species == "rattus_norvegicus")
-      """
-        perl ${var_syn_script} --source_name ${source_name} --species ${species} --data_file ${input_file} --registry ${registry}
-        perl ${var_syn_script} --source_name "rat" --species ${species} --registry ${registry} --host ${host} --port ${port} --user 'ensro' --db_name $dbname
-      """
-  else 
-      """
-        perl ${var_syn_script} --source_name ${source_name} --species ${species} --data_file ${input_file} --registry ${registry}
-      """
+    """
+    ${cmd}
+    perl ${var_syn_script} \\
+      --source_name "rat" \\
+      --species ${species} \\
+      --registry ${registry} \\
+      --host ${host} \\
+      --port ${port} \\
+      --user 'ensro' \\
+      --db_name $dbname
+    """
+  else
+    """
+    ${cmd}
+    """
 }
 
 process run_variation_set {
@@ -305,7 +341,7 @@ workflow {
 
   run_eva(prepare_tables.out, file(eva_script), command_to_run, input_file, input_file_tbi, params.merge_all_types, params.fork, params.sort_vf, file(params.chr_synonyms), params.remove_prefix, params.skipped_variants_file)
 
-  run_variant_synonyms(run_eva.out, file(var_syn_script), params.source, params.species, file(params.var_syn_file), registry, params.old_host, params.old_port, params.old_dbname)
+  run_variant_synonyms(run_eva.out, file(var_syn_script), params.source, params.version, params.species, file(params.var_syn_file), registry, params.old_host, params.old_port, params.old_dbname)
 
   // check if the species starts with any of the keys in set_names, such as 'ovis_aries_rambouillet' matching 'ovis_aries'
   set_names_key = set_names.keySet().find{ params.species =~ /^${it}/ }
