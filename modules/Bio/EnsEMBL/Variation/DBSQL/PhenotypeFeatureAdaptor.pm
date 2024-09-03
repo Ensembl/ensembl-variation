@@ -117,6 +117,33 @@ sub _is_significant_constraint {
 }
 
 
+=head2 _filter_dna_type
+
+  Arg [1]    : string $constraint
+  Arg [1]    : string $dna_type
+  Example    : $self->_filter_dna_type($constraint, $dna_type)
+  Description: Internal method to add a constraint on the column "DNA_type".
+               Phenotype features from ClinVar have DNA_type 'Germline' or 'Somatic'.
+               For non-human or other human sources DNA_type is NULL.
+               This method add a constraint to return a specific type of DNA and/or null.
+  Returntype : string
+  Exceptions : none
+  Caller     : internal
+  Status     : stable
+
+=cut
+
+sub _filter_dna_type {
+  my $self = shift;
+  my $constraint = shift;
+  my $dna_type = shift;
+
+  my $dna_constraint = qq{ (pf.DNA_type='$dna_type' OR pf.DNA_type is NULL) };
+  $constraint .= (defined($constraint)) ? " AND$dna_constraint" : $dna_constraint;
+
+  return $constraint;
+}
+
 =head2 _is_class_constraint
 
   Arg [1]    : string $constraint
@@ -153,7 +180,8 @@ sub _fetch_all_by_object {
   my $self   = shift;
   my $object = shift;
   my $type   = shift;
-  
+  my $dna_type = shift; # dna_type to include
+
   $type ||= (split '::', ref($object))[-1];
   throw("$type is not a valid object type, valid types are: ".(join ", ", sort keys %TYPES)) unless defined $type and defined($TYPES{$type});
   
@@ -163,7 +191,12 @@ sub _fetch_all_by_object {
   $constraint = $self->_is_significant_constraint($constraint);
   # Add the constraint for phenotype class
   $constraint = $self->_is_class_constraint($constraint);
-     
+
+  # Filter phenotype features by their DNA_type (includes null DNA_type)
+  if(defined $dna_type) {
+    $constraint = $self->_filter_dna_type($constraint, $dna_type);
+  }
+
   return $self->generic_fetch($constraint);
 }
 
@@ -400,7 +433,7 @@ sub fetch_all_by_Slice_with_ontology_accession {
 
   Arg [1]    : Bio::EnsEMBL::Variation::Variation $var
   Example    : my @pfs = @{$pfa->fetch_all_by_Variation($var)};
-  Description: Retrieves all PhenotypeFeatures for a given variation.
+  Description: Retrieves all PhenotypeFeatures with 'Germline' DNA type for a given variation.
   Returntype : reference to list Bio::EnsEMBL::Variation::PhenotypeFeature
   Exceptions : throw on bad argument
   Caller     : general
@@ -416,7 +449,32 @@ sub fetch_all_by_Variation {
     throw('Bio::EnsEMBL::Variation::Variation arg expected');
   }
   
-  return $self->_fetch_all_by_object($var, 'Variation');
+  # Only include phenotype features with DNA_type 'Germline' or null
+  return $self->_fetch_all_by_object($var, 'Variation', 'Germline');
+}
+
+=head2 fetch_all_somatic_by_Variation
+
+  Arg [1]    : Bio::EnsEMBL::Variation::Variation $var
+  Example    : my @pfs = @{$pfa->fetch_all_somatic_by_Variation($var)};
+  Description: Retrieves all PhenotypeFeatures with 'Somatic' DNA type for a given variation.
+  Returntype : reference to list Bio::EnsEMBL::Variation::PhenotypeFeature
+  Exceptions : throw on bad argument
+  Caller     : general
+  Status     : stable
+
+=cut
+
+sub fetch_all_somatic_by_Variation {
+  my $self = shift;
+  my $var  = shift;
+
+  if(!ref($var) || !$var->isa('Bio::EnsEMBL::Variation::Variation')) {
+    throw('Bio::EnsEMBL::Variation::Variation arg expected');
+  }
+
+  # Only include phenotype features with DNA_type 'Somatic' or null
+  return $self->_fetch_all_by_object($var, 'Variation', 'Somatic');
 }
 
 
