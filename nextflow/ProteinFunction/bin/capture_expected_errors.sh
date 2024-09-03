@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Example: capture_expected_errors.sh sift_align .command.err 54
+# Example: capture_expected_errors.sh 37e493a9feb018c2ce69e68c0093f6d2 sift_align .command.error 54 expected_error.txt
 md5=${1?:1st arg must be md5 of peptide sequence}
 category=${2?:2nd arg must be the name of a set of errors}
 stderr_file=${3?:3rd arg must be the error file}
