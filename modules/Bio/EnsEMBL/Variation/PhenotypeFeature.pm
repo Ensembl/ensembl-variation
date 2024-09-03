@@ -82,7 +82,7 @@ use Exporter;
 use vars qw(@EXPORT_OK @ISA);
 
 our @ISA = ('Bio::EnsEMBL::Feature', 'Exporter');
-@EXPORT_OK = qw(%TYPES);
+@EXPORT_OK = qw(%TYPES %DNA_TYPES);
 
 # define valid object types
 # this must correspond to the types defined in the type column of
@@ -94,6 +94,11 @@ our %TYPES = (
   'QTL'                           => 1,
   'Gene'                          => 1,
   'RegulatoryFeature'             => 1,
+);
+
+our %DNA_TYPES = (
+  'Germline' => 1,
+  'Somatic'  => 1
 );
 
 =head2 new
@@ -157,12 +162,12 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
 
-  my ($dbID,$adaptor,$phenotype_id,$phenotype,$type,$object,$object_id,$source_name,$source_id,$source,$study,$study_id,$is_significant,$attribs, $ontology_accessions) =
+  my ($dbID,$adaptor,$phenotype_id,$phenotype,$type,$object,$object_id,$source_name,$source_id,$source,$study,$study_id,$is_significant,$dna_type,$attribs, $ontology_accessions) =
     rearrange([qw(
       dbID ADAPTOR _PHENOTYPE_ID PHENOTYPE
       TYPE OBJECT _OBJECT_ID
       SOURCE_NAME _SOURCE_ID SOURCE STUDY _STUDY_ID
-      IS_SIGNIFICANT
+      IS_SIGNIFICANT DNA_TYPE
       ATTRIBS ONTOLOGY_ACCESSIONS
     )], @_);
 
@@ -207,6 +212,7 @@ sub new {
 
   $self->{type}                = $type;
   $self->{is_significant}      = $is_significant;
+  $self->{dna_type}            = $dna_type || undef;
   $self->{attribs}             = $attribs || {};
   $self->{ontology_accessions} = $ontology_accessions || undef;
 
@@ -510,6 +516,30 @@ sub type {
   return $self->{'type'};
 }
 
+=head2 dna_type
+
+  Arg [1]    : string $type (optional)
+               The new value to set the clinical significance type attribute to
+  Example    : $type = $obj->dna_type()
+  Description: Getter/Setter for the object dna_type of the PhenotypeFeature.
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub dna_type {
+  my $self = shift;
+  my $type = shift;
+  
+  if(defined($type)) {
+    throw("$type is not a valid object type, valid types are: ".(join ", ", sort %DNA_TYPES)) unless defined($DNA_TYPES{$type});
+    $self->{'dna_type'} = $type;
+  }
+  
+  return $self->{'dna_type'};
+}
 
 =head2 is_significant
 
