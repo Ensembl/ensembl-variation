@@ -1,6 +1,6 @@
 =head1 LICENSE
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2023] EMBL-European Bioinformatics Institute
+Copyright [2016-2024] EMBL-European Bioinformatics Institute
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -86,16 +86,13 @@ sub resource_classes {
     return {
         %{$self->SUPER::resource_classes},
         'gpu'      => {
-                        'LSF'   => '-q gpu-a100 -gpu "num=1:gmem=80000"', # the queue gpu-a100 can access /hps/nobackup
                         'SLURM' => '--time=5:00:00 --gres=gpu:a100:1 --mem=24G'
                       },
         '4Gb_job'  => {
-                        'LSF' => '-q production -R"select[mem>4000] rusage[mem=4000]" -M4000',
-                        'SLURM' => "--partition=standard --time=4:00:00 --mem=4G"
+                        'SLURM' => "--partition=standard --time=4:00:00 --mem=8G"
                       },
          'default' => {
-                        'LSF' => '-R"select[mem>1000] rusage[mem=1000]" -M1000',
-                        'SLURM' => "--partition=standard --time=1:00:00 --mem=2G"
+                        'SLURM' => "--partition=standard --time=1:00:00 --mem=4G"
                       }
     };
 }
