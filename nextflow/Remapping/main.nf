@@ -151,10 +151,11 @@ if (params.help) {
 
 include { crossmap; tabix; report } from './modules/crossmap.nf'
 include { copy_to_rapid_release_ftp } from './modules/copy.nf'
-include { print_params; print_summary } from '../utils/utils.nf'
 
-print_params(description=description, separator=separator,
+include { check_JVM_mem; print_params; print_summary } from '../utils/utils.nf'
+print_params(description,
              nullable=['rr_root', 'rr_path'])
+check_JVM_mem(min=0.4)
 print_summary()
 
 workflow {

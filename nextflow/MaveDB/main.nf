@@ -53,17 +53,10 @@ include { download_chain_files;
 include { concatenate_files;
           tabix } from './nf_modules/output.nf'
 
-log.info """
-  Create MaveDB plugin data for VEP
-  ---------------------------------
-  urn      : ${params.urn}
-  output   : ${params.output}
-  ensembl  : ${params.ensembl}
-  registry : ${params.registry}
-
-  licences : ${params.licences}
-  round    : ${params.round}
-  """
+include { check_JVM_mem; print_params; print_summary } from '../utils/utils.nf'
+print_params('Create MaveDB plugin data for VEP', nullable=['registry'])
+check_JVM_mem(min=50.4)
+print_summary()
 
 workflow {
   // filter MaveDB URNs based on file-specific licence
@@ -98,21 +91,4 @@ workflow {
                    collect { it.last() }
   concatenate_files( output_files )
   tabix( concatenate_files.out )
-}
-
-// Print summary
-workflow.onComplete {
-  println ( workflow.success ? """
-        Workflow summary
-        ----------------
-        Completed at: ${workflow.complete}
-        Duration    : ${workflow.duration}
-        Success     : ${workflow.success}
-        workDir     : ${workflow.workDir}
-        exit status : ${workflow.exitStatus}
-        """ : """
-        Failed: ${workflow.errorReport}
-        exit status : ${workflow.exitStatus}
-        """
-  )
 }
