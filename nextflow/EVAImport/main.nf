@@ -164,6 +164,10 @@ log.info """
   ${command_to_run}
 """
 
+include { check_JVM_mem; print_summary } from '../utils/utils.nf'
+check_JVM_mem(min=0.4)
+print_summary()
+
 process run_eva {
   cpus "${params.fork}"
 
@@ -319,20 +323,4 @@ workflow {
   if(params.citations_file) {
     run_citations(run_variant_synonyms.out, file(citations_script), params.species, registry, file(params.citations_file))
   }
-}
-
-workflow.onComplete {
-  println ( workflow.success ? """
-    Workflow summary
-    ----------------
-    Completed at: ${workflow.complete}
-    Duration    : ${workflow.duration}
-    Success     : ${workflow.success}
-    workDir     : ${workflow.workDir}
-    exit status : ${workflow.exitStatus}
-    """ : """
-    Failed: ${workflow.errorReport}
-    exit status : ${workflow.exitStatus}
-    """
-  )
 }
