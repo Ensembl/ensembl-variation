@@ -76,8 +76,8 @@ def check_JVM_mem (min=0.4) {
     log.error """
     ERROR: The memory of the Nextflow head node (${mem.round(2)} GiB) is below the recommended (${min} GiB); please try the following actions:
       - Increase the JVM's max RAM percentage: export NXF_JVM_ARGS="-XX:InitialRAMPercentage=25 -XX:MaxRAMPercentage=75"
-      - Increase the JVM heap size memory: export NXF_OPTS="-Xms50m -Xmx${min}g"
-      - Increase the memory of the job used to run the Nextflow pipeline: salloc --time 6:00:00 --mem ${min * 4}GB
+      - Increase the JVM heap size memory: export NXF_OPTS="-Xms50m -Xmx${min.round(0)}g"
+      - Increase the memory of the job used to run the Nextflow pipeline: salloc --time 6:00:00 --mem ${(min * 4).round(0)}GB
     """.stripIndent()
     exit 1
   }
