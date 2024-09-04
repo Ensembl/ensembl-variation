@@ -968,6 +968,54 @@ sub clinical_significance {
   return defined($self->get_all_attributes->{'clinvar_clin_sig'}) ? $self->get_all_attributes->{'clinvar_clin_sig'} : undef;
 }
 
+=head2 somatic_classification
+
+  Example    : $somatic_classification = $obj->somatic_classification()
+  Description: Getter/setter for the somatic_clin_sig attribute.
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub somatic_classification {
+  my $self = shift;
+  my $new  = shift;
+
+  $self->_set_attribute('somatic_clin_sig', $new) if defined($new);
+
+  my $classification = undef;
+
+  if(defined $self->get_all_attributes->{'somatic_clin_sig'}) {
+    $classification = $self->get_all_attributes->{'somatic_clin_sig'};
+    if(defined $self->get_all_attributes->{'impact_assertion'} && defined $self->get_all_attributes->{'impact_clin_sig'}) {
+      $classification .= " - " . $self->get_all_attributes->{'impact_assertion'} . " - " . $self->get_all_attributes->{'impact_clin_sig'};
+    }
+  }
+
+  return $classification;
+}
+
+=head2 oncogenicity_classification
+
+  Example    : $oncogenicity = $obj->oncogenicity_classification()
+  Description: Getter/setter for the oncogenic_clin_sig attribute.
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub oncogenicity_classification {
+  my $self = shift;
+  my $new  = shift;
+
+  $self->_set_attribute('oncogenic_clin_sig', $new) if defined($new);
+  
+  return defined($self->get_all_attributes->{'oncogenic_clin_sig'}) ? $self->get_all_attributes->{'oncogenic_clin_sig'} : undef;
+}
 
 =head2 external_id
 
