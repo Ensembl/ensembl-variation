@@ -971,7 +971,7 @@ sub clinical_significance {
 =head2 somatic_classification
 
   Example    : $somatic_classification = $obj->somatic_classification()
-  Description: Getter/setter for the somatic_clin_sig attribute.
+  Description: Getter for the somatic_clin_sig attribute.
   Returntype : string
   Exceptions : none
   Caller     : general
@@ -983,15 +983,30 @@ sub somatic_classification {
   my $self = shift;
   my $new  = shift;
 
-  $self->_set_attribute('somatic_clin_sig', $new) if defined($new);
-
   my $classification = undef;
+  my @tmp;
 
   if(defined $self->get_all_attributes->{'somatic_clin_sig'}) {
-    $classification = $self->get_all_attributes->{'somatic_clin_sig'};
+    my @somatic_clin_sig_list = split ",", $self->get_all_attributes->{'somatic_clin_sig'};
+    my @impact_assertion_list;
+    my @impact_clin_sig_list;
+
     if(defined $self->get_all_attributes->{'impact_assertion'} && defined $self->get_all_attributes->{'impact_clin_sig'}) {
-      $classification .= " - " . $self->get_all_attributes->{'impact_assertion'} . " - " . $self->get_all_attributes->{'impact_clin_sig'};
+      @impact_assertion_list = split ",", $self->get_all_attributes->{'impact_assertion'};
+      @impact_clin_sig_list = split ",", $self->get_all_attributes->{'impact_clin_sig'};
     }
+
+    for (my $i=0; $i<(scalar @somatic_clin_sig_list); $i++) {
+      my $somatic_clin_sig = $somatic_clin_sig_list[$i];
+      if(scalar @impact_assertion_list && scalar @impact_clin_sig_list) {
+        $somatic_clin_sig .= " - " . $impact_assertion_list[$i] . " - " . $impact_clin_sig_list[$i];
+      }
+      push @tmp, $somatic_clin_sig;
+    }
+  }
+
+  if(scalar @tmp) {
+    $classification = join("; ", @tmp);
   }
 
   return $classification;

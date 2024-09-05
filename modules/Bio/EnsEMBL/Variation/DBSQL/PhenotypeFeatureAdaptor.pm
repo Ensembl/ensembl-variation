@@ -138,7 +138,15 @@ sub _filter_dna_type {
   my $constraint = shift;
   my $dna_type = shift;
 
-  my $dna_constraint = qq{ (pf.DNA_type='$dna_type' OR pf.DNA_type is NULL) };
+  my $dna_constraint;
+
+  if($dna_type eq "Germline") {
+    $dna_constraint = qq{ (pf.DNA_type='$dna_type' OR pf.DNA_type is NULL) };
+  }
+  else {
+    $dna_constraint = qq{ pf.DNA_type='$dna_type' };
+  }
+
   $constraint .= (defined($constraint)) ? " AND$dna_constraint" : $dna_constraint;
 
   return $constraint;
@@ -192,7 +200,7 @@ sub _fetch_all_by_object {
   # Add the constraint for phenotype class
   $constraint = $self->_is_class_constraint($constraint);
 
-  # Filter phenotype features by their DNA_type (includes null DNA_type)
+  # Filter phenotype features by their DNA_type (when searching for germline also includes null DNA_type)
   if(defined $dna_type) {
     $constraint = $self->_filter_dna_type($constraint, $dna_type);
   }
@@ -473,7 +481,7 @@ sub fetch_all_somatic_by_Variation {
     throw('Bio::EnsEMBL::Variation::Variation arg expected');
   }
 
-  # Only include phenotype features with DNA_type 'Somatic' or null
+  # Only include phenotype features with DNA_type 'Somatic'
   return $self->_fetch_all_by_object($var, 'Variation', 'Somatic');
 }
 
