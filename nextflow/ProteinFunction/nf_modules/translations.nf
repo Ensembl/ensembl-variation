@@ -46,7 +46,7 @@ process translate_fasta {
 }
 
 // module imports                                                               
-include { get_current_MD5_translations } from './database_utils.nf'        
+include { get_current_MD5_translations } from './database.nf'        
 
 workflow filter_existing_translations {
   // Filter out translation already present in database
