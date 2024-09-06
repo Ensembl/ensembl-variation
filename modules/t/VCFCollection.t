@@ -1,5 +1,5 @@
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016-2022] EMBL-European Bioinformatics Institute
+# Copyright [2016-2024] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -522,5 +522,16 @@ ok(scalar (@{$vfs->[2]->get_all_clinical_significance_states()}) eq 2, 'get_all_
 
 # below check only works once we update supported list of ClinVar clinical significance entries (probably for release 110)
 #ok(scalar (@{$vfs->[3]->get_all_clinical_significance_states()}) eq 2 && $vfs->[3]->get_all_clinical_significance_states()->[0] eq , 'get_all_clinical_significance_states - process clinical significance entries with commas before delimiter split');
+
+# Test frequency evidence
+my $file_data = $vca->fetch_by_id('vcf_freq');
+ok($file_data && $file_data->isa('Bio::EnsEMBL::Variation::VCFCollection'), "fetch_by_id vcf_freq");
+my $temp_name = $file_data->filename_template();
+$temp_name =~ s/###t\-root###/$dir/;
+$file_data->filename_template($temp_name);
+
+$slice = $sa->fetch_by_region('chromosome', '2');
+my $vf_list = $file_data->get_all_VariationFeatures_by_Slice($slice, $dont_fetch_vf_overlaps);
+ok($vf_list->[0]->get_all_evidence_values()->[0] eq 'Frequency', 'get evidence value - Frequency');
 
 done_testing();

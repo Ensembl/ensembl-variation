@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2022] EMBL-European Bioinformatics Institute
+Copyright [2016-2024] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -64,31 +64,34 @@ my %source_info;
 my $animalqtl_baseURL='https://www.animalgenome.org/QTLdb/export/ENS83H19HZS/';
 
 my %animalQTL_species_url = (
-  gallus_gallus => $animalqtl_baseURL.'QTL_GG_5.0.gff.txt.gz', #Gallus gallus
-  sus_scrofa => $animalqtl_baseURL.'QTL_SS_11.1.gff.txt.gz', #Sus scrofa
-  ovis_aries => $animalqtl_baseURL.'QTL_OAR_4.0.gff.txt.gz',  # Ovis aries
-  bos_taurus => $animalqtl_baseURL.'QTL_ARS_UCD1.gff.txt.gz', #Bos taurus
-  equus_caballus => $animalqtl_baseURL.'QTL_EquCab2.0.gff.txt.gz', #Equus caballus
-  ovis_aries_rambouillet => "",
+  gallus_gallus => $animalqtl_baseURL.'QTLdb_chicken_GRCg7b.gff.gz', #Gallus gallus, chicken
+  sus_scrofa => $animalqtl_baseURL.'QTLdb_pig_SS11.1.gff.gz', #Sus scrofa, pig
+  ovis_aries => $animalqtl_baseURL.'QTLdb_sheep_OAR3.1.gff.gz',  # Ovis aries, sheep
+  bos_taurus => $animalqtl_baseURL.'QTLdb_cattle_ARS_UCD1.gff.gz', #Bos taurus, cow
+  equus_caballus => $animalqtl_baseURL.'QTLdb_horse_EC3.gff.gz', #Equus caballus, horse 
+  ovis_aries_rambouillet => $animalqtl_baseURL."QTLdb_sheep_OAR_rambo2.gff.gz", #Ovis aries rambo
+  capra_hircus => $animalqtl_baseURL.'QTLdb_goatCHIR_ARS1.gff.gz', #capra hircus, goat
 );
 
 my %animalQTL_species_fileNames = (
-  gallus_gallus => 'QTL_gallus_gallus_gbp_6.0.gff3.gz', #Gallus gallus, remapped file
-  sus_scrofa => 'QTL_sus_scrofa_gbp_11.1.gff3.gz', #Sus scrofa
-  ovis_aries => 'QTL_ovis_aries_gbp_3.1.gff3.gz',  # Ovis aries, remapped file
-  bos_taurus => 'QTL_bos_taurus_gbp_1.2.gff3.gz', #Bos taurus
-  equus_caballus => 'QTL_equus_caballus_gbp_3.0.gff3.gz', #Equus caballus, remapped file
-  ovis_aries_rambouillet => 'QTL_ovis_aries_rambouillet_gbp_1.0.gff3.gz', # remapped from ovis aries data
+  gallus_gallus => 'QTL_gallus_gallus_GRCg7b.gff3.gz',
+  sus_scrofa => 'QTL_sus_scrofa_gbp_11.1.gff3.gz',
+  ovis_aries => 'QTL_ovis_aries_OAR3.1.gff3.gz',
+  bos_taurus => 'QTL_bos_taurus_ARS_UCD1.gff3.gz',
+  equus_caballus => 'QTL_equus_caballus_EC3.gff3.gz',
+  ovis_aries_rambouillet => 'QTL_ovis_aries_rambouillet_OAR_rambo2.gff3.gz',
+  capra_hircus => 'QTL_capra_hircus_CHIR_ARS1.gff3.gz',
 );
 
 # use '0' if the data is not the same assembly and import should be skipped
 my %animalQTL_species_ok = (
-  gallus_gallus => 0, #Gallus gallus, remapped data, not same Ensembl assembly as AnimalQTL
+  gallus_gallus => 1, #Gallus gallus
   sus_scrofa => 1, #Sus scrofa
-  ovis_aries => 0,  #Ovis aries: remapped data, not same Ensembl assembly as AnimalQTL
+  ovis_aries => 1,  #Ovis aries: 
   bos_taurus => 1, #Bos taurus
-  equus_caballus => 0, #Equus caballus: remapped data, not same Ensembl assembly as AnimalQTL
-  ovis_aries_rambouillet => 0, #remapped data from Ovis aries (ovis_aries_variation)
+  equus_caballus => 1, #Equus caballus
+  ovis_aries_rambouillet => 1,
+  capra_hircus => 1
 );
 
 
@@ -365,7 +368,7 @@ sub parse_input_file {
     }
 
     # add additional fields if found
-    $phenotype->{'study'} = $self->get_pubmed_prefix().$extra->{'PUBMED_ID'} if defined($extra->{'PUBMED_ID'} && $extra->{'PUBMED_ID'} =~ /^\d+$/);
+    $phenotype->{'study'} = $self->get_pubmed_prefix().$extra->{'PUBMED_ID'} if (defined($extra->{'PUBMED_ID'} ) && $extra->{'PUBMED_ID'} =~ /^\d+$/);
     $phenotype->{'p_value'} = $extra->{'P-value'} if defined($extra->{'P-value'});
     $phenotype->{'f_stat'} = $extra->{'F-stat'} if defined($extra->{'F-stat'});
     $phenotype->{'lod_score'} = $extra->{'LOD-score'} if defined($extra->{'LOD-score'});

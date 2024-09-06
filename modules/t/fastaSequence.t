@@ -1,5 +1,5 @@
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016-2022] EMBL-European Bioinformatics Institute
+# Copyright [2016-2024] EMBL-European Bioinformatics Institute
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -120,6 +120,8 @@ $slice1 = $sa->fetch_by_region('chromosome', 21, 1, 10);
 is($slice1->seq, 'N' x 10, "start of chrom");
 is($slice1->expand(10, 0)->seq, 'N' x 20, "expand beyond start of chrom");
 
+$slice1 = $sa->fetch_by_region('chromosome', 21, 46709993, 46709997);
+is($slice1->seq, 'N', "subseq out of bounds");
 
 # test synonyms
 clear_fasta_cache();

@@ -13,14 +13,24 @@ process get_sift_version {
 }
 
 process get_sift_db_version {
-  container "nunoagostinho/sift:6.2.1"
+  /*
+  Get version from UniRef release note file (if available)
+  */
+  container "ensemblorg/sift:6.2.1"
   input:
+    path db_dir
     path db
   output:
     stdout
 
   """
-  echo -n ${db.baseName} \\(`date -r ${db} -u +"%Y_%m"`\\)
+  release_note=${db_dir}/${db.baseName}.release_note
+  if [ -f \${release_note} ]; then
+    version=`grep -oE "[0-9]+_[0-9]+" \${release_note}`
+  else
+    version=`date -r ${db} -u +%Y_%m`
+  fi
+  echo -n "${db.baseName} (\${version})"
   """
 }
 
@@ -135,7 +145,7 @@ workflow update_sift_version {
 workflow update_sift_db_version {
   take: db
   main:
-    get_sift_db_version( db )
+    get_sift_db_version( db.parent, db )
     update_meta("sift_db_version", get_sift_db_version.out)
 }
 

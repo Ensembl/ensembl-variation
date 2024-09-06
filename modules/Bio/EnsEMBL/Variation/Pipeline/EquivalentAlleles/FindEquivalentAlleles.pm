@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2022] EMBL-European Bioinformatics Institute
+Copyright [2016-2024] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -50,12 +50,17 @@ sub run {
   my $self = shift;
 
   my $core_dba = $self->get_species_adaptor('core');
+  $core_dba->dbc->reconnect_when_lost(1);
+
   my $var_dba  = $self->get_species_adaptor('variation');
   $var_dba->include_failed_variations(1);
+  $var_dba->dbc->reconnect_when_lost(1);
 
-  my $sa       = $core_dba->get_SliceAdaptor();
-  my $vfa      = $var_dba->get_VariationFeatureAdaptor();
+  my $sa  = $core_dba->get_SliceAdaptor();
+  $sa->dbc->reconnect_when_lost(1);
 
+  my $vfa = $var_dba->get_VariationFeatureAdaptor();
+  $vfa->dbc->reconnect_when_lost(1);
 
   my $location = $self->required_param('location');
   $self->warning( 'starting location '. $location);

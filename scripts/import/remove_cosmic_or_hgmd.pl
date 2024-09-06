@@ -1,5 +1,5 @@
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016-2022] EMBL-European Bioinformatics Institute
+# Copyright [2016-2024] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -35,14 +35,19 @@ use Getopt::Long;
 
 use Bio::EnsEMBL::Registry;
 
+use IO::Handle;
+STDOUT->autoflush(1); # flush STDOUT buffer immediately
+
 my $registry_file;
 my $source_name;
 my $help;
+my $remove_tv;
 
 GetOptions(
     "registry|r=s"  => \$registry_file,
     "source|s=s"    => \$source_name,
     "help|h"        => \$help,
+    "remove_tv=s"   => \$remove_tv
 );
 
 unless ($registry_file) {
@@ -56,9 +61,22 @@ unless ($source_name) {
 }
 
 if ($help) {
-    print "Usage: $0 --registry <reg_file> --source <source_name> --help\n";
-    print "\nDeletes all COSMIC or HGMD-PUBLIC data from an Ensembl variation database\n";
+    print "
+    Usage:
+        $0 --registry <reg_file> --source <source_name>
+        # Deletes all COSMIC or HGMD-PUBLIC data from an Ensembl variation database
+
+    To also remove data from transcript_variation:
+        $0 --registry <reg_file> --source <source_name> --remove_tv 1
+        \n";
     exit(0);
+}
+
+if($remove_tv) {
+    print "Going to remove entries from transcript_variation and MTMP_transcript_variation\n";
+}
+else {
+    print "NOT going to remove entries from transcript_variation and MTMP_transcript_variation\n";
 }
 
 $source_name = 'HGMD-PUBLIC' if ($source_name =~ /hgmd/i);
@@ -106,22 +124,33 @@ $dbh->do(qq{
 print "- 'failed_variation' entries deleted\n";
 
 
-# variation_feature, transcript_variation and MTMP_transcript_variation
+# Remove variation_feature
+# Optionally remove transcript_variation and MTMP_transcript_variation
 my $tv_del_sth = $dbh->prepare(qq[ SELECT vf.variation_feature_id from variation_feature vf
                                           WHERE vf.source_id = $source_id;
                                          ]);
-$tv_del_sth->execute() || die "Error selecting variation feature from $source_name\n";
+$tv_del_sth->execute() or die "Error selecting variation feature from $source_name\n";
 my $tv_to_del = $tv_del_sth->fetchall_arrayref();
+
+# Prepare SQL statements before for loop
+my $del_vf_sth = $dbh->prepare(qq[ DELETE FROM variation_feature WHERE variation_feature_id = ? ]);
+my $del_sth = $dbh->prepare(qq[ DELETE FROM transcript_variation WHERE variation_feature_id = ? ]);
+my $del_mtmp_sth = $dbh->prepare(qq[ DELETE FROM MTMP_transcript_variation WHERE variation_feature_id = ? ]);
+
 foreach my $to_del (@{$tv_to_del}){
   my $vf_id_del = $to_del->[0];
-  my $del_vf_sth = $dbh->prepare(qq[ DELETE FROM variation_feature WHERE variation_feature_id = $vf_id_del ]);
-  my $del_sth = $dbh->prepare(qq[ DELETE FROM transcript_variation WHERE variation_feature_id = $vf_id_del ]);
-  my $del_mtmp_sth = $dbh->prepare(qq[ DELETE FROM MTMP_transcript_variation WHERE variation_feature_id = $vf_id_del ]);
-  $del_vf_sth->execute() || die "Could not delete entry with variation_feature_id = $vf_id_del from variation_feature\n";
-  $del_sth->execute() || die "Could not delete entry with variation_feature_id = $vf_id_del from transcript_variation\n";
-  $del_mtmp_sth->execute() || die "Could not delete entry with variation_feature_id = $vf_id_del from MTMP_transcript_variation\n";
+  $del_vf_sth->execute($vf_id_del) or die "Error deleting variation_feature_id $vf_id_del from variation_feature\n";
+  if($remove_tv){
+    $del_sth->execute($vf_id_del) or die "Error deleting variation_feature_id = $vf_id_del from transcript_variation\n";
+    $del_mtmp_sth->execute($vf_id_del) or die "Error deleting variation_feature_id = $vf_id_del from MTMP_transcript_variation\n";
+  }
 }
-print "- 'variation_feature', 'transcript_variation' and 'MTMP_transcript_variation' entries deleted\n";
+if($remove_tv) {
+    print "- 'variation_feature', 'transcript_variation' and 'MTMP_transcript_variation' entries deleted\n";
+}
+else {
+    print "- 'variation_feature' entries deleted\n";
+}
 
 # phenotype_feature_attrib
 $dbh->do(qq{

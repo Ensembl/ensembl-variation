@@ -1,0 +1,116 @@
+{
+   "callithrix_jacchus" : {
+      "count" : "<span class=\"vdoc_var_count vdoc_million_1\" title=\"Over 14 million variants\">14 M</span>",
+      "name" : "White-tufted-ear marmoset",
+      "label" : "Callithrix jacchus"
+   },
+   "sander_lucioperca" : {
+      "count" : "<span class=\"vdoc_var_count vdoc_thousand\" title=\"Over 975,000 variants\">975 K</span>",
+      "name" : "Pike-perch",
+      "label" : "Sander lucioperca"
+   },
+   "ficedula_albicollis" : {
+      "count" : "<span class=\"vdoc_var_count vdoc_thousand\" title=\"Over 37,000 variants\">37 K</span>",
+      "name" : "Collared flycatcher",
+      "label" : "Ficedula albicollis"
+   },
+   "macaca_mulatta" : {
+      "count" : "<span class=\"vdoc_var_count vdoc_million_1\" title=\"Over 50 million variants\">50 M</span>",
+      "name" : "Macaque",
+      "label" : "Macaca mulatta"
+   },
+   "pan_troglodytes" : {
+      "count" : "<span class=\"vdoc_var_count vdoc_million_1\" title=\"Over 22 million variants\">22 M</span>",
+      "name" : "Chimpanzee",
+      "label" : "Pan troglodytes"
+   },
+   "coturnix_japonica" : {
+      "count" : "<span class=\"vdoc_var_count vdoc_thousand\" title=\"Over 8,000 variants\">8 K</span>",
+      "name" : "Japanese quail",
+      "label" : "Coturnix japonica"
+   },
+   "bos_grunniens" : {
+      "count" : "<span class=\"vdoc_var_count vdoc_thousand\" title=\"Over 64,000 variants\">64 K</span>",
+      "name" : "Domestic yak",
+      "label" : "Bos grunniens"
+   },
+   "anas_platyrhynchos" : {
+      "count" : "<span class=\"vdoc_var_count vdoc_million_1\" title=\"Over 30 million variants\">30 M</span>",
+      "name" : "Mallard",
+      "label" : "Anas platyrhynchos"
+   },
+   "macaca_fascicularis" : {
+      "count" : "<span class=\"vdoc_var_count vdoc_million_2\" title=\"Over 1.6 million variants\">1.6 M</span>",
+      "name" : "Crab-eating macaque",
+      "label" : "Macaca fascicularis"
+   },
+   "oreochromis_niloticus" : {
+      "count" : "<span class=\"vdoc_var_count vdoc_thousand\" title=\"Over 63,000 variants\">63 K</span>",
+      "name" : "Nile tilapia",
+      "label" : "Oreochromis niloticus"
+   },
+   "oncorhynchus_mykiss" : {
+      "count" : "<span class=\"vdoc_var_count vdoc_thousand\" title=\"Over 33,000 variants\">33 K</span>",
+      "name" : "Rainbow trout",
+      "label" : "Oncorhynchus mykiss"
+   },
+   "taeniopygia_guttata" : {
+      "count" : "<span class=\"vdoc_var_count vdoc_million_2\" title=\"Over 1.5 million variants\">1.5 M</span>",
+      "name" : "Zebra finch",
+      "label" : "Taeniopygia guttata"
+   },
+   "meleagris_gallopavo" : {
+      "count" : "<span class=\"vdoc_var_count vdoc_thousand\" title=\"Over 5,000 variants\">5 K</span>",
+      "name" : "Turkey",
+      "label" : "Meleagris gallopavo"
+   },
+   "seriola_dumerili" : {
+      "count" : "<span class=\"vdoc_var_count vdoc_million_2\" title=\"Over 9 million variants\">9 M</span>",
+      "name" : "Greater amberjack",
+      "label" : "Seriola dumerili"
+   },
+   "salmo_salar" : {
+      "count" : "<span class=\"vdoc_var_count vdoc_million_2\" title=\"Over 8 million variants\">8 M</span>",
+      "name" : "Atlantic salmon",
+      "label" : "Salmo salar",
+      "genotype" : 1
+   },
+   "neovison_vison" : {
+      "count" : "<span class=\"vdoc_var_count vdoc_thousand\" title=\"Over 34,000 variants\">34 K</span>",
+      "name" : "American mink",
+      "label" : "Neovison vison"
+   },
+   "microtus_ochrogaster" : {
+      "count" : "<span class=\"vdoc_var_count vdoc_thousand\" title=\"Over 8,000 variants\">8 K</span>",
+      "name" : "Prairie vole",
+      "label" : "Microtus ochrogaster"
+   },
+   "pongo_abelii" : {
+      "count" : "<span class=\"vdoc_var_count vdoc_million_2\" title=\"Over 9.6 million variants\">9.6 M</span>",
+      "name" : "Sumatran orangutan",
+      "label" : "Pongo abelii"
+   },
+   "nomascus_leucogenys" : {
+      "count" : "<span class=\"vdoc_var_count vdoc_million_2\" title=\"Over 1.1 million variants\">1.1 M</span>",
+      "name" : "Gibbon",
+      "label" : "Nomascus leucogenys"
+   },
+   "chlorocebus_sabaeus" : {
+      "count" : "<span class=\"vdoc_var_count vdoc_million_1\" title=\"Over 67 million variants\">67 M</span>",
+      "name" : "Vervet-AGM",
+      "label" : "Chlorocebus sabaeus",
+      "genotype" : 1
+   },
+   "oryctolagus_cuniculus" : {
+      "count" : "<span class=\"vdoc_var_count vdoc_thousand\" title=\"Over 83,000 variants\">83 K</span>",
+      "name" : "Rabbit",
+      "label" : "Oryctolagus cuniculus",
+      "genotype" : 1
+   },
+   "parus_major" : {
+      "count" : "<span class=\"vdoc_var_count vdoc_thousand\" title=\"Over 497,000 variants\">497 K</span>",
+      "name" : "Great Tit",
+      "genotype" : 1,
+      "label" : "Parus major"
+   }
+}

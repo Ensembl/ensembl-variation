@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2022] EMBL-European Bioinformatics Institute
+Copyright [2016-2024] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -614,6 +614,13 @@ sub _raw_seq {
       }
 
       $start = 1;
+    }
+
+    if ($start > $fa_length) {
+      print STDERR "SLICE HAS START > SEQ LENGTH\n" if $DEBUG;
+
+      # return only one N (same behaviour as when not using a Faidx/FASTA file)
+      return 'N';
     }
 
     if($end > $fa_length) {

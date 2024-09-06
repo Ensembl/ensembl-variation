@@ -1,6 +1,6 @@
 =head1 LICENSE
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2022] EMBL-European Bioinformatics Institute
+Copyright [2016-2024] EMBL-European Bioinformatics Institute
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -99,12 +99,12 @@ sub pipeline_analyses {
     {   
       -logic_name        => 'init_mapping', 
       -module            => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::InitVariationFeatureMapping',
-      -rc_name           => 'default_mem',
+      -rc_name           => 'default_mem_long',
       -analysis_capacity => 5,
       -flow_into => { 
         '2->A' => ['run_mapping'],
         'A->1' => ['init_parse_mapping']
-      },		
+      },
     },
     {
       -logic_name => 'run_mapping',
@@ -180,7 +180,7 @@ sub pipeline_analyses {
       -logic_name => 'finish_variant_qc',
       -module     => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::FinishVariationFeatureQC',
       -max_retry_count => 0,
-      -rc_name    => 'default_mem',
+      -rc_name    => 'high_mem_long',
        -flow_into => {
         1 => ['compare_prev_assembly'],
       },
@@ -203,4 +203,3 @@ sub pipeline_analyses {
 }
 
 1;
-

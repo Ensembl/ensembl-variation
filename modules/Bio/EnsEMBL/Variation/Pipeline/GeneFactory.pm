@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2022] EMBL-European Bioinformatics Institute
+Copyright [2016-2024] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -36,17 +36,13 @@ use warnings;
 use Bio::EnsEMBL::Variation::Utils::FastaSequence qw(setup_fasta);
 
 use File::Path qw(mkpath rmtree);
-
+use FileHandle;
 use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 
-my $DEBUG = 0;
-my $DEBUG_GENE_IDS = 0;
 sub fetch_input {
    
     my $self = shift;
-
     my $mtmp = $self->param('mtmp_table');
-
     my $include_lrg = $self->param('include_lrg');
     my $biotypes = $self->param('limit_biotypes');
 
@@ -54,48 +50,49 @@ sub fetch_input {
     my $var_dba = $self->get_species_adaptor('variation');
     
     my $dbc = $var_dba->dbc;
-
+    my $tva = $var_dba->get_TranscriptVariationAdaptor;
     my $ga = $core_dba->get_GeneAdaptor or die "Failed to get gene adaptor";
+    my $ta = $core_dba->get_TranscriptAdaptor;
 
     my @genes;
     my @gene_output_ids; 
     my $gene_count = 0;
-    my @delete_transcripts = ();
 
-
-    if (-e $self->param('update_diff')){
-
-      my $file = $self->param('update_diff');
-      open (DIFF, $file) or die "Can't open file $file: $!";
-      while (<DIFF>){
-	      chomp;
-        next if /^transcript_id/;
-        my ($transcript_id, $status, $gene_id, $other_info) = split(/\t/);
-        push @gene_output_ids, {
-          gene_stable_id  => $gene_id,
-        } if $status ne "deleted";
-
-        push @delete_transcripts, $transcript_id if $status eq "deleted";
-
-        # Remove Deleted transcripts
-        if (@delete_transcripts > 500){
-            my $joined_ids = '"' . join('", "', @delete_transcripts) . '"';
-            
-            $dbc->do(qq{
-                      DELETE FROM  transcript_variation
-                      WHERE   feature_stable_id IN ($joined_ids);
-            }) or die "Deleting stable ids failed";
-
-            # Reset delete_transcripts list
-            @delete_transcripts = ();
+    # Check if debug mode switched on and just run pipeline on the genes in the array, exit the sub to prevent any other loading
+    if ($self->param('debug_genes')) {
+      my @gene_ids = qw/ENSG00000100697/; # slow: ENSG00000078328, fast: ENSG00000276644, others: ENSG00000078328 ENSG00000149972 ENSG00000182185
+      foreach my $gene_id (@gene_ids) {
+        if (!grep {$_->{gene_stable_id} eq $gene_id } @gene_output_ids) {
+          push @gene_output_ids, {
+            gene_stable_id => $gene_id,
+          }
         }
       }
+      $self->param('gene_output_ids', \@gene_output_ids);
+      return;
+    }
 
-    } elsif ( grep {defined($_)} @$biotypes ) {  # If array is not empty  
+    # If update diff is activated, then only pass geneIDs forward for transcripts that are new/updated
+    if (-e $self->param('update_diff')) {
+      my $file = $self->param('update_diff');
+      open (DIFF, $file) or die "Can't open file $file: $!";
+      
+      while (<DIFF>) {
+        chomp;
+        next if /^transcript_id/;
+        my ($transcript_id, $status, $gene_id, $other_info) = split(/\t/);
+        if ($status ne "deleted") {
+          push @gene_output_ids, {gene_stable_id  => $gene_id,}
+        }
+      }
+    }
+
+    elsif ( grep {defined($_)} @$biotypes ) {  # If array is not empty  
        # Limiting genes to specified biotypes 
        @genes = map { @{$ga->fetch_all_by_logic_name($_)} } @$biotypes;
+    } 
 
-    } else { 
+    else { 
        # fetch all genes 
        @genes = @{ $ga->fetch_all };
     }  
@@ -107,39 +104,10 @@ sub fetch_input {
 
     for my $gene (@genes) {
       $gene_count++;
-      push @gene_output_ids, {
-        gene_stable_id  => $gene->stable_id,
-      };
-      
-      if ($DEBUG) {
-          last if $gene_count >= 500;
-      }
+      push @gene_output_ids, {gene_stable_id  => $gene->stable_id,};
     }
-
-    if ($DEBUG_GENE_IDS) {
-      my @gene_ids = qw/ENSG00000078328 ENSG00000149972 ENSG00000182185/; # slow: ENSG00000078328, fast: ENSG00000276644
-      foreach my $gene_id (@gene_ids) {
-        if (!grep {$_->{gene_stable_id} eq $gene_id } @gene_output_ids) {
-          push @gene_output_ids, {
-            gene_stable_id => $gene_id,
-          };
-        }
-      }
-    } 
 
     $self->param('gene_output_ids', \@gene_output_ids);
-
-    # Remove Deleted transcripts
-    if (-e $self->param('update_diff')){
-        my $joined_ids = '"' . join('", "', @delete_transcripts) . '"';
-        return if $joined_ids eq "";
-        $dbc->do(qq{
-                  DELETE FROM  transcript_variation
-                  WHERE   feature_stable_id IN ($joined_ids);
-        }) or die "Deleting stable ids failed";
-
-    }
-
 }
 
 sub write_output {

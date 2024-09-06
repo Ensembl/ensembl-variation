@@ -3,13 +3,13 @@ CREATE TABLE `alt_allele` (
   `alt_allele_group_id` int(10) unsigned NOT NULL,
   `gene_id` int(10) unsigned NOT NULL,
   PRIMARY KEY (`alt_allele_id`),
-  UNIQUE KEY `gene_idx` (`gene_id`),
-  KEY `gene_id` (`gene_id`,`alt_allele_group_id`)
+  KEY `gene_id` (`gene_id`,`alt_allele_group_id`),
+  KEY `gene_idx` (`gene_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 CREATE TABLE `alt_allele_attrib` (
   `alt_allele_id` int(10) unsigned DEFAULT NULL,
-  `attrib` enum('IS_REPRESENTATIVE','IS_MOST_COMMON_ALLELE','IN_CORRECTED_ASSEMBLY','HAS_CODING_POTENTIAL','IN_ARTIFICIALLY_DUPLICATED_ASSEMBLY','IN_SYNTENIC_REGION','HAS_SAME_UNDERLYING_DNA_SEQUENCE','IN_BROKEN_ASSEMBLY_REGION','IS_VALID_ALTERNATE','SAME_AS_REPRESENTATIVE','SAME_AS_ANOTHER_ALLELE','MANUALLY_ASSIGNED','AUTOMATICALLY_ASSIGNED') DEFAULT NULL,
+  `attrib` enum('IS_REPRESENTATIVE','IS_MOST_COMMON_ALLELE','IN_CORRECTED_ASSEMBLY','HAS_CODING_POTENTIAL','IN_ARTIFICIALLY_DUPLICATED_ASSEMBLY','IN_SYNTENIC_REGION','HAS_SAME_UNDERLYING_DNA_SEQUENCE','IN_BROKEN_ASSEMBLY_REGION','IS_VALID_ALTERNATE','SAME_AS_REPRESENTATIVE','SAME_AS_ANOTHER_ALLELE','MANUALLY_ASSIGNED','AUTOMATICALLY_ASSIGNED','IS_PAR') DEFAULT NULL,
   KEY `aa_idx` (`alt_allele_id`,`attrib`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
@@ -266,7 +266,7 @@ CREATE TABLE `exon` (
   PRIMARY KEY (`exon_id`),
   KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`),
   KEY `stable_id_idx` (`stable_id`,`version`)
-) ENGINE=MyISAM AUTO_INCREMENT=2725348 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=2725371 DEFAULT CHARSET=latin1;
 
 CREATE TABLE `exon_transcript` (
   `exon_id` int(10) unsigned NOT NULL DEFAULT '0',
@@ -322,7 +322,7 @@ CREATE TABLE `gene` (
   KEY `analysis_idx` (`analysis_id`),
   KEY `stable_id_idx` (`stable_id`,`version`),
   KEY `canonical_transcript_id_idx` (`canonical_transcript_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=267302 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=267304 DEFAULT CHARSET=latin1;
 
 CREATE TABLE `gene_archive` (
   `gene_stable_id` varchar(128) NOT NULL DEFAULT '',
@@ -485,12 +485,12 @@ CREATE TABLE `marker_synonym` (
 CREATE TABLE `meta` (
   `meta_id` int(11) NOT NULL AUTO_INCREMENT,
   `species_id` int(10) unsigned DEFAULT '1',
-  `meta_key` varchar(40) NOT NULL,
+  `meta_key` varchar(64) NOT NULL,
   `meta_value` varchar(255) NOT NULL,
   PRIMARY KEY (`meta_id`),
   UNIQUE KEY `species_key_value_idx` (`species_id`,`meta_key`,`meta_value`),
   KEY `species_value_idx` (`species_id`,`meta_value`)
-) ENGINE=MyISAM AUTO_INCREMENT=1052 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=1061 DEFAULT CHARSET=latin1;
 
 CREATE TABLE `meta_coord` (
   `table_name` varchar(40) NOT NULL DEFAULT '',
@@ -851,7 +851,7 @@ CREATE TABLE `transcript` (
   KEY `xref_id_index` (`display_xref_id`),
   KEY `analysis_idx` (`analysis_id`),
   KEY `stable_id_idx` (`stable_id`,`version`)
-) ENGINE=MyISAM AUTO_INCREMENT=740730 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=740732 DEFAULT CHARSET=latin1;
 
 CREATE TABLE `transcript_attrib` (
   `transcript_id` int(10) unsigned NOT NULL DEFAULT '0',

@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016-2022] EMBL-European Bioinformatics Institute
+# Copyright [2016-2024] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -71,8 +71,8 @@ $no_sort ||= 0;
 
 warn("Make sure you have an updated ensembl.registry file!\n");
 
-usage('-TMP_DIR argument is required') if(!$TMP_DIR);
-usage('-TMP_FILE argument is required') if(!$TMP_FILE);
+usage('-tmpdir argument is required') if(!$TMP_DIR);
+usage('-tmpfile argument is required') if(!$TMP_FILE);
 usage('-species argument is required') if(!$species);
 
 $registry_file ||= $Bin . "/ensembl.registry";
@@ -85,6 +85,8 @@ my $vdba = $reg->get_DBAdaptor($species,'variation');
 my $dbCore = $reg->get_DBAdaptor($species,'core');
 
 my $dbVar = $vdba->dbc->db_handle;
+debug("Truncating compressed_genotype_var table");
+$dbVar->do(qq{ TRUNCATE compressed_genotype_var }); 
 
 $ImportUtils::TMP_DIR = $TMP_DIR;
 $ImportUtils::TMP_FILE = $TMP_FILE;

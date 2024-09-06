@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2022] EMBL-European Bioinformatics Institute
+Copyright [2016-2024] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -1246,6 +1246,98 @@ sub get_allele_freq{
 sub get_allele_count{
   my $self = shift;
   return $self->{'allele_count'} if (defined($self->{'allele_count'}));
+}
+
+=head2 _parse_breakends
+
+  Example    : $breakends = $obj->_parse_breakends();
+  Description: Return breakend information from structural variants with such info
+  Returntype : Arrayref of hashrefs containing information of the breakends
+  Exceptions : none
+  Caller     : get_breakends()
+  Status     : Stable
+
+=cut
+
+sub _parse_breakends {
+  my $self = shift;
+  my $alt  = $self->allele_string;
+  return unless defined $alt;
+
+  my $any_left_breakend = 0;
+  my $ref;
+
+  my $breakends = [];
+  # Support multiple breakends in the format T/C[2:321682[/]17:198982]G
+  # NB: the equivalent ALT format in VCF would be C[2:321682[,]17:198982]G
+  #     VEP converts the commas in ALT to slash and prepends the ref allele
+  for my $alt_string (split "/", $alt) {
+    my ($alt_allele, $alt_chr, $alt_pos, $alt_allele2) =
+      $alt_string =~ '([A-Za-z]*)\s*[\[\]]\s*(\S+)\s*:\s*([0-9]+)\s*[\[\]]\s*([(A-Za-z)]*)';
+    $alt_allele ||= $alt_allele2;
+
+    unless (defined $alt_allele and defined $alt_chr and defined $alt_pos) {
+      # Check if single breakend symbol, such as 'N.'
+      ($ref) = $alt_string =~ '^[\.]?([ACGTN]+)[\.]?$';
+      next;
+    }
+
+    # Mate orientation:
+    #   C[2:321682[  - normal
+    #   G]17:198982] - inverted
+    #   ]13:123456]T - normal
+    #   [17:198983[A - inverted
+    my $inverted = ($alt_string =~ '^\[|\]$') || 0;
+
+    # Mate placement:
+    #   [17:198983[A - left
+    #   ]17:198983]A - left
+    #   C[2:321682[  - right
+    #   C]2:321682]  - right
+    my $placement = ($alt_string =~ '^(\[|\])') ? 'left' : 'right';
+    $any_left_breakend = 1 if $placement eq 'left';
+
+    my $slice = Bio::EnsEMBL::Slice->new_fast({
+      seq_region_name => $alt_chr,
+      start           => $alt_pos,
+      end             => $alt_pos,
+    });
+
+    push @$breakends, {
+      string    => $alt_string,
+      allele    => $alt_allele,
+      pos       => $alt_pos,
+      inverted  => $inverted,
+      placement => $placement,
+      slice     => $slice,
+      chr       => $slice->{seq_region_name},
+      start     => $slice->{start},
+      end       => $slice->{end},
+    };
+  }
+
+  # Fix string for reference breakend based on the placement of other breakends
+  $ref ||= 'N';
+  $self->{string} = $any_left_breakend ? ".$ref" : "$ref.";
+  return $breakends;
+}
+
+=head2 get_breakends
+
+  Example    : $breakends = $obj->get_breakends()
+  Description: Getter for the breakends of a structural variation, if available.
+  Returntype : Arrayref of hashrefs containing information of the breakends
+  Exceptions : none
+  Caller     : general
+  Status     : At Risk
+
+=cut
+
+sub get_breakends {
+  my $self = shift;
+  return [] unless $self->class_SO_term =~ /breakpoint/;
+  $self->{'breakends'} = $self->_parse_breakends unless $self->{'breakends'};
+  return $self->{'breakends'};
 }
 
 1;

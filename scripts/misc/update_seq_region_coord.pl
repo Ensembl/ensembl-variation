@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016-2022] EMBL-European Bioinformatics Institute
+# Copyright [2016-2024] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -27,8 +27,8 @@ my $script_opts = [{args => ['host', 'dbhost', 'h'], type => '=s'},
         {args => ['pass', 'dbpass', 'p'], type => ':s'},
         {args => ['dbname',  'D'],         type => ':s'},
         {args => ['version'],    type => ':i'},
-        {args => ['dry_run'], type=>'!'}, ],
-        {args => ['truncate'], type=>'!'}, ],;
+        {args => ['dry_run'], type=>'!'},
+        {args => ['truncate'], type=>'!'}, ];
 
 if (scalar(@ARGV) == 0) {
   usage();
@@ -61,12 +61,8 @@ foreach my $variation_dbname (keys %$variation_dbas) {
   
   # Coord system need to be truncated?
   if ($opts->{truncate}) {
-    my $sql_truncate = qq{
-      TRUNCATE table coord_system
-    };
-    my $trunc = $vdba->dbc()->sql_helper()->execute(
-                                         -SQL => $sql_truncate);
-    print "Total of $trunc rows in coord_system set\n";
+    my $sql_truncate = qq{ TRUNCATE table coord_system };
+    $vdba->dbc()->sql_helper()->execute(-SQL => $sql_truncate);
   }
 
   # Are there foreign key failures between seq_region and coord_system?
@@ -163,8 +159,10 @@ USAGE:
   $0 \$(XserverX details script_db) --dbname XdbnameX --dry_run
   $0 \$(XserverX details script_db) --version Xrelease-versionX
   $0 --help
+
+  --truncate    Truncate coord_system table
   --dry_run     Print update statements
-  --help        Displays this help text.
+  --help        Displays this help text
 
 This script will update 
 - the variation seq_region.coord_system_id with core seq_region.coord_system_id

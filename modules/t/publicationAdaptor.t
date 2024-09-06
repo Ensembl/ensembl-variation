@@ -1,5 +1,5 @@
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016-2022] EMBL-European Bioinformatics Institute
+# Copyright [2016-2024] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -143,5 +143,34 @@ is_deeply($publications->[1]->{variation_id_to_source}->{26469702}, $expected_so
 my $variation_no_citation = $va->fetch_by_dbID(39404961);
 my $publications_no_citation = $pa->fetch_all_by_Variation($variation_no_citation);
 ok(!$publications_no_citation->[0]->{variation_id_to_source}, 'fetch_all_by_Variation - source not defined');
+
+# Delete one (and only) publication for a failed variant
+my $var_id = 14128071;
+$variation = $va->fetch_by_dbID($var_id);
+ok($variation->is_failed, "failed variant");
+ok(grep(/^Cited$/, @{ $va->fetch_by_dbID($var_id)->get_all_evidence_values() }),
+   "variant has 'Cited' evidence");
+
+$publications = $variation->get_all_Publications();
+ok(scalar @$publications == 1, "one publication associated with failed variant");
+$publications->[0]->variations(); # get all variations
+
+my $vf = $variation->get_all_VariationFeatures();
+ok(scalar @$vf == 1, "one variationFeature associated with variant");
+ok($vf->[0]->{'display'} == 1, "variationFeature with display = 1");
+
+$pa->remove_publication_by_dbID($publications->[0]->dbID);
+ok(!defined $pa->fetch_by_dbID($publications->[0]->dbID), "publication removed");
+ok(scalar @{ $variation->get_all_Publications()} == 0,
+   "no publications associated with failed variant after removing publication");
+ok(!grep(/^Cited$/, @{ $va->fetch_by_dbID($var_id)->get_all_evidence_values() }),
+   "No 'Cited' attribute");
+ok($variation->get_all_VariationFeatures()->[0]->{'display'} == 0,
+   "variationFeature with display = 0 after removing publication");
+
+# Re-add publication and confirm if working
+$pa->store($pub, 1);
+$pubs = $va->fetch_by_name('rs7698608')->get_all_Publications();
+ok($pub->title() eq $pubs->[0]->title(), 'publication re-added with associated variants');
 
 done_testing();

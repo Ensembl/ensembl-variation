@@ -261,6 +261,14 @@
       "type": "local",
       "filename_template": "###t-root###/test-genome-DBs/homo_sapiens/variation/test_vcf_clnsig.vcf.gz",
       "chromosomes": ["1"]
+    },
+    {
+      "id": "vcf_freq",
+      "species": "homo_sapiens",
+      "assembly": "GRCh37",
+      "type": "local",
+      "filename_template": "###t-root###/test-genome-DBs/homo_sapiens/variation/test_freq.vcf.gz",
+      "chromosomes": ["2"]
     }
   ]
 }

@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2022] EMBL-European Bioinformatics Institute
+Copyright [2016-2024] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -563,6 +563,12 @@ sub get_all_VariationFeatures_by_Slice {
           }
         }
       }
+
+      # Evidence frequency
+      if($info->{'AF'}) {
+        $vf->add_evidence_value('Frequency');
+      }
+
       $vf->_finish_annotation();
     }
   }
@@ -596,6 +602,16 @@ sub get_all_VariationFeatures_by_Slice {
           \@vfs,
           \@features,
         ) if @features;
+      }
+    }
+
+    # Populate the evidence frequency for vcf-only species
+    foreach my $vf (@vfs) {
+      my $metadata_info = $vcf->{metadata}->{INFO};
+      my $info = $vf->{vcf_record}->get_info;
+
+      if($info->{'AF'}) {
+        $vf->add_evidence_value('Frequency');
       }
     }
 

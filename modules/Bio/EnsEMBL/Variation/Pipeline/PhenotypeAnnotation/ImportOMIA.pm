@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2022] EMBL-European Bioinformatics Institute
+Copyright [2016-2024] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -46,7 +46,7 @@ use strict;
 use File::Path qw(make_path);
 use File::stat;
 use POSIX qw(strftime);
-use LWP::Simple;
+use LWP::UserAgent;
 use HTTP::Tiny;
 use Data::Dumper;
 
@@ -145,7 +145,23 @@ sub fetch_input {
 
   #get input files OMIA gene_table, this file contains multiple species
   print $logFH "Found file (".$workdir_fetch."/".$file_omia.") and will skip new fetch\n" if -e $workdir_fetch."/".$file_omia;
-  getstore($omia_url, $workdir_fetch."/".$file_omia) unless -e $workdir_fetch."/".$file_omia;
+
+  unless(-e $workdir_fetch."/".$file_omia) {
+    my $ua = LWP::UserAgent->new;
+    $ua->agent('Mozilla/5.0');
+
+    my $response = $ua->get($omia_url);
+
+    if ($response->is_success) {
+      open(my $fh, '>', $workdir_fetch."/".$file_omia) or die "Could not open file '$file_omia': $!";
+      print $fh $response->decoded_content;
+      close($fh);
+      print $logFH "Succesfully downloaded OMIA file: ".$workdir_fetch."/".$file_omia."\n";
+    }
+    else {
+      die "Failed to fetch OMIA file: ".$response->status_line."\n";
+    }
+  }
   $source_info{source_version} = strftime("%Y%m%d", localtime(stat($workdir_fetch."/".$file_omia)->mtime));
 
   #get section specific for this species

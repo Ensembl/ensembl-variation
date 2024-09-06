@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2022] EMBL-European Bioinformatics Institute
+Copyright [2016-2024] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -60,7 +60,7 @@ sub default_options {
         split_slice                     => 1,
         split_slice_length              => 5e6,
         only_update_vf                  => 0,
-        update_vf                       => 1,
+
         # if set to 1 this option tells the transcript_effect analysis to disambiguate
         # ambiguity codes in single nucleotide alleles, so e.g. an allele string like
         # 'T/M' will be treated as if it were 'T/A/C' (this was a request from ensembl
@@ -71,7 +71,7 @@ sub default_options {
             -host   => $self->o('hive_db_host'),
             -port   => $self->o('hive_db_port'),
             -user   => $self->o('hive_db_user'),
-            -pass   => $self->o('hive_db_password'),            
+            -pass   => $self->o('hive_db_password'),
             -dbname => $ENV{'USER'} . '_ehive_' . $self->o('pipeline_name') . '_' . $self->o('ensembl_release') . '_' . $self->o('assembly') . '_' . $self->o('species'),
             -driver => 'mysql',
         },
@@ -88,8 +88,12 @@ sub resource_classes {
     # requirements, queue parameters etc.) to suit your own data
 
     return {
-      'default' => { 'LSF' => '-qproduction -R"select[mem>2000] rusage[mem=2000]" -M2000'},
-      'highmem' => { 'LSF' => '-qproduction -R"select[mem>15000] rusage[mem=15000]" -M15000'},
+      'default' => { 'LSF' => '-qproduction -R"select[mem>2000] rusage[mem=2000]" -M2000',
+                     'SLURM' => "--partition=production --time=4:00:00 --mem=2G" },
+      'highmem' => { 'LSF' => '-qproduction -R"select[mem>15000] rusage[mem=15000]" -M15000',
+                     'SLURM' => "--partition=production --time=28:00:00 --mem=15G"},
+      'long'    => { 'LSF' => '-qproduction -R"select[mem>2000] rusage[mem=2000]" -M2000',
+                     'SLURM' => "--partition=production --time=28:00:00 --mem=2G"},
     };
 }
 
@@ -100,7 +104,6 @@ sub pipeline_wide_parameters {
         disambiguate_single_nucleotide_alleles => $self->o('disambiguate_single_nucleotide_alleles'),
         ensembl_registry                       => $self->o('registry_file'),
         only_update_vf                         => $self->o('only_update_vf'),
-        update_vf                              => $self->o('update_vf'),
         species                                => $self->o('species'),
         debug                                  => $self->o('debug'),
         split_slice                            => $self->o('split_slice'),
@@ -119,6 +122,9 @@ sub pipeline_analyses {
                 -module => 'Bio::EnsEMBL::Variation::Pipeline::FinishRegulationEffect',
                 -input_ids => [{},],
                 -hive_capacity => 1,
+                -parameters => {
+                  'pipeline_dir' => $self->o('pipeline_dir'),
+                },
             },
         );
     } else {
@@ -155,6 +161,9 @@ sub pipeline_analyses {
             {   -logic_name => 'finish_regulation_effect',
                 -module => 'Bio::EnsEMBL::Variation::Pipeline::FinishRegulationEffect',
                 -hive_capacity => 1,
+                -parameters => {
+                  'pipeline_dir' => $self->o('pipeline_dir'),
+                },
             },
         );
     }

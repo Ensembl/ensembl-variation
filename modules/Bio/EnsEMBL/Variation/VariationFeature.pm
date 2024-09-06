@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2022] EMBL-European Bioinformatics Institute
+Copyright [2016-2024] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -99,7 +99,7 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
 use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp expand);
-use Bio::EnsEMBL::Variation::Utils::Sequence qw(ambiguity_code hgvs_variant_notation SO_variation_class format_hgvs_string get_3prime_seq_offset trim_right);
+use Bio::EnsEMBL::Variation::Utils::Sequence qw(ambiguity_code hgvs_variant_notation SO_variation_class format_hgvs_string get_3prime_seq_offset trim_right trim_sequences);
 use Bio::EnsEMBL::Variation::Utils::Sequence;
 use Bio::EnsEMBL::Variation::Variation;
 use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(MAX_DISTANCE_FROM_TRANSCRIPT);
@@ -1121,6 +1121,31 @@ sub class_SO_term {
     return $self->{class_SO_term};
 }
 
+=head2 var_allele_class
+
+    Args[1]     : allele
+    Example     : my $variation_allele_class = $vf->var_allele_class('AA/A');
+    Description : returns the Ensembl term for the class of this variation allele
+    ReturnType  : String
+    Exceptions  : throws if we can't find a corresponding display term for an SO term
+    Caller      : General
+    Status      : Stable
+
+=cut
+
+sub var_allele_class {
+    my $self    = shift;
+    my $allele  = shift;
+
+    my $so_term = SO_variation_class($allele);
+
+    # convert the SO term to the ensembl display term
+    my $class = $self->is_somatic ?
+        $VARIATION_CLASSES{$so_term}->{somatic_display_term} :
+        $VARIATION_CLASSES{$so_term}->{display_term};
+    return $class;
+}
+
 =head2 get_all_evidence_values
 
   Arg [1]     : none
@@ -1903,8 +1928,12 @@ sub hgvs_genomic {
 
   my @all_alleles = split(/\//,$tr_vf->allele_string());
   my $ref_allele = shift @all_alleles;  ## remove reference allele - not useful for HGVS
+  my $original_ref_allele = $ref_allele;
+  my $original_ref_start  = $ref_start;
 
-  foreach my $allele ( @all_alleles ) {
+  my $is_multi_allelic = scalar @all_alleles > 1;
+  foreach my $original_allele ( @all_alleles ) {
+    my $allele = $original_allele;
 
     ## If a particular allele was requested, ignore others
     next if  (defined($use_allele) && $allele ne $use_allele);
@@ -1933,7 +1962,18 @@ sub hgvs_genomic {
 
     ### Apply HGVS 3' shift if required
     my $offset = 0;
-    my $var_class  =  $self->var_class();
+    my $lookup_order = 1;
+
+    if ($is_multi_allelic) {
+      # fix for multi-allelic variants
+      my $old_chr_start = $chr_start;
+      ($ref_allele, $allele, $chr_start, $chr_end) = @{trim_sequences($original_ref_allele, $allele, $chr_start)};
+      $allele ||= '-';
+      $offset = $chr_start - $old_chr_start;
+      $ref_start = $original_ref_start + $offset;
+      $ref_allele ||= '-';
+    }
+    my $var_class  =  $self->var_allele_class($ref_allele . '/' . $allele);
     $var_class  =~ s/somatic_//;
 
     ##  only check insertions & deletions & don't move beyond transcript
@@ -1967,6 +2007,7 @@ sub hgvs_genomic {
    }
     else{
       reverse_comp(\$check_allele) if $flip_allele == 1 ;
+      $lookup_order = -1 if $flip_allele == 1 ;
     }
 
     my $hgvs_notation = hgvs_variant_notation(
@@ -1976,42 +2017,15 @@ sub hgvs_genomic {
       $ref_end + $offset,
       $chr_start + $offset,   ## start wrt seq region slice is on (eg. chrom)
       $chr_end + $offset,
-      $self->variation_name() ## for error message
+      $self->variation_name(), ## for error message
+      $lookup_order
     );
 
     # Skip if e.g. allele is identical to the reference slice
     next if (!defined($hgvs_notation));
 
     ## alleles may need trimming if the type is reported as a delins
-    if( $hgvs_notation->{type} eq 'delins'){
-
-      ## check the start
-      while( $hgvs_notation->{ref} && $hgvs_notation->{alt} &&
-             substr($hgvs_notation->{ref}, 0, 1) eq substr($hgvs_notation->{alt}, 0, 1)) {
-        $hgvs_notation->{ref} = substr($hgvs_notation->{ref}, 1);
-        $hgvs_notation->{alt} = substr($hgvs_notation->{alt}, 1);
-        $hgvs_notation->{start}++;
-      }
-
-      ## check the end
-      while($hgvs_notation->{ref} && $hgvs_notation->{alt} &&
-            substr($hgvs_notation->{ref}, -1, 1) eq substr($hgvs_notation->{alt}, -1, 1)) {
-        $hgvs_notation->{ref} = substr($hgvs_notation->{ref}, 0, length($hgvs_notation->{ref}) - 1);
-        $hgvs_notation->{alt} = substr($hgvs_notation->{alt}, 0, length($hgvs_notation->{alt}) - 1);
-        $hgvs_notation->{end}--;
-      }
-
-      ## fix alleles and types if necessary
-      $hgvs_notation->{ref} ||= '-';
-      $hgvs_notation->{alt} ||= '-';
-      $hgvs_notation->{type} = 'del' if $hgvs_notation->{alt} eq '-';
-      if ($hgvs_notation->{ref} eq '-') {
-        $hgvs_notation->{type} = 'ins';
-        ## fix position for ins
-        $hgvs_notation->{start}--;
-        $hgvs_notation->{end} = $hgvs_notation->{start} + 1;
-      }
-    }
+    $hgvs_notation = _clip_alleles($hgvs_notation) if $hgvs_notation->{type} eq 'delins';
 
     # Add the name of the reference
     $hgvs_notation->{'ref_name'} = $reference_name;
@@ -2021,10 +2035,71 @@ sub hgvs_genomic {
     # Construct the HGVS notation from the data in the hash
     $hgvs_notation->{'hgvs'} = format_hgvs_string( $hgvs_notation);
 
-    $hgvs{$allele} = $hgvs_notation->{'hgvs'};
+    $hgvs{$original_allele} = $hgvs_notation->{'hgvs'};
   }
   return \%hgvs;
 
+}
+
+### HGVS:  remove common bp from alt and ref strings & shift start/end accordingly 
+sub _clip_alleles {
+  
+  my $hgvs_notation = shift;
+  
+  ## check the start
+  my $preseq = "";
+  while( $hgvs_notation->{ref} && $hgvs_notation->{alt} &&
+         substr($hgvs_notation->{ref}, 0, 1) eq substr($hgvs_notation->{alt}, 0, 1)) {
+    $preseq .= substr($hgvs_notation->{ref}, 0, 1);
+    $hgvs_notation->{ref} = substr($hgvs_notation->{ref}, 1);
+    $hgvs_notation->{alt} = substr($hgvs_notation->{alt}, 1);
+    $hgvs_notation->{start}++;
+  }
+
+  ## check the end
+  while($hgvs_notation->{ref} && $hgvs_notation->{alt} &&
+        substr($hgvs_notation->{ref}, -1, 1) eq substr($hgvs_notation->{alt}, -1, 1)) {
+    $hgvs_notation->{ref} = substr($hgvs_notation->{ref}, 0, length($hgvs_notation->{ref}) - 1);
+    $hgvs_notation->{alt} = substr($hgvs_notation->{alt}, 0, length($hgvs_notation->{alt}) - 1);
+    $hgvs_notation->{end}--;
+  }
+
+  ## fix alleles and types if necessary
+  $hgvs_notation->{ref} ||= '-';
+  $hgvs_notation->{alt} ||= '-';
+  
+  if( $hgvs_notation->{ref} eq $hgvs_notation->{alt}) {
+      $hgvs_notation->{type} = "=";
+  }   
+  
+  elsif( $hgvs_notation->{ref} ne "-" &&
+          length ($hgvs_notation->{ref}) == 1 && 
+          length ($hgvs_notation->{alt}) == 1 && 
+          $hgvs_notation->{alt} ne $hgvs_notation->{ref}) {
+      
+      $hgvs_notation->{type} = ">";
+  }
+  
+  elsif ($hgvs_notation->{ref} eq '-' && length ($hgvs_notation->{alt}) >=1) {
+    my $prev_str = substr($preseq, length($preseq) - length($hgvs_notation->{alt}));
+    if ($hgvs_notation->{alt} eq $prev_str){
+      $hgvs_notation->{type} = 'dup';
+      ## fix position for dup
+      $hgvs_notation->{start} -= length($hgvs_notation->{alt});
+    }
+    else {
+      $hgvs_notation->{type} = 'ins';
+      ## fix position for ins
+      $hgvs_notation->{start}--;
+      $hgvs_notation->{end} = $hgvs_notation->{start} + 1;
+    }
+  }
+  
+  elsif (length ($hgvs_notation->{ref}) >=1 && $hgvs_notation->{alt} eq '-') {
+    $hgvs_notation->{type} = 'del';
+  }
+  
+  return $hgvs_notation;
 }
 
 =head2  spdi_genomic

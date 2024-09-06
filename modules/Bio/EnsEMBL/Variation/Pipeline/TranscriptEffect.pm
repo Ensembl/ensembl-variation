@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2022] EMBL-European Bioinformatics Institute
+Copyright [2016-2024] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -106,6 +106,7 @@ sub run {
     my $ta = $core_dba->get_TranscriptAdaptor;
     my $transcript = $ta->fetch_by_stable_id($transcript_stable_id) 
       or die "failed to fetch transcript for stable id: $transcript_stable_id";
+
     $slice = $sa->fetch_by_transcript_stable_id(
       $transcript_stable_id, 
       $max_distance
@@ -114,7 +115,9 @@ sub run {
     $slice->seq();
     $transcript = $transcript->transfer($slice);
     push @transcripts, $transcript;
-  } else {
+  } 
+  
+  else {
     my $gene_stable_id =  $self->param('gene_stable_id');
     $stable_id = $gene_stable_id;
     my $ga = $core_dba->get_GeneAdaptor;
@@ -153,11 +156,16 @@ sub run {
   );
 
   for my $transcript (@transcripts) {
-    
+
     my $biotype = $transcript->biotype;
-    my $is_mane = $transcript->is_mane();
+    my $is_mane = $transcript->is_mane(); # grch38
+    my $is_canonical = $transcript->is_canonical(); # grch37
     my $stable_id = $transcript->stable_id;
     my @vf_ids;
+
+    #Skip transcript if running in gc primary mode and transcript isn't part of that set.
+    next if ($self->param('gencode_primary') and !$transcript->gencode_primary);
+
 
     for my $vf(@vfs) {
 
@@ -209,10 +217,15 @@ sub run {
           
           # Check species
           my $species = $self->param('species');
-          # MANE is only available for human
+          # MANE is only available for human grch38
           my $is_human = $species =~ /homo_sapiens|human/ ? 1 : 0;
           my $write_mtmp = ($is_human && $is_mane) || !$is_human ? 1 : 0;
-          
+
+          # Human grch37 has canonical transcripts
+          if($is_human && lc $self->param('assembly') =~ /37|grch37/ && $is_canonical) {
+            $write_mtmp = 1;
+          }
+
           unless($biotypes_to_skip{$biotype} || !$write_mtmp){
             print $mtmp_fh join("\t", map {defined($_) ? $_ : '\N'} @$_)."\n" for @$mtmp_data;
           }

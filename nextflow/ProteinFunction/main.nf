@@ -22,11 +22,11 @@ params.database = null
 // SIFT params
 params.sift_run_type = "NONE"
 params.median_cutoff = 2.75 // as indicated in SIFT's README
-params.blastdb       = null
+params.blastdb       = "/nfs/production/flicek/ensembl/variation/data/uniref90/uniref90.fasta"
 
 // PolyPhen-2 params
 params.pph_run_type = "NONE"
-params.pph_data     = null
+params.pph_data     = "/hps/software/users/ensembl/variation/polyphen-2.2.3/data"
 
 // Print usage
 if (params.help) {
@@ -90,6 +90,10 @@ include { clear_assemblies;
           store_translation_mapping } from './nf_modules/database.nf'
 include { run_sift_pipeline }         from './nf_modules/sift.nf'
 include { run_pph2_pipeline }         from './nf_modules/polyphen2.nf'
+
+include { check_JVM_mem; print_summary } from '../utils/utils.nf'
+check_JVM_mem(min=4)
+print_summary()
 
 // Check input data
 if (!params.translated) {
@@ -203,25 +207,4 @@ workflow {
   errors
     .collectFile(name: 'failure_reason.tsv', newLine: true, storeDir: params.outdir)
     .subscribe { println "Errors saved to file $it" }
-}
-
-// Print summary
-workflow.onComplete {
-    println ( workflow.success ? """
-        Workflow summary
-        ----------------
-        Completed at: ${workflow.complete}
-        Duration    : ${workflow.duration}
-        Success     : ${workflow.success}
-        workDir     : ${workflow.workDir}
-        exit status : ${workflow.exitStatus}
-        """ : """
-        Failed: ${workflow.errorReport}
-        exit status : ${workflow.exitStatus}
-        """
-    )
-}
-
-workflow.onError {
-  log.info "Execution halted: ${workflow.errorMessage}"
 }

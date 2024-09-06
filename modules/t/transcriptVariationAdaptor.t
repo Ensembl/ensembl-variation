@@ -1,5 +1,5 @@
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016-2022] EMBL-European Bioinformatics Institute
+# Copyright [2016-2024] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -283,7 +283,7 @@ foreach my $trans_varns (@{$trans_vars_ns}){
   next unless $trans_varns->transcript->stable_id() eq $trans_name;
   my $tvas_ns = $trans_varns->get_all_alternate_TranscriptVariationAlleles(); 
 
-  ok( $tvas_ns->[0]->hgvs_transcript() eq 'ENST00000336617.2:c.615_616insG', 'HGVS for non-shifted location' );
+  ok( $tvas_ns->[0]->hgvs_transcript() eq 'ENST00000336617.2:c.616dup', 'HGVS for non-shifted location' );
   ok(scalar $tvas_ns->[0]->hgvs_offset() == 0, 'non shifted offset');
 }
 
@@ -314,7 +314,7 @@ foreach my $trans_varns (@{$trans_vars_ns2}){
   next unless $trans_varns->transcript->stable_id() eq $trans_name;
   my $tvas_ns = $trans_varns->get_all_alternate_TranscriptVariationAlleles();
 
-  ok( $tvas_ns->[0]->hgvs_transcript() eq 'ENST00000336617.2:c.615_616insG', 'HGVS for non-shifted location without adaptor' );
+  ok( $tvas_ns->[0]->hgvs_transcript() eq 'ENST00000336617.2:c.616dup', 'HGVS for non-shifted location without adaptor' );
   ok(scalar $tvas_ns->[0]->hgvs_offset() == 0, 'non shifted offset without adaptor');
 }
 
@@ -425,7 +425,7 @@ $tv->cdna_start(1000);
 $tv->transcript->{cdna_coding_start} = 234;
 
 ## Coordinate within HGVS matches cds_start as these values take mismatch into account 
-ok($tv->hgvs_transcript->{A} eq 'NM_001270408.1:c.1234N>A', 'Refseq HGVS mismatch calculated');
+ok($tv->hgvs_transcript->{A} eq 'NM_001270408.1:c.1234G>A', 'Refseq HGVS mismatch calculated');
 
 ## Misalignment offset calculated from transcript edits recognises insertion of 4BP
 my @attribs = @{$tr->get_all_Attributes()};

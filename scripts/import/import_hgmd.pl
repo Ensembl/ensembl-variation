@@ -1,5 +1,5 @@
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016-2022] EMBL-European Bioinformatics Institute
+# Copyright [2016-2024] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,13 +29,17 @@ use strict;
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
+use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(overlap);
 use DBI qw(:sql_types);
 use Getopt::Long;
-our ($registry_file);
+our ($registry_file, $insert_tv, $assembly);
 
-GetOptions('registry=s' => \$registry_file);
+GetOptions('registry=s'  => \$registry_file,
+           'assembly=s'  => \$assembly,
+           'insert_tv=s' => \$insert_tv);
 
 $registry_file ||= "./ensembl.registry";
+$insert_tv ||= 0; 
 my $species = 'human';
 
 my $var_table = 'HGMD_PUBLIC_variation';
@@ -45,7 +49,8 @@ my $short_set_hgmd = 'ph_hgmd_pub';
 my $short_set_pheno = 'ph_variants';
 my $evidence_pheno = 'Phenotype_or_Disease';
 
-Bio::EnsEMBL::Registry->load_all( $registry_file );
+my $reg = Bio::EnsEMBL::Registry->load_all( $registry_file );
+my $vdc = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'core');
 my $vdb = Bio::EnsEMBL::Registry->get_DBAdaptor($species,'variation');
 my $dbh = $vdb->dbc->db_handle;
 
@@ -68,6 +73,13 @@ die ("HGMD set not found") if (!defined($hgmd_set_id));
 die ("All phenotype set not found") if (!defined($pheno_set_id));
 die ("Phenotype evidence attrib not found") if (!defined($pheno_evidence_id));
 die ("Phenotype type attrib not found") if (!defined($pheno_class_attrib_id));
+
+# MTMP transcript variation - biotypes to skip
+  my %biotypes_to_skip = (
+    'lncRNA' => 1,
+    'processed_pseudogene' => 1,
+    'unprocessed_pseudogene' => 1,
+  );
 
 # Main
 add_variation();
@@ -135,45 +147,173 @@ sub add_variation {
 
 
 sub add_variation_feature {
+
+  if(!$insert_tv) {
   my $insert_vf_sth = $dbh->prepare(qq{
-    INSERT IGNORE INTO 
-      variation_feature (
-        seq_region_id,
-        seq_region_start,
-        seq_region_end,
-        seq_region_strand,
-        allele_string,
-        class_attrib_id,
-        variation_set_id,
-        map_weight,
-        variation_id,
-        variation_name,
-        evidence_attribs,
-        display,
-        source_id
-      ) 
-      SELECT 
-        vf.seq_region_id,
-        vf.seq_region_start,
-        vf.seq_region_end,
-        1,
-        vf.allele_string,
-        vf.class_attrib_id,
-        '$pheno_set_id,$hgmd_set_id',
-        vf.map_weight,
-        v.new_var_id,
-        v.name,
-        '$pheno_evidence_id',
-        1,
-        ?
-        FROM $vf_table vf, $var_table v 
-        WHERE v.variation_id=vf.variation_id
-        AND NOT EXISTS ( SELECT * 
-                         FROM variation_feature vf2 
-                         WHERE vf2.variation_id=v.new_var_id
-                       );
-  });
-  $insert_vf_sth->execute($source_id);
+      INSERT IGNORE INTO 
+        variation_feature (
+          seq_region_id,
+          seq_region_start,
+          seq_region_end,
+          seq_region_strand,
+          allele_string,
+          class_attrib_id,
+          variation_set_id,
+          map_weight,
+          variation_id,
+          variation_name,
+          evidence_attribs,
+          display,
+          source_id
+        ) 
+        SELECT 
+          vf.seq_region_id,
+          vf.seq_region_start,
+          vf.seq_region_end,
+          1,
+          vf.allele_string,
+          vf.class_attrib_id,
+          '$pheno_set_id,$hgmd_set_id',
+          vf.map_weight,
+          v.new_var_id,
+          v.name,
+          '$pheno_evidence_id',
+          1,
+          ?
+          FROM $vf_table vf, $var_table v 
+          WHERE v.variation_id=vf.variation_id
+          AND NOT EXISTS ( SELECT * 
+                           FROM variation_feature vf2 
+                           WHERE vf2.variation_id=v.new_var_id
+                         );
+    });
+    $insert_vf_sth->execute($source_id);
+  }
+
+  else {
+    my $var_adaptor = $vdb->get_VariationAdaptor($species, 'variation');
+    my $var_feat_adaptor = $vdb->get_VariationFeatureAdaptor($species, 'variation');
+    my $tva = $vdb->get_TranscriptVariationAdaptor($species, 'variation');
+    my $slice_adaptor = $vdc->get_SliceAdaptor('homo_sapiens', 'core');
+    $slice_adaptor->dbc->reconnect_when_lost(1);
+    my $source_adaptor = $vdb->get_SourceAdaptor('homo_sapiens', 'variation');
+    my $source = $source_adaptor->fetch_by_dbID($source_id);
+
+    my $seq_region_ids = get_seq_region_ids();
+
+    my $select_vf_sth = $dbh->prepare(qq{
+          SELECT 
+            vf.seq_region_id,
+            vf.seq_region_start,
+            vf.seq_region_end,
+            vf.allele_string,
+            vf.class_attrib_id,
+            vf.map_weight,
+            v.new_var_id,
+            v.name
+            FROM $vf_table vf, $var_table v 
+            WHERE v.variation_id=vf.variation_id
+            AND NOT EXISTS ( SELECT * 
+                             FROM variation_feature vf2
+                             WHERE vf2.variation_id=v.new_var_id
+                           );
+      });
+
+    $select_vf_sth->execute() or die ("ERROR: cannot select data from $vf_table and $var_table\n");
+    my $vf_data = $select_vf_sth->fetchall_arrayref();
+
+    foreach my $data (@{$vf_data}){
+      my $seq_region_name = $seq_region_ids->{$data->[0]};
+      my $slice = $slice_adaptor->fetch_by_region('chromosome', $seq_region_name);
+
+      my $var = $var_adaptor->fetch_by_dbID($data->[6]);
+      die ("ERROR: cannot fetch variation id ", $data->[6], " from variation table\n") if(!$var);
+
+      # Create the variation feature
+      my $vf = Bio::EnsEMBL::Variation::VariationFeature->new
+        (-start            => $data->[1],
+         -end              => $data->[2],
+         -strand           => 1,
+         -slice            => $slice,
+         -variation_name   => $data->[7],
+         -map_weight       => $data->[5],
+         -allele_string    => $data->[3],
+         -variation        => $var,
+         -source           => $source,
+         -is_somatic       => 1,
+         -adaptor          => $var_feat_adaptor
+        );
+
+        $vf->add_evidence_value($evidence_pheno);
+        $vf->{class_attrib_id} = $data->[4];
+        $var_feat_adaptor->store($vf);
+
+        my $count_tv = 0;
+        my $all_tv = $vf->get_all_TranscriptVariations();
+        foreach my $tv (@{$all_tv}) {
+          # Do not include upstream and downstream consequences
+          next unless overlap($vf->start, $vf->end, $tv->transcript->start - 0, $tv->transcript->end + 0);
+          
+          $count_tv += 1;
+          
+          # only include valid biotypes in MTMP_transcript_variation
+          my $write_biotype = $biotypes_to_skip{$tv->transcript->biotype} ? 0 : 1;
+          
+          # write to MTMP table if transcript is MANE (GRCh38)
+          my $write_mane = $tv->transcript->is_mane ? 1 : 0;
+          my $mtmp = $write_mane && $write_biotype;
+          
+          # MANE is not available for GRCh37
+          if($assembly =~ /GRCh37/) {
+            $mtmp = $write_biotype;
+          }
+          
+          $tva->store($tv, $mtmp);
+        }
+        
+        # get variation_feature_id
+        my $vf_dbid = $vf->dbID;
+
+        my $update_vf_smt = qq { UPDATE variation_feature
+                                 SET consequence_types = ?
+                                 WHERE variation_feature_id = ?
+                         };
+        
+        # If variation_feature has no entry in transcript_variation then we need to set the consequence_types to default
+        if(!$count_tv) {
+        my $vf_sth = $vdb->dbc()->prepare($update_vf_smt);
+          $vf_sth->execute('intergenic_variant', $vf->dbID) or die "Error updating consequence_types to default in table variation_feature\n";
+        }
+        
+        # By default group_concat has maximum length 1024
+        # some variants have consequence_types longer than 1024
+        my $stmt_len = qq {set session group_concat_max_len = 100000};
+        my $sth_len = $vdb->dbc()->prepare($stmt_len);
+        $sth_len->execute();
+        
+        # Update consequence_types in variation_feature table
+        my $tv_sth = $vdb->dbc()->prepare(qq[ SELECT variation_feature_id, GROUP_CONCAT(DISTINCT(consequence_types))
+                                              FROM transcript_variation
+                                              WHERE variation_feature_id = ?
+                                              GROUP BY variation_feature_id;
+                                            ]);
+
+        $tv_sth->execute($vf_dbid) or die "Error selecting consequence_types from transcript_variation for variation_feature_id: $vf_dbid\n";
+        my $data_tv = $tv_sth->fetchall_arrayref();
+
+        if (defined $data_tv->[0]->[0]) {
+          my $update_vf_sth = $vdb->dbc()->prepare($update_vf_smt);
+          $update_vf_sth->execute($data_tv->[0]->[1], $data_tv->[0]->[0]) or die "Error updating consequence_types in table variation_feature, variation_feature_id: ", $data_tv->[0]->[0],"\n";
+        }
+    }
+    
+    # Update variation_set in variation_feature table
+    my $vf_set_upd_sth = $vdb->dbc()->prepare(qq[ UPDATE variation_feature
+                                                  SET variation_set_id = concat($pheno_set_id,',', $hgmd_set_id)
+                                                  WHERE source_id = $source_id
+                                                ]);
+    $vf_set_upd_sth->execute() or die "Error updating variation_set_id in variation_feature\n";
+  }
 }
 
 sub add_annotation {
@@ -327,4 +467,21 @@ sub add_set {
   $sth2->bind_param(1,$hgmd_set_id,SQL_INTEGER);
   $sth2->bind_param(2,$source_id,SQL_INTEGER);
   $sth2->execute();
+}
+
+sub get_seq_region_ids {
+
+  my $select_sth = $dbh->prepare(
+  qq{
+    SELECT seq_region_id, name
+    FROM seq_region
+  });
+  $select_sth->execute;
+
+  my (%seq_region_ids, $id, $name);
+  $select_sth->bind_columns(\$id, \$name);
+  $seq_region_ids{$id} = $name while $select_sth->fetch();
+  $select_sth->finish;
+
+  return \%seq_region_ids;
 }

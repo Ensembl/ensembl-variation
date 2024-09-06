@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2022] EMBL-European Bioinformatics Institute
+Copyright [2016-2024] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -45,6 +45,8 @@ use File::Path qw(make_path);
 use File::stat;
 use File::Basename;
 use POSIX qw(strftime);
+use utf8;
+use Text::Unidecode;
 
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
@@ -264,6 +266,8 @@ sub parse_input_file {
              $unit =~ s/\)//g;
              $unit =~ s/µ/micro/g;
           if ($unit =~ /decrease|increase/) {
+            $unit = unidecode($unit);
+            $unit =~ s/aEUR%01/-/g;
             $data{'beta_coef'} = "$ratio $unit";
           }
           else {

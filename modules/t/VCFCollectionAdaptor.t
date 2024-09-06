@@ -1,5 +1,5 @@
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016-2022] EMBL-European Bioinformatics Institute
+# Copyright [2016-2024] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ ok($vca && $vca->isa('Bio::EnsEMBL::Variation::DBSQL::VCFCollectionAdaptor'), "i
 
 # fetch all
 my $collections = $vca->fetch_all();
-ok($collections && scalar @$collections == 10, "fetch_all count");
+ok($collections && scalar @$collections == 11, "fetch_all count");
 
 # fetch by ID
 my $coll = $vca->fetch_by_id('1000genomes_phase1');

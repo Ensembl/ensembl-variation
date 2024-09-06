@@ -1,6 +1,6 @@
 =head1 LICENSE
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2022] EMBL-European Bioinformatics Institute
+Copyright [2016-2024] EMBL-European Bioinformatics Institute
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -125,12 +125,18 @@ sub resource_classes {
     my ($self) = @_;
     return {
         %{$self->SUPER::resource_classes},  # inherit 'default' from the parent class
-            'default_mem' => { 'LSF' => '-q production -R"select[mem>2500] rusage[mem=2500]" -M2500'},
-            'high_mem'    => { 'LSF' => '-q production -R"select[mem>5500] rusage[mem=5500]" -M5500'},
-            'extra_mem'   => { 'LSF' => '-q production -R"select[mem>12500] rusage[mem=12500]" -M12500'},
+            'default_mem'      => { 'LSF' => '-q production -R"select[mem>2500] rusage[mem=2500]" -M2500',
+                                    'SLURM' => '--partition=production --time=1:00:00 --mem=2.5G'},
+            'default_mem_long' => { 'LSF' => '-q production -R"select[mem>2500] rusage[mem=2500]" -M2500',
+                                    'SLURM' => '--partition=production --time=4:00:00 --mem=2.5G'},
+            'high_mem'         => { 'LSF' => '-q production -R"select[mem>6000] rusage[mem=6000]" -M6000',
+                                    'SLURM' => '--partition=production --time=1:00:00 --mem=6G'},
+            'high_mem_long'    => { 'LSF' => '-q production -R"select[mem>6000] rusage[mem=6000]" -M6000',
+                                    'SLURM' => '--partition=production --time=4:00:00 --mem=6G'},
+            'extra_mem'        => { 'LSF' => '-q production -R"select[mem>12500] rusage[mem=12500]" -M12500',
+                                    'SLURM' => '--partition=production --time=1:00:00 --mem=12.5G'},
     };
 }
 
 
 1;
-

@@ -1,5 +1,5 @@
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016-2022] EMBL-European Bioinformatics Institute
+# Copyright [2016-2024] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -81,6 +81,12 @@ ok($sv2->[0]->variation_name() eq 'esv93078', "name by name");
 
 my @sv_dbIDs = (3506221,3506222);
 my @sv_names = ('esv93078','esv89107');
+
+# test fetch all by name list
+print "\n# Test - fetch_all_by_name_list\n";
+my $svs = $sva->fetch_all_by_name_list(\@sv_names);
+ok($svs->[0]->variation_name eq $sv_names[0], "fetch by name list - 1");
+ok($svs->[1]->variation_name eq $sv_names[1], "fetch by name list - 2");
 
 # test fetch Iterator by dbID list
 print "\n# Test - fetch_Iterator_by_dbID_list\n";

@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2022] EMBL-European Bioinformatics Institute
+Copyright [2016-2024] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -35,93 +35,105 @@ use warnings;
 
 use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 
+use IO::Handle;
+STDOUT->autoflush(1); # flush STDOUT buffer immediately
+
 sub run {
-    my $self = shift;
+  my $self = shift;
 
-    my $consequence_types = "'intergenic_variant','splice_acceptor_variant','splice_donor_variant','stop_lost','coding_sequence_variant','missense_variant','stop_gained','synonymous_variant','frameshift_variant','non_coding_transcript_variant','non_coding_transcript_exon_variant','mature_miRNA_variant','NMD_transcript_variant','5_prime_UTR_variant','3_prime_UTR_variant','incomplete_terminal_codon_variant','intron_variant','splice_region_variant','downstream_gene_variant','upstream_gene_variant','start_lost','stop_retained_variant','inframe_insertion','inframe_deletion','transcript_ablation','transcript_fusion','transcript_amplification','transcript_translocation','TFBS_ablation','TFBS_fusion','TFBS_amplification','TFBS_translocation','regulatory_region_ablation','regulatory_region_fusion','regulatory_region_amplification','regulatory_region_translocation','feature_elongation','feature_truncation','protein_altering_variant','regulatory_region_variant','TF_binding_site_variant'";
+  my $log_file = $self->param('pipeline_dir') . '/log_finish_regulation_effect.txt';
 
-  if ($self->param('update_vf') || $self->param('only_update_vf')) {
-    my $vdba = $self->get_species_adaptor('variation');
-    my $dbc = $vdba->dbc;
-    $dbc->reconnect_when_lost(1);
-    # pre-clean-up:
-    foreach my $table (qw/regulatory_region_consequences variation_feature_overlap_regulation variation_feature_consequences/) {
-      $dbc->do(qq{DROP TABLE IF EXISTS $table;})
-    }
+  my $consequence_types = "'intergenic_variant','splice_acceptor_variant','splice_donor_variant','stop_lost','coding_sequence_variant','missense_variant','stop_gained','synonymous_variant','frameshift_variant','non_coding_transcript_variant','non_coding_transcript_exon_variant','mature_miRNA_variant','NMD_transcript_variant','5_prime_UTR_variant','3_prime_UTR_variant','incomplete_terminal_codon_variant','intron_variant','splice_region_variant','downstream_gene_variant','upstream_gene_variant','start_lost','stop_retained_variant','inframe_insertion','inframe_deletion','transcript_ablation','transcript_fusion','transcript_amplification','transcript_translocation','TFBS_ablation','TFBS_fusion','TFBS_amplification','TFBS_translocation','regulatory_region_ablation','regulatory_region_fusion','regulatory_region_amplification','regulatory_region_translocation','feature_elongation','feature_truncation','protein_altering_variant','regulatory_region_variant','TF_binding_site_variant','start_retained_variant','splice_donor_5th_base_variant','splice_donor_region_variant','splice_polypyrimidine_tract_variant'";
 
-    my @regulatory_tables = ('motif_feature_variation', 'regulatory_feature_variation');
+  # Write log
+  open(my $wrt, ">", $log_file) or die("Failed to open file: $!\n");
 
-    $self->warning('Collect variation features overlapping regulatory features');
+  print $wrt "Finish Regulation Effect\n";
+  print $wrt "Start: " . localtime() . "\n\n";
 
-    $dbc->do(qq{
-      CREATE TABLE IF NOT EXISTS regulatory_region_consequences(
-      variation_feature_id int(10), 
-      consequence_types set($consequence_types) NOT NULL DEFAULT 'intergenic_variant',
-      key variation_feature_idx(variation_feature_id)
-    )engine=MyISAM;});
-
-    for my $table (@regulatory_tables) {
-      $dbc->do(qq{
-        INSERT INTO regulatory_region_consequences(variation_feature_id, consequence_types)
-        SELECT variation_feature_id, consequence_types 
-        FROM $table;});
-    }
-
-    $self->warning('Completed collect variation features overlapping regulatory features.');
-    $self->warning('Collect overlap with variation_feature table.');
-
-    $dbc->do(qq{
-      CREATE TABLE IF NOT EXISTS variation_feature_overlap_regulation(
-      variation_feature_id int(10), 
-      consequence_types set($consequence_types) NOT NULL DEFAULT 'intergenic_variant',
-      key variation_feature_idx(variation_feature_id)
-    )engine=MyISAM;});
-
-    $dbc->do(qq{
-      INSERT INTO variation_feature_overlap_regulation(variation_feature_id, consequence_types)
-      SELECT vf.variation_feature_id, vf.consequence_types
-      FROM variation_feature vf, regulatory_region_consequences rrc
-      WHERE rrc.variation_feature_id = vf.variation_feature_id;});
-
-    $dbc->do(qq{
-      INSERT INTO regulatory_region_consequences 
-      SELECT * FROM variation_feature_overlap_regulation;});
-
-    # combine consequences for all variation_features in regulatory_region_consequences
-    my $tmp_table = 'variation_feature_consequences';
-
-    $dbc->do(qq{CREATE TABLE IF NOT EXISTS $tmp_table(
-	    variation_feature_id int(10),
-	    consequence_types set($consequence_types) NOT NULL DEFAULT 'intergenic_variant',
-	    key variation_feature_idx(variation_feature_id)
-	   )engine=MyISAM;});
-
-    $dbc->do(qq{
-     INSERT INTO $tmp_table (variation_feature_id, consequence_types)
-     SELECT variation_feature_id, GROUP_CONCAT(DISTINCT(consequence_types))
-     FROM regulatory_region_consequences
-     GROUP BY variation_feature_id;}) or die "Populating tmp table failed";
-
-    $self->warning('Final update of variation_feature table.');
-
-    $tmp_table = 'variation_feature_consequences';
-    # update variation feature
-    $dbc->do(qq{
-      UPDATE variation_feature vf, $tmp_table vfc
-      SET vf.consequence_types = vfc.consequence_types
-      WHERE vf.variation_feature_id = vfc.variation_feature_id;}) or die "Failed to update vf table";
-
-    $self->warning('Completed update of variation_feature table.');
-
-    # post-clean-up:
-    foreach my $table (qw/regulatory_region_consequences variation_feature_overlap_regulation variation_feature_consequences/) {
-      $dbc->do(qq{DROP TABLE IF EXISTS $table;})
-    }
-    foreach my $table (qw/motif_feature_variation regulatory_feature_variation/) {
-      $dbc->do(qq{ALTER TABLE $table ENABLE KEYS;});
-    } 
-
+  my $vdba = $self->get_species_adaptor('variation');
+  my $dbc = $vdba->dbc;
+  $dbc->reconnect_when_lost(1);
+  # pre-clean-up:
+  foreach my $table (qw/regulatory_region_consequences variation_feature_overlap_regulation variation_feature_consequences/) {
+    $dbc->do(qq{DROP TABLE IF EXISTS $table;})
   }
+
+  my @regulatory_tables = ('motif_feature_variation', 'regulatory_feature_variation');
+
+  print $wrt "Collect variation features overlapping regulatory features\n";
+
+  $dbc->do(qq{
+    CREATE TABLE IF NOT EXISTS regulatory_region_consequences(
+    variation_feature_id int(10), 
+    consequence_types set($consequence_types) NOT NULL DEFAULT 'intergenic_variant',
+    key variation_feature_idx(variation_feature_id)
+  )engine=MyISAM;});
+
+  for my $table (@regulatory_tables) {
+    $dbc->do(qq{
+      INSERT INTO regulatory_region_consequences(variation_feature_id, consequence_types)
+      SELECT variation_feature_id, consequence_types 
+      FROM $table;});
+  }
+
+  print $wrt "Completed collect variation features overlapping regulatory features\n";
+  print $wrt "Collect overlap with variation_feature table\n";
+
+  $dbc->do(qq{
+    CREATE TABLE IF NOT EXISTS variation_feature_overlap_regulation(
+    variation_feature_id int(10), 
+    consequence_types set($consequence_types) NOT NULL DEFAULT 'intergenic_variant',
+    key variation_feature_idx(variation_feature_id)
+  )engine=MyISAM;});
+
+  $dbc->do(qq{
+    INSERT INTO variation_feature_overlap_regulation(variation_feature_id, consequence_types)
+    SELECT vf.variation_feature_id, vf.consequence_types
+    FROM variation_feature vf, regulatory_region_consequences rrc
+    WHERE rrc.variation_feature_id = vf.variation_feature_id;});
+
+  $dbc->do(qq{
+    INSERT INTO regulatory_region_consequences 
+    SELECT * FROM variation_feature_overlap_regulation;});
+
+  # combine consequences for all variation_features in regulatory_region_consequences
+  my $tmp_table = 'variation_feature_consequences';
+
+  $dbc->do(qq{CREATE TABLE IF NOT EXISTS $tmp_table(
+    variation_feature_id int(10),
+    consequence_types set($consequence_types) NOT NULL DEFAULT 'intergenic_variant',
+    key variation_feature_idx(variation_feature_id)
+    )engine=MyISAM;});
+
+  $dbc->do(qq{
+    INSERT INTO $tmp_table (variation_feature_id, consequence_types)
+    SELECT variation_feature_id, GROUP_CONCAT(DISTINCT(consequence_types))
+    FROM regulatory_region_consequences
+    GROUP BY variation_feature_id;}) or die "Populating tmp table failed";
+
+  print $wrt "Final update of variation_feature table\n";
+
+  $tmp_table = 'variation_feature_consequences';
+  # update variation feature
+  $dbc->do(qq{
+    UPDATE variation_feature vf, $tmp_table vfc
+    SET vf.consequence_types = vfc.consequence_types
+    WHERE vf.variation_feature_id = vfc.variation_feature_id;}) or die "Failed to update vf table";
+
+  print $wrt "Completed update of variation_feature table\n";
+
+  # post-clean-up:
+  foreach my $table (qw/regulatory_region_consequences variation_feature_overlap_regulation variation_feature_consequences/) {
+    $dbc->do(qq{DROP TABLE IF EXISTS $table;})
+  }
+  foreach my $table (qw/motif_feature_variation regulatory_feature_variation/) {
+    $dbc->do(qq{ALTER TABLE $table ENABLE KEYS;});
+  }
+
+  print $wrt "\nDone: " . localtime() . "\n";
+
+  close($wrt);
 }
 
 1;
