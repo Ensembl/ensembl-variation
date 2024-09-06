@@ -20,11 +20,12 @@ if ( $model =~ /humdiv/i ) {
 
 # parse and store the results
 my @fields;
+my $md5 = md5_hex($peptide);
 my $pred_matrix = Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix->new(
     -analysis           => 'polyphen',
     -sub_analysis       => $model_name,
     -peptide_length     => length($peptide),
-    -translation_md5    => md5_hex($peptide),
+    -translation_md5    => $md5,
 );
 my $any_results = 0;
 
@@ -72,8 +73,15 @@ if ( $any_results ){
     );
   my $pfpma = $var_dba->get_ProteinFunctionPredictionMatrixAdaptor
       or die "Failed to get matrix adaptor";
-  $pfpma->store($pred_matrix);
+
+  # check if identical predictions are already stored                           
+  my $data = $pfpma->fetch_polyphen_predictions_by_translation_md5($md5, $model_name);
+  if (defined $data && defined $data->{matrix} && $data->{matrix} eq $pred_matrix->serialize) {
+    warn "Skipping: identical PolyPhen-2 predictions already stored in database\n"
+  } else {
+    $pfpma->store($pred_matrix);
+  }
   $var_dba->dbc and $var_dba->dbc->disconnect_if_idle();
 } else {
-  warn "Skipping: no results to store\n";
+  warn "Skipping: no PolyPhen-2 predictions to store\n";
 }
