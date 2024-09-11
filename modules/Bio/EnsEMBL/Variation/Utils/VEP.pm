@@ -191,6 +191,7 @@ our @EXTRA_HEADERS = (
   { flag => 'flag_pick_allele',cols => ['PICK'] },
   { flag => 'variant_class',   cols => ['VARIANT_CLASS']},
   { flag => 'minimal',         cols => ['MINIMISED']},
+  { flag => 'somatic_classification', cols => ['SOMATIC_CLASSIFICATION']},
 
   # gene-related
   { flag => 'symbol',          cols => ['SYMBOL','SYMBOL_SOURCE','HGNC_ID'] },
@@ -309,6 +310,7 @@ our %COL_DESCS = (
     'GENE_PHENO'         => 'Indicates if gene is associated with a phenotype, disease or trait',
     'MINIMISED'          => 'Alleles in this variant have been converted to minimal representation before consequence calculation',
     'HGVS_OFFSET'        => 'Indicates by how many bases the HGVS notations for this variant have been shifted',
+    'SOMATIC_CLASSIFICATION' => 'ClinVar somatic classification of the dbSNP variant',
 );
 
 our @REG_FEAT_TYPES = qw(

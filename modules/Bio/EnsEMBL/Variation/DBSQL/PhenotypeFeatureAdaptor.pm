@@ -1249,7 +1249,8 @@ sub get_clinsig_alleles_by_location {
       AND pf.seq_region_id = ?
       AND pf.seq_region_start >= ?
       AND pf.seq_region_end <= ?
-      AND pf.source_id = ? 
+      AND pf.source_id = ?
+      AND (DNA_type = 'Germline' OR DNA_type is NULL)
       AND EXISTS(select value from phenotype_feature_attrib where phenotype_feature_id = pf.phenotype_feature_id && attrib_type_id = 483)
 
       GROUP BY pf.phenotype_feature_id
@@ -1281,6 +1282,74 @@ sub get_clinsig_alleles_by_location {
   return $hash;
 }
 
+sub get_somatic_clin_impact_by_location {
+  my $self = shift;
+  my $seq_region_id = shift;
+  my $seq_region_start = shift;
+  my $seq_region_end = shift;
+  my $source_id = shift;
+  throw("Cannot fetch attributes without seq region information") unless defined($seq_region_id) && defined($seq_region_start) && defined($seq_region_end);
+
+  my $extra_sql = $self->_is_significant_constraint();
+  # Add the constraint for phenotype class
+  $extra_sql = $self->_is_class_constraint($extra_sql);
+
+  my $sth = $self->dbc->prepare(qq{
+    SELECT
+      CONCAT(pf.seq_region_id, ':', pf.seq_region_start, '-', pf.seq_region_end),
+      CONCAT_WS('; ',
+        CONCAT('id=', pf.object_id), CONCAT('pf_id=', pf.phenotype_feature_id),
+        GROUP_CONCAT(IF(at.code in ('somatic_clin_sig', 'impact_assertion', 'impact_clin_sig', 'oncogenic_clin_sig'), at.code, NULL), "=", concat('', pfa.value, '') SEPARATOR '; ')
+      ) AS attribute
+
+      FROM
+        phenotype p,
+        phenotype_feature pf
+
+      LEFT JOIN phenotype_feature_attrib pfa
+        ON pf.phenotype_feature_id = pfa.phenotype_feature_id
+      LEFT JOIN attrib_type `at`
+          ON pfa.attrib_type_id = at.attrib_type_id
+
+      WHERE pf.phenotype_id = p.phenotype_id
+      AND pf.seq_region_id = ?
+      AND pf.seq_region_start >= ?
+      AND pf.seq_region_end <= ?
+      AND pf.source_id = ?
+      AND pf.DNA_type = 'Somatic'
+
+      GROUP BY pf.phenotype_feature_id
+      ORDER BY pf.seq_region_id, pf.seq_region_start, pf.seq_region_end
+  });
+
+  $sth->bind_param(1, $seq_region_id, SQL_VARCHAR);
+  $sth->bind_param(2, $seq_region_start, SQL_VARCHAR);
+  $sth->bind_param(3, $seq_region_end, SQL_VARCHAR);
+  $sth->bind_param(4, $source_id, SQL_VARCHAR);
+  $sth->execute();
+
+  my $pf_id;
+  my $output_string;
+  my $hash;
+  $sth->bind_columns(\$pf_id, \$output_string);
+
+  while ($sth->fetch){
+    $hash->{$pf_id} = [] if !defined($hash->{$pf_id});
+    my $internal_hash;
+
+    # Example: $output_string => "id=rs1555760738; pf_id=266451087; somatic_clin_sig=Tier III - Unknown"
+    foreach my $id (split/\;/,$output_string){
+      my ($key, $value) = split /\=/, $id;
+      $key =~ s/^\s+|\s+$//g;
+
+      $internal_hash->{$key} = $value;
+    }
+    push(@{$hash->{$pf_id}}, $internal_hash);
+  }
+
+  $sth->finish();
+  return $hash;
+}
 
 
 # stub method used by web
