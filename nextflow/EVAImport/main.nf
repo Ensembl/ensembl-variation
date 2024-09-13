@@ -89,6 +89,7 @@ if (params.help) {
              --species sus_scrofa \\
              --registry ensembl.registry \\
              --release 111 \\
+             --version 3 \\
              --input_file GCA_000003025.6_current_ids.vcf.gz \\
              --var_syn_file GCA_000003025.6_merged_ids.vcf.gz \\
              --skipped_variants_file report_EVA_import.log \\
@@ -103,6 +104,7 @@ if (params.help) {
     --species                 species name
     --registry                registry file pointing to the new variation and core databases
     --release                 release number
+    --version                 EVA release version
     --input_file              EVA input file
     --var_syn_file            EVA variation synonyms file [GCA_*_merged_ids.vcf.gz]
     --skipped_variants_file   output file to write number of skipped variants in the EVA import
