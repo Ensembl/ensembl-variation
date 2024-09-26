@@ -1967,7 +1967,7 @@ sub hgvs_genomic {
     if ($is_multi_allelic) {
       # fix for multi-allelic variants
       my $old_chr_start = $chr_start;
-      ($ref_allele, $allele, $chr_start, $chr_end) = @{trim_sequences($original_ref_allele, $allele, $chr_start)};
+      ($ref_allele, $allele, $chr_start, $chr_end) = @{trim_sequences($original_ref_allele, $allele, $chr_start, $chr_end)};
       $allele ||= '-';
       $offset = $chr_start - $old_chr_start;
       $ref_start = $original_ref_start + $offset;
