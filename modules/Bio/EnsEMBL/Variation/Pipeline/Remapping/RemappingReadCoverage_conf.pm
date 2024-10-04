@@ -81,8 +81,10 @@ sub resource_classes {
     my ($self) = @_;
     return {
         %{$self->SUPER::resource_classes},  # inherit 'default' from the parent class
-            'default_mem' => { 'LSF' => '-R"select[mem>2500] rusage[mem=2500]" -M2500'}, 
-            'high_mem'    => { 'LSF' => '-R"select[mem>5500] rusage[mem=5500]" -M5500'}, 
+            'default_mem' => { 'LSF' => '-R"select[mem>2500] rusage[mem=2500]" -M2500',
+                               'SLURM' => '--partition=production --time=1:00:00 --mem=4G'}, 
+            'high_mem'    => { 'LSF' => '-R"select[mem>5500] rusage[mem=5500]" -M5500',
+                               'SLURM' => '--partition=production --time=1:00:00 --mem=8G'}, 
     };
 }
 
@@ -93,6 +95,7 @@ sub pipeline_analyses {
   {
             -logic_name => 'pre_run_checks',
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::PreRunChecks',
+            -rc_name    => 'default_mem',
             -max_retry_count  => 0,
             -input_ids  => [{},],
             -flow_into  => {
@@ -152,6 +155,7 @@ sub pipeline_analyses {
         {
             -logic_name => 'finish_filter_mapping',
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::FinishFilterMapping',
+            -rc_name    => 'default_mem',
             -flow_into => {
                 1 => ['load_mapping'],
             },
@@ -159,6 +163,7 @@ sub pipeline_analyses {
         {
           -logic_name => 'load_mapping',
           -module     => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::LoadMapping',
+          -rc_name    => 'default_mem',
         }
     );
    return \@analyses;
