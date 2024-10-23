@@ -1299,7 +1299,8 @@ sub get_somatic_clin_impact_by_location {
       CONCAT(pf.seq_region_id, ':', pf.seq_region_start, '-', pf.seq_region_end),
       CONCAT_WS('; ',
         CONCAT('id=', pf.object_id), CONCAT('pf_id=', pf.phenotype_feature_id),
-        GROUP_CONCAT(IF(at.code in ('somatic_clin_sig', 'impact_assertion', 'impact_clin_sig', 'oncogenic_clin_sig'), at.code, NULL), "=", concat('', pfa.value, '') SEPARATOR '; ')
+        GROUP_CONCAT(IF(at.code in ('somatic_clin_sig', 'impact_assertion', 'impact_clin_sig', 'oncogenic_clin_sig'), at.code, NULL), "=", concat('', pfa.value, '') SEPARATOR '; '),
+        CONCAT('phenotype=', p.description)
       ) AS attribute
 
       FROM
@@ -1348,6 +1349,7 @@ sub get_somatic_clin_impact_by_location {
   }
 
   $sth->finish();
+
   return $hash;
 }
 
