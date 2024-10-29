@@ -1439,8 +1439,8 @@ sub hgvs_transcript {
 
   if(scalar @edit_attrs > 0) {
     my $ref = $tv->get_reference_TranscriptVariationAllele;
-    $hgvs_notation->{ref} = $ref->variation_feature_seq;
-    $hgvs_notation->{alt} = $self->variation_feature_seq;
+    $hgvs_notation->{ref} = $ref->feature_seq; # ref allele relative to the feature (transcript)
+    $hgvs_notation->{alt} = $self->feature_seq; # alt allele relative to the feature (transcript)
   }
 
   my $misalignment_offset = 0;
