@@ -21,7 +21,7 @@ params.registry        = null
 
 // Params for EVA import script
 params.input_file      = ""
-input_file_tbi         = "${params.input_file}.tbi"
+input_file_index       = file("${params.input_file}.tbi").exists() ? "${params.input_file}.tbi" : "${params.input_file}.csi"
 params.source          = "EVA"
 params.description     = "Short variant data imported from EVA"
 params.version         = null
@@ -89,6 +89,7 @@ if (params.help) {
              --species sus_scrofa \\
              --registry ensembl.registry \\
              --release 111 \\
+             --version 3 \\
              --input_file GCA_000003025.6_current_ids.vcf.gz \\
              --var_syn_file GCA_000003025.6_merged_ids.vcf.gz \\
              --skipped_variants_file report_EVA_import.log \\
@@ -103,6 +104,7 @@ if (params.help) {
     --species                 species name
     --registry                registry file pointing to the new variation and core databases
     --release                 release number
+    --version                 EVA release version
     --input_file              EVA input file
     --var_syn_file            EVA variation synonyms file [GCA_*_merged_ids.vcf.gz]
     --skipped_variants_file   output file to write number of skipped variants in the EVA import
@@ -139,7 +141,7 @@ if(!params.version) {
   exit 1, "ERROR: EVA version (--version) must be provided when running EVA import"
 }
 
-if(params.input_file == "" || !file(params.input_file).exists() || !file(input_file_tbi).exists()) {
+if(params.input_file == "" || !file(params.input_file).exists() || !file(input_file_index).exists()) {
   exit 1, "ERROR: a valid input file (--input_file) must be provided when running EVA import. Please make sure the file is compressed and indexed."
 }
 
@@ -162,7 +164,7 @@ if(!params.skipped_variants_file) {
 // Build command to run EVA import
 registry = file(params.registry)
 input_file = file(params.input_file)
-input_file_tbi = file(input_file_tbi)
+input_file_index = file(input_file_index)
 
 command_to_run = [
   " -i ${input_file}",
@@ -176,10 +178,15 @@ command_to_run = [
   params.skip_tables ? "--skip_tables '${params.skip_tables}'"        : null
 ].findAll { it != null }
 
+indent=" " * 4
 log.info "\n  Importing EVA data with the following parameters:"
-log.info command_to_run.join("\n").indent(4)
+log.info command_to_run.collect{"${indent} ${it}"}.join("\n")
 
 command_to_run = command_to_run.join(" ")
+
+include { check_JVM_mem; print_summary } from '../utils/utils.nf'
+check_JVM_mem(min=0.4)
+print_summary()
 
 process run_eva {
   cpus "${params.fork}"
@@ -189,7 +196,7 @@ process run_eva {
   path eva_script
   val options
   path input_file
-  path input_file_tbi
+  path input_file_index
   val merge_all_types
   val fork
   val sort_vf
@@ -339,7 +346,7 @@ process run_citations {
 workflow {
   prepare_tables(copy_tables_script, params.host, params.port, params.pass, params.user, params.dbname, params.old_dbname)
 
-  run_eva(prepare_tables.out, file(eva_script), command_to_run, input_file, input_file_tbi, params.merge_all_types, params.fork, params.sort_vf, file(params.chr_synonyms), params.remove_prefix, params.skipped_variants_file)
+  run_eva(prepare_tables.out, file(eva_script), command_to_run, input_file, input_file_index, params.merge_all_types, params.fork, params.sort_vf, file(params.chr_synonyms), params.remove_prefix, params.skipped_variants_file)
 
   run_variant_synonyms(run_eva.out, file(var_syn_script), params.source, params.version, params.species, file(params.var_syn_file), registry, params.old_host, params.old_port, params.old_dbname)
 
@@ -355,20 +362,4 @@ workflow {
   if(params.citations_file) {
     run_citations(run_variant_synonyms.out, file(citations_script), params.species, registry, file(params.citations_file))
   }
-}
-
-workflow.onComplete {
-  println ( workflow.success ? """
-    Workflow summary
-    ----------------
-    Completed at: ${workflow.complete}
-    Duration    : ${workflow.duration}
-    Success     : ${workflow.success}
-    workDir     : ${workflow.workDir}
-    exit status : ${workflow.exitStatus}
-    """ : """
-    Failed: ${workflow.errorReport}
-    exit status : ${workflow.exitStatus}
-    """
-  )
 }
