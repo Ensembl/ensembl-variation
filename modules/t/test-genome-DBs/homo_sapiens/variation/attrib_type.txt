@@ -41,3 +41,4 @@
 534	dbnsfp_ma_pred	dbNSFP mutation assessor prediction	dbNSFP mutation assessor prediction
 542	citation_source	Citation source	Variant citation data source
 544	phenotype_type	Phenotype type	Type of the phenotype information
+577	somatic_clin_sig	ClinVar somatic classification	The somatic classification of a variant as reported by ClinVar
