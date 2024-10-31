@@ -233,7 +233,7 @@ my $pfs3 = $pf_adaptor->fetch_all_by_object_id('rs2299222');
 for my $pheno_feat (@$pfs3) {
   if(!$pheno_feat->somatic_classification) {
     my $asso_study = $pheno_feat->associated_studies->[0];
-    ok($asso_study->[0]->name eq 'asso_study', 'associated_studies');
+    ok($asso_study->name eq 'asso_study', 'associated_studies');
   }
 }
 
