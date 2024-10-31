@@ -442,24 +442,32 @@ sub get_clinsig {
     if (ref($classifications->{SomaticClinicalImpact}->{Description}) eq "ARRAY") {
       for my $description (@{$classifications->{SomaticClinicalImpact}->{Description}}) {
         # clinical significance
-        push @somatic_desc, $description->{content};
+        my $tmp_desc = $description->{content};
+        # clinical impact assertion type
+        if($description->{ClinicalImpactAssertionType}) {
+          $tmp_desc .= ":" . $description->{ClinicalImpactAssertionType};
+        }
+         # clinical impact clinical significance
+        if($description->{ClinicalImpactClinicalSignificance}) {
+          $tmp_desc .= ":" . $description->{ClinicalImpactClinicalSignificance};
+        }
+        push @somatic_desc, $tmp_desc;
+
         # date last evaluated
         push @dates, $description->{DateLastEvaluated};
-        # clinical impact assertion type
-        push @clinical_assertions, $description->{ClinicalImpactAssertionType};
-        # clinical impact clinical significance
-        push @clinical_impact_cs, $description->{ClinicalImpactClinicalSignificance};
       }
       $desc = join(",", @somatic_desc);
       $date = join(",", @dates);
-      $clinical_impact_assertion = join(",", @clinical_assertions);
-      $clinical_impact_clin_sig = join(",", @clinical_impact_cs);
     }
     else {
         $desc = $classifications->{SomaticClinicalImpact}->{Description}->{content};
+        if($classifications->{SomaticClinicalImpact}->{Description}->{ClinicalImpactAssertionType}) {
+          $desc .= ":" . $classifications->{SomaticClinicalImpact}->{Description}->{ClinicalImpactAssertionType};
+        }
+        if($classifications->{SomaticClinicalImpact}->{Description}->{ClinicalImpactClinicalSignificance}) {
+          $desc .= ":" . $classifications->{SomaticClinicalImpact}->{Description}->{ClinicalImpactClinicalSignificance};
+        }
         $date = $classifications->{SomaticClinicalImpact}->{Description}->{DateLastEvaluated};
-        $clinical_impact_assertion = $classifications->{SomaticClinicalImpact}->{Description}->{ClinicalImpactAssertionType};
-        $clinical_impact_clin_sig = $classifications->{SomaticClinicalImpact}->{Description}->{ClinicalImpactClinicalSignificance};
     }
 
     # Remove empty space from beginning and end of the description
@@ -468,9 +476,7 @@ sub get_clinsig {
     my %somatic_data = (
       "clin_sign" => $desc,
       "status" => $classifications->{SomaticClinicalImpact}->{ReviewStatus},
-      "date" => $date,
-      "impact_assertion" => $clinical_impact_assertion,
-      "impact_clin_sig" => $clinical_impact_clin_sig
+      "date" => $date
     );
 
     $result_by_type{$type} = \%somatic_data;
@@ -961,7 +967,6 @@ sub add_clinvar_data{
 
   ## add phenotype_feature & attrib (there may not be an alt_allele)
 
-  print "Add clinvar data import phenotype feature\n";
   import_phenotype_feature($record, $variation_object, 'Variation', $feat, $alt_allele);
 
 }
@@ -1036,16 +1041,6 @@ sub import_phenotype_feature{
 
       if(defined $record->{Classifications}->{somatic}->{date}){
         $attribs{somatic_date} = $record->{Classifications}->{somatic}->{date};
-      }
-
-      # ClinicalImpactAssertionType
-      if(defined $record->{Classifications}->{somatic}->{impact_assertion}){
-        $attribs{impact_assertion} = $record->{Classifications}->{somatic}->{impact_assertion};
-      }
-
-      # ClinicalImpactClinicalSignificance
-      if(defined $record->{Classifications}->{somatic}->{impact_clin_sig}){
-        $attribs{impact_clin_sig} = $record->{Classifications}->{somatic}->{impact_clin_sig};
       }
     }
     # Oncogenicity classification
@@ -1979,9 +1974,10 @@ sub check_known_clinsig {
       my @tmpClinsigs = split(/,\s*|;\s*/, $tmpClinsig);
       my $found = 1;
       foreach my $clinsig (@tmpClinsigs) {
-        if (!defined $known_clinsig_somatic{$clinsig}) {
+        my @clinsig_clean = split(/:/, $clinsig);
+        if (!defined $known_clinsig_somatic{$clinsig_clean[0]}) {
           $found = 0;
-          $term = $clinsig;
+          $term = $clinsig_clean[0];
         }
       }
     }
