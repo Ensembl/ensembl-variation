@@ -258,7 +258,7 @@ sub pipeline_analyses {
               include_lrg => $self->o('include_lrg'),
               @common_params,
             },
-            -rc_name   => 'default',
+            -rc_name   => 'default_long',
             -flow_into => {
               1 => ['gene_factory'],
               2 => ['rebuild_tv_indexes'],
@@ -325,9 +325,9 @@ sub pipeline_analyses {
           },
           { -logic_name => 'by_gene_transcript_effect',
             -module => 'Bio::EnsEMBL::Variation::Pipeline::TranscriptEffect',
-            -hive_capacity  => 50,
+            -hive_capacity  => 100,
             -max_retry_count => 1,
-            -analysis_capacity  => 50,
+            -analysis_capacity  => 100,
             -parameters => {
               mtmp_table => $self->o('mtmp_table'),
               fasta => $self->o('fasta'),
