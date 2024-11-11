@@ -674,7 +674,7 @@ sub display_codon_allele_string {
     $ref_tva->{shift_hash} = $self->{shift_hash};
     
     my $ref_display_codon = $ref_tva->display_codon;
-    
+
     return undef unless $ref_display_codon;
     
     return $ref_display_codon.'/'.$display_codon;
@@ -866,6 +866,11 @@ sub codon {
     my $cds_obj = $self->_get_alternate_cds();
     return undef unless defined($cds_obj);
     $cds = ( $self->{is_reference} ? $tv->_translateable_seq() : $cds_obj->seq() );
+
+    # modifies the $cds at the specific positions
+    if($self->{is_reference}) {
+      substr($cds, $tv->cds_start(undef, $tr->strand * $shifting_offset) -1, $vf_nt_len) = $seq;
+    }
 
     # and extract the codon sequence
     my $codon = ( $self->{is_reference} ? substr($cds, $codon_cds_start-1, $codon_len ) : substr($cds, $codon_cds_start-1, $codon_len + ($allele_len - $vf_nt_len)));
