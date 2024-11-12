@@ -868,9 +868,8 @@ sub codon {
     $cds = ( $self->{is_reference} ? $tv->_translateable_seq() : $cds_obj->seq() );
 
     # modifies the $cds at the specific positions
-    # this is necessary for RefSeq transcripts that have edited alleles
-    # these transcripts are flagged with 'invalid_alleles'
-    if($self->{is_reference} && $self->{invalid_alleles}) {
+    # this is necessary for RefSeq transcripts that have edited alleles saved in @edit_attrs
+    if($self->{is_reference} && scalar @edit_attrs > 0) {
       substr($cds, $tv->cds_start(undef, $tr->strand * $shifting_offset) -1, $vf_nt_len) = $seq;
     }
 
