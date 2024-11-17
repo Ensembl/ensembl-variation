@@ -1087,19 +1087,6 @@
             "source_version": 6
         },
         {
-            "id": "eva_drosophila_melanogaster_gca000001215v4",
-            "description": "Variants from EVA",
-            "species": "Drosophila_melanogaster",
-            "assembly": "BDGP6.46",
-            "type": "remote",
-            "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_5/by_species/drosophila_melanogaster/GCA_000001215.4/7227_GCA_000001215.4_current_ids.vcf.gz",
-            "use_as_source": 1,
-            "use_seq_region_synonyms": 0,
-            "strict_name_match": 0,
-            "source_name": "EVA",
-            "source_version": 5
-        },
-        {
             "id": "eva_neovison_vison_gca900108605v1",
             "description": "Variants from EVA",
             "species": "Neovison_vison",
