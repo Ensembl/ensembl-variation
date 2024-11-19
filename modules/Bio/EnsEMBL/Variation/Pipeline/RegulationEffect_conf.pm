@@ -55,7 +55,6 @@ sub default_options {
         pipeline_dir                   => $self->o('pipeline_dir'),
         registry_file                  => $self->o('pipeline_dir') . '/ensembl.registry',
 
-        use_experimentally_validated_mf => 1,
         debug                           => 0,
         split_slice                     => 1,
         split_slice_length              => 5e6,
@@ -108,7 +107,6 @@ sub pipeline_wide_parameters {
         debug                                  => $self->o('debug'),
         split_slice                            => $self->o('split_slice'),
         split_slice_length                     => $self->o('split_slice_length'),
-        use_experimentally_validated_mf        => $self->o('use_experimentally_validated_mf'),
     };
 }
 
@@ -155,7 +153,6 @@ sub pipeline_analyses {
                 -max_retry_count => 0,
                 -hive_capacity  =>  50,
                 -parameters => {
-                  'use_experimentally_validated_mf' => $self->o('use_experimentally_validated_mf'),
                 },
             }, 
             {   -logic_name => 'finish_regulation_effect',
