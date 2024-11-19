@@ -160,6 +160,7 @@ sub pipeline_analyses {
             }, 
             {   -logic_name => 'finish_regulation_effect',
                 -module => 'Bio::EnsEMBL::Variation::Pipeline::FinishRegulationEffect',
+                -rc_name => 'long',
                 -hive_capacity => 1,
                 -parameters => {
                   'pipeline_dir' => $self->o('pipeline_dir'),
