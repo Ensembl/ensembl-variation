@@ -55,7 +55,7 @@ sub default_options {
         pipeline_dir                   => $self->o('pipeline_dir'),
         registry_file                  => $self->o('pipeline_dir') . '/ensembl.registry',
 
-        use_experimentally_validated_mf => 1,
+        use_experimentally_validated_mf => 0,
         debug                           => 0,
         split_slice                     => 1,
         split_slice_length              => 5e6,
@@ -93,7 +93,7 @@ sub resource_classes {
       'highmem' => { 'LSF' => '-qproduction -R"select[mem>15000] rusage[mem=15000]" -M15000',
                      'SLURM' => "--partition=production --time=28:00:00 --mem=15G"},
       'long'    => { 'LSF' => '-qproduction -R"select[mem>2000] rusage[mem=2000]" -M2000',
-                     'SLURM' => "--partition=production --time=28:00:00 --mem=2G"},
+                     'SLURM' => "--partition=production --time=72:00:00 --mem=4G"},
     };
 }
 
@@ -161,6 +161,7 @@ sub pipeline_analyses {
             {   -logic_name => 'finish_regulation_effect',
                 -module => 'Bio::EnsEMBL::Variation::Pipeline::FinishRegulationEffect',
                 -hive_capacity => 1,
+                -rc_name => 'long',
                 -parameters => {
                   'pipeline_dir' => $self->o('pipeline_dir'),
                 },
