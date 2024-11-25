@@ -140,8 +140,6 @@ sub pipeline_analyses {
                 -hive_capacity => 1,
                 -rc_name => 'default',
                 -max_retry_count => 0,
-                -parameters => {
-                },
                 -flow_into => {
                     '2->A' => ['regulation_effect'],
                     'A->1' => ['finish_regulation_effect'],
@@ -152,8 +150,6 @@ sub pipeline_analyses {
                 -rc_name => 'default',
                 -max_retry_count => 0,
                 -hive_capacity  =>  50,
-                -parameters => {
-                },
             }, 
             {   -logic_name => 'finish_regulation_effect',
                 -module => 'Bio::EnsEMBL::Variation::Pipeline::FinishRegulationEffect',
