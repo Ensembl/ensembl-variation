@@ -60,15 +60,9 @@ sub run {
     my @regulatory_features = grep { $_->seq_region_end <= $seq_region_end  } @{$regulatory_feature_adaptor->fetch_all_by_Slice($slice)||[]};
     $self->add_regulatory_feature_variations(\@regulatory_features);
 
-    if ($self->param('use_experimentally_validated_mf')) {
-      foreach my $rf (@regulatory_features) {
-        my $motif_features = $rf->get_all_experimentally_verified_MotifFeatures();
-        $self->add_motif_feature_variations($motif_features);
-      }
-    } else {
-      my @motif_features = grep { $_->seq_region_end <= $seq_region_end  } @{$motif_feature_adaptor->fetch_all_by_Slice($slice)||[]};
-      $self->add_motif_feature_variations(\@motif_features);
-    }
+    my @motif_features = grep { $_->seq_region_end <= $seq_region_end  } @{$motif_feature_adaptor->fetch_all_by_Slice($slice)||[]};
+    $self->add_motif_feature_variations(\@motif_features);
+
     return;
 }
 
