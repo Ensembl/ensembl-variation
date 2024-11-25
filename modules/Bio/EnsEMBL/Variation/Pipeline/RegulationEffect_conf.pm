@@ -55,7 +55,6 @@ sub default_options {
         pipeline_dir                   => $self->o('pipeline_dir'),
         registry_file                  => $self->o('pipeline_dir') . '/ensembl.registry',
 
-        use_experimentally_validated_mf => 1,
         debug                           => 0,
         split_slice                     => 1,
         split_slice_length              => 5e6,
@@ -93,7 +92,7 @@ sub resource_classes {
       'highmem' => { 'LSF' => '-qproduction -R"select[mem>15000] rusage[mem=15000]" -M15000',
                      'SLURM' => "--partition=production --time=28:00:00 --mem=15G"},
       'long'    => { 'LSF' => '-qproduction -R"select[mem>2000] rusage[mem=2000]" -M2000',
-                     'SLURM' => "--partition=production --time=28:00:00 --mem=2G"},
+                     'SLURM' => "--partition=production --time=72:00:00 --mem=4G"},
     };
 }
 
@@ -108,7 +107,6 @@ sub pipeline_wide_parameters {
         debug                                  => $self->o('debug'),
         split_slice                            => $self->o('split_slice'),
         split_slice_length                     => $self->o('split_slice_length'),
-        use_experimentally_validated_mf        => $self->o('use_experimentally_validated_mf'),
     };
 }
 
@@ -142,8 +140,6 @@ sub pipeline_analyses {
                 -hive_capacity => 1,
                 -rc_name => 'default',
                 -max_retry_count => 0,
-                -parameters => {
-                },
                 -flow_into => {
                     '2->A' => ['regulation_effect'],
                     'A->1' => ['finish_regulation_effect'],
@@ -154,13 +150,11 @@ sub pipeline_analyses {
                 -rc_name => 'default',
                 -max_retry_count => 0,
                 -hive_capacity  =>  50,
-                -parameters => {
-                  'use_experimentally_validated_mf' => $self->o('use_experimentally_validated_mf'),
-                },
             }, 
             {   -logic_name => 'finish_regulation_effect',
                 -module => 'Bio::EnsEMBL::Variation::Pipeline::FinishRegulationEffect',
                 -hive_capacity => 1,
+                -rc_name => 'long',
                 -parameters => {
                   'pipeline_dir' => $self->o('pipeline_dir'),
                 },
