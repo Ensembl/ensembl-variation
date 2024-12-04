@@ -110,7 +110,7 @@ sub pipeline_analyses {
     {
       -logic_name => 'run_mapping',
       -module     => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::RunMapping',
-      -rc_name    => 'high_mem',
+      -rc_name    => 'extra_mem',
     },
     {
       -logic_name        => 'init_parse_mapping', 
@@ -177,7 +177,7 @@ sub pipeline_analyses {
       -logic_name        => 'variant_qc',
       -module            => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::VariationFeatureQC',
       -analysis_capacity => 5,
-      -rc_name           => 'default_mem',
+      -rc_name           => 'extra_long',
     },
     {
       -logic_name => 'finish_variant_qc',
