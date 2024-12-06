@@ -348,6 +348,7 @@ CREATE TABLE allele (
 @column seq_region_start		  The start position of the feature on the @link seq_region.
 @column seq_region_end			  The end position of the feature on the @link seq_region.
 @column seq_region_strand		  The orientation of the feature on the @link seq_region.
+@column DNA_type		          The type of DNA, 'Germline' or 'Somatic'.
 
 @see variation
 @see phenotype
@@ -367,12 +368,14 @@ CREATE TABLE IF NOT EXISTS `phenotype_feature` (
   `seq_region_start` INT(11) UNSIGNED DEFAULT NULL,
   `seq_region_end` INT(11) UNSIGNED DEFAULT NULL,
   `seq_region_strand` TINYINT(4) DEFAULT NULL,
+  `DNA_type` ENUM('Germline', 'Somatic') DEFAULT NULL,
   PRIMARY KEY (`phenotype_feature_id`),
   KEY `phenotype_idx` (`phenotype_id`),
   KEY `object_idx` (`object_id`,`type`),
   KEY `type_idx` (`type`),
   KEY `pos_idx` (`seq_region_id`,`seq_region_start`,`seq_region_end`),
-  KEY `source_idx` (`source_id`)
+  KEY `source_idx` (`source_id`),
+  KEY `dna_type_idx` (`DNA_type`)
 );
 
 

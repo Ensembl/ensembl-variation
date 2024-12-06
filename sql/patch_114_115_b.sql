@@ -15,6 +15,8 @@
 
 # Add column to phenotype_feature
 ALTER TABLE phenotype_feature ADD DNA_type enum('Germline', 'Somatic') DEFAULT NULL;
+# Create index
+CREATE INDEX dna_type_idx on phenotype_feature (DNA_type);
 
 # patch identifier
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_114_115_b.sql|Add column DNA_type to phenotype_feature');

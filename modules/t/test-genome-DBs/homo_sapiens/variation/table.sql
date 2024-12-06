@@ -245,7 +245,8 @@ CREATE TABLE `phenotype_feature` (
   KEY `object_idx` (`object_id`,`type`),
   KEY `type_idx` (`type`),
   KEY `pos_idx` (`seq_region_id`,`seq_region_start`,`seq_region_end`),
-  KEY `source_idx` (`source_id`)
+  KEY `source_idx` (`source_id`),
+  KEY `dna_type_idx` (`DNA_type`)
 ) ENGINE=MyISAM AUTO_INCREMENT=8 DEFAULT CHARSET=latin1;
 
 CREATE TABLE `phenotype_feature_attrib` (
