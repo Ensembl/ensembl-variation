@@ -39,9 +39,9 @@ my $sl  = $sla->fetch_by_region('chromosome', 7, 86442403, 86442405);
 
 # fetch_all_by_object_id
 my $pfs = $pfa->fetch_all_by_object_id('rs2299222');
-ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && $pfs->[0]->object_id eq 'rs2299222', "fetch_all_by_object_id");
+ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 2 && $pfs->[0]->object_id eq 'rs2299222', "fetch_all_by_object_id");
 $pfs =  $pfa->fetch_all_by_object_id('rs2299222', 'Variation');
-ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && $pfs->[0]->object_id eq 'rs2299222', "fetch_all_by_object_id + type");
+ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 2 && $pfs->[0]->object_id eq 'rs2299222', "fetch_all_by_object_id + type");
 throws_ok { $pfa->fetch_all_by_object_id('rs2299222', 'Variant'); } qr/is not a valid object type, valid types are/, ' > Throw on wrong object type';
 
 # fetch_all_by_object_id_accession_type
@@ -57,7 +57,7 @@ throws_ok { $pfa->fetch_all_by_object_id('rs2299222', 'Variant'); } qr/is not a 
 
 # fetch_all_by_Slice_type
 $pfs = $pfa->fetch_all_by_Slice_type($sl, 'Variation');
-ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && $pfs->[0]->object_id eq 'rs2299222', "fetch_all_by_Slice_type");
+ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 2 && $pfs->[0]->object_id eq 'rs2299222', "fetch_all_by_Slice_type");
 
 # fetch_all_by_Variation
 my $va = $vdba->get_VariationAdaptor();
@@ -66,10 +66,13 @@ $pfs = $pfa->fetch_all_by_Variation($v);
 ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && $pfs->[0]->object_id eq 'rs2299222', "fetch_all_by_Variation");
 throws_ok { $pfa->fetch_all_by_Variation('Variant'); } qr/Variation arg expected/, ' > Throw on wrong argument';
 
+# fetch_all_somatic_by_Variation
+my $somatic_pfs = $pfa->fetch_all_somatic_by_Variation($v);
+ok(ref($somatic_pfs) eq 'ARRAY' && scalar @$somatic_pfs == 1 && $somatic_pfs->[0]->object_id eq 'rs2299222', "fetch_all_somatic_by_Variation");
 
 # fetch_all_by_Variation_list
 $pfs = $pfa->fetch_all_by_Variation_list([$v]);
-ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && $pfs->[0]->object_id eq 'rs2299222', "fetch_all_by_Variation_list");
+ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 2 && $pfs->[0]->object_id eq 'rs2299222', "fetch_all_by_Variation_list");
 throws_ok { $pfa->fetch_all_by_Variation_list(['Variant']); } qr/Variation arg expected/, ' > Throw on wrong argument';
 throws_ok { $pfa->fetch_all_by_Variation_list([Bio::EnsEMBL::Variation::Variation->new()]); } qr/Variation arg must have defined name/, ' > Throw on wrong argument';
 
@@ -89,7 +92,7 @@ throws_ok { $pfa->fetch_all_by_Gene('gene'); } qr/Gene arg expected/, ' > Throw 
 
 # fetch_all_by_VariationFeature_list
 $pfs = $pfa->fetch_all_by_VariationFeature_list($v->get_all_VariationFeatures);
-ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 && $pfs->[0]->object_id eq 'rs2299222', "fetch_all_by_VariationFeature_list");
+ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 2 && $pfs->[0]->object_id eq 'rs2299222', "fetch_all_by_VariationFeature_list");
 throws_ok { $pfa->fetch_all_by_VariationFeature_list(['VariationFeature']); } qr/VariationFeature arg expected/, ' > Throw on wrong argument';
 throws_ok { $pfa->fetch_all_by_VariationFeature_list([Bio::EnsEMBL::Variation::VariationFeature->new()]); } qr/VariationFeatures in list must have defined names/, ' > Throw on wrong argument';
 
@@ -147,12 +150,14 @@ ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 1 &&  $pfs->[0]->object_id eq 'rs2299
   $pfa->use_phenotype_classes('trait,non_specified,tumour');
   $sl_oa  = $sla->fetch_by_region('chromosome', 18, 721588, 86442450);
   $pfs = $pfa->fetch_all_by_Slice_with_ontology_accession($sl_oa);
+
   ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 3 &&
     (grep {$_->object_id eq 'rs2299298'} @$pfs) &&
     (grep {$_->phenotype_class_id == 663 } @$pfs), "fetch_all_by_Slice_accession_type - phenotype class all ");
   $pfa->clear_cache();
   $pfa->use_phenotype_classes('trait');
   $pfs = $pfa->fetch_all_by_Slice_with_ontology_accession($sl_oa);
+
   ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 2 &&
     (grep {$_->object_id eq 'ENSG00000176105'} @$pfs) &&
     (grep {$_->phenotype_class_id == 665} @$pfs), "fetch_all_by_Slice_accession_type - phenotype class - trait");
@@ -256,7 +261,7 @@ ok($count && $count->{'Variation'} == 1 && $count->{'StructuralVariation'} == 2 
 
 # fetch_all
 $pfs = $pfa->fetch_all();
-ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 7 && (grep {$_->object_id eq 'rs2299222'} @$pfs), "fetch_all");
+ok(ref($pfs) eq 'ARRAY' && scalar @$pfs == 8 && (grep {$_->object_id eq 'rs2299222'} @$pfs), "fetch_all");
 
 # store
 my $pf = $pfs->[0];

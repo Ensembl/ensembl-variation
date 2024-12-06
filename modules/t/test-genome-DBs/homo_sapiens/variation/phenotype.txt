@@ -2,3 +2,4 @@
 2	\N	\N	COSMIC:tumour_site:skin	664
 3	\N	\N	BRUGADA SYNDROME	665
 4	\N	\N	ClinVar: phenotype not specified	663
+5	\N	\N	Acute myeloid leukemia	664
