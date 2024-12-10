@@ -90,3 +90,30 @@ process get_current_MD5_translations {
   EOF
   """
 }
+
+process init_sqlite_db {
+  output: stdout
+
+  cache false
+
+  """
+  #!/usr/bin/perl
+  my $dbh = DBI->connect("dbi:SQLite:dbname=${params.sqlite_db}","","");
+
+  $dbh->do("DROP TABLE IF EXISTS predictions");
+  $dbh->do("CREATE TABLE predictions(md5, analysis, matrix)");
+  """
+}
+
+process postprocess_sqlite_db {
+  output: stdout
+
+  cache false
+
+  """
+  #!/usr/bin/perl
+  my $dbh = DBI->connect("dbi:SQLite:dbname=${params.sqlite_db}","","");
+
+  $dbh->do("CREATE INDEX md5_idx ON predictions(md5)");
+  """
+}

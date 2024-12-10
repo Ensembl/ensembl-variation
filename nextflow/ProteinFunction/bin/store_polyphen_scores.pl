@@ -6,6 +6,7 @@ use Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix;
 use Digest::MD5 qw(md5_hex);
 
 my ($species, $port, $host, $user, $pass, $dbname,
+    $offline, $sqlite,
     $peptide, $output_file, $model) = @ARGV;
 
 # Extract model name
@@ -62,18 +63,28 @@ while (<RESULT>) {
 
 # save the predictions to the database unless they are null matrices
 if ( $any_results ){
-  my $var_dba = Bio::EnsEMBL::Variation::DBSQL::DBAdaptor->new(
-      '-species' => $species,
-      '-port'    => $port,
-      '-host'    => $host,
-      '-user'    => $user,
-      '-pass'    => $pass,
-      '-dbname'  => $dbname
-    );
-  my $pfpma = $var_dba->get_ProteinFunctionPredictionMatrixAdaptor
-      or die "Failed to get matrix adaptor";
-  $pfpma->store($pred_matrix);
-  $var_dba->dbc and $var_dba->dbc->disconnect_if_idle();
+  if (!$offline){
+    my $var_dba = Bio::EnsEMBL::Variation::DBSQL::DBAdaptor->new(
+        '-species' => $species,
+        '-port'    => $port,
+        '-host'    => $host,
+        '-user'    => $user,
+        '-pass'    => $pass,
+        '-dbname'  => $dbname
+      );
+    my $pfpma = $var_dba->get_ProteinFunctionPredictionMatrixAdaptor
+        or die "Failed to get matrix adaptor";
+    $pfpma->store($pred_matrix);
+    $var_dba->dbc and $var_dba->dbc->disconnect_if_idle();
+  }
+
+  if ($sqlite){
+    my $dbh = DBI->connect("dbi:SQLite:dbname=$db","","");
+    my $sth = $dbh->prepare("INSERT INTO predictions VALUES(?, ?, ?)");
+
+    my $attrib_id = $model_name eq "humdiv" ? 269 : 268;
+    $sth->execute($pred_matrix->translation_md5, $attrib_id, $pred_matrix->serialize)
+  }
 } else {
   warn "Skipping: no results to store\n";
 }

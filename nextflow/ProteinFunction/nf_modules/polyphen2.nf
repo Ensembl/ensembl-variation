@@ -99,8 +99,8 @@ process store_pph2_scores {
     tuple val(peptide), path(weka_output), val(model)
 
   """
-  store_polyphen_scores.pl $species ${params.port} ${params.host} \
-                           ${params.user} ${params.pass} ${params.database} \
+  store_polyphen_scores.pl ${species} ${params.offline} ${params.sqlite_db} \
+                           ${params.port} ${params.host} ${params.user} ${params.pass} ${params.database} \
                            ${peptide.seqString} ${weka_output} ${model}
   """
 }
@@ -110,12 +110,14 @@ include { delete_prediction_data; update_meta } from './database_utils.nf'
 include { filter_existing_translations        } from './translations.nf'
 
 workflow run_pph2_pipeline {
-  take: translated
+  take: 
+    translated
+    sqlite_db_prep
   main:
-  if ( params.pph_run_type == "UPDATE" ) {
+  if ( params.pph_run_type == "UPDATE" && !params.offline ) {
     translated = filter_existing_translations( "polyphen_%", translated )
     wait = "ready"
-  } else if ( params.pph_run_type == "FULL" ) {
+  } else if ( params.pph_run_type == "FULL" && !params.offline ) {
     delete_prediction_data("polyphen_%")
     wait = delete_prediction_data.out
     get_pph2_version()
