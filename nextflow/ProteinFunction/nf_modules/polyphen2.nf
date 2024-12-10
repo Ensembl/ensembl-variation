@@ -107,8 +107,8 @@ process store_pph2_scores {
     tuple val(peptide), path(weka_output), val(model)
 
   """
-  store_polyphen_scores.pl $species ${params.port} ${params.host} \
-                           ${params.user} ${params.pass} ${params.database} \
+  store_polyphen_scores.pl ${species} ${params.offline} ${params.sqlite_db} \
+                           ${params.port} ${params.host} ${params.user} ${params.pass} ${params.database} \
                            ${peptide.seqString} ${weka_output} ${model}
   """
 }
@@ -118,25 +118,27 @@ include { delete_prediction_data; update_meta } from './database.nf'
 include { filter_existing_translations        } from './translations.nf'
 
 workflow run_pph2_pipeline {
-  take: translated
+  take: 
+    translated
+    sqlite_db_prep
   main:
-    if ( params.pph_run_type == "UPDATE" ) {
-      translated = filter_existing_translations( "polyphen_%", translated )
-      wait = "ready"
-    } else if ( params.pph_run_type == "FULL" ) {
-      delete_prediction_data("polyphen_%")
-      wait = delete_prediction_data.out
-      get_pph2_version()
-      update_meta("polyphen_version", get_pph2_version.out)
-    }
-    // Run PolyPhen-2 and Weka
-    pph2 = run_pph2_on_all_aminoacid_substitutions(translated)
+  if ( params.pph_run_type == "UPDATE" && !params.offline ) {
+    translated = filter_existing_translations( "polyphen_%", translated )
+    wait = "ready"
+  } else if ( params.pph_run_type == "FULL" && !params.offline ) {
+    delete_prediction_data("polyphen_%")
+    wait = delete_prediction_data.out
+    get_pph2_version()
+    update_meta("polyphen_version", get_pph2_version.out)
+  }
+  // Run PolyPhen-2 and Weka
+  pph2 = run_pph2_on_all_aminoacid_substitutions(translated)
 
-    weka_model = Channel.of("HumDiv.UniRef100.NBd.f11.model",
-                            "HumVar.UniRef100.NBd.f11.model")
-    weka = run_weka(weka_model, pph2.scores)
-    store_pph2_scores(wait, // wait for data deletion
-                      params.species, weka)
+  weka_model = Channel.of("HumDiv.UniRef100.NBd.f11.model",
+                          "HumVar.UniRef100.NBd.f11.model")
+  weka = run_weka(weka_model, pph2.scores)
+  store_pph2_scores(wait, // wait for data deletion
+                    params.species, weka)
   emit:
     errors = pph2.errors
 }

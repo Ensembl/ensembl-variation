@@ -18,6 +18,12 @@ params.port     = null
 params.user     = null
 params.pass     = null
 params.database = null
+params.offline  = false
+
+// SQLite database params
+params.sqlite   = false
+params.sqlite_dir = params.outdir
+params.sqlite_db  = null
 
 // SIFT params
 params.sift_run_type = "NONE"
@@ -87,7 +93,9 @@ include { translate_fasta }           from './nf_modules/translations.nf'
 include { clear_assemblies;
           store_assemblies;
           drop_translation_mapping; 
-          store_translation_mapping } from './nf_modules/database.nf'
+          store_translation_mapping;
+          init_sqlite_db;
+          postprocess_sqlite_db } from './nf_modules/database.nf'
 include { run_sift_pipeline }         from './nf_modules/sift.nf'
 include { run_pph2_pipeline }         from './nf_modules/polyphen2.nf'
 
@@ -104,8 +112,19 @@ if (!params.translated) {
   }
 }
 
-if (!params.host || !params.port || !params.user || !params.pass || !params.database) {
-  exit 1, "Error: --host, --port, --user, --pass and --database need to be defined"
+if (!params.offline && (!params.host || !params.port || !params.user || !params.pass || !params.database)) {
+  exit 1, "ERROR: --host, --port, --user, --pass and --database need to be defined"
+}
+
+if (!params.offline && !params.sqlite) {
+  log.info "WARNING: --offline mode selected, setting --sqlite to true."
+  params.sqlite = true
+}
+
+if (params.sqlite) {
+  if (!params.sqlite_db) {
+    params.sqlite_db = params.sqlite_dir + "/" + params.species + 'PolyPhen_SIFT.db'
+  } 
 }
 
 // Check run type for each protein function predictor
@@ -159,6 +178,12 @@ def getFiles (files) {
 }
 
 workflow {
+  if (params.sqlite) { 
+    sqlite_db_prep = init_sqlite_db()
+  } else {
+    sqlite_db_prep = "ready"
+  }
+
   // Translate transcripts from GTF and FASTA if no translation FASTA is given
   if (!params.translated) {
     translate_fasta(getFiles(params.gtf), getFiles(params.fasta))
@@ -193,13 +218,20 @@ workflow {
                           name: "translation_mapping.tsv",
                           storeDir: params.outdir,
                           newLine: true) { it.id + "\t" + it.md5 }
+<<<<<<< HEAD
   store_translation_mapping(translation_mapping, translation_mapping_wait)
   store_assemblies(files.collect(), assemblies_wait)
+=======
+  if (!params.offline) {
+    store_translation_mapping(translation_mapping)
+  }
+>>>>>>> 2ec244b12 (Nextflow ProteinFunction: support for SQLite db)
 
   // Get unique translations based on MD5 hashes of their sequences
   translated = translated.unique { it.md5 }
 
   // Run protein function prediction
+<<<<<<< HEAD
   errors = Channel.of("# failure reasons")
   if ( params.sift_run_type != "NONE" ) errors = errors.concat(run_sift_pipeline( translated ))
   if ( params.pph_run_type  != "NONE" ) errors = errors.concat(run_pph2_pipeline( translated ))
@@ -207,4 +239,12 @@ workflow {
   errors
     .collectFile(name: 'failure_reason.tsv', newLine: true, storeDir: params.outdir)
     .subscribe { println "Errors saved to file $it" }
+=======
+  if ( params.sift_run_type != "NONE" ) run_sift_pipeline( translated, sqlite_db_prep )
+  if ( params.pph_run_type  != "NONE" ) run_pph2_pipeline( translated, sqlite_db_prep )
+
+  if ( params.sqlite ) {
+    postprocess_sqlite_db()
+  }
+>>>>>>> 2ec244b12 (Nextflow ProteinFunction: support for SQLite db)
 }
