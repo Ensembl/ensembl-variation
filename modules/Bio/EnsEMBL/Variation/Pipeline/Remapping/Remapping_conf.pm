@@ -135,8 +135,8 @@ sub resource_classes {
                                     'SLURM' => '--partition=production --time=4:00:00 --mem=8G'},
             'extra_mem'        => { 'LSF' => '-q production -R"select[mem>12500] rusage[mem=12500]" -M12500',
                                     'SLURM' => '--partition=production --time=1:00:00 --mem=24G'},
-            'extra_long'        => { 'LSF' => '-q production -R"select[mem>2500] rusage[mem=2500]" -M2500',
-                                    'SLURM' => '--partition=production --time=10:00:00 --mem=4G'},
+            'extra_long'        => { 'LSF' => '-q production -R"select[mem>6000] rusage[mem=6000]" -M6000',
+                                    'SLURM' => '--partition=production --time=10:00:00 --mem=8G'},
     };
 }
 
