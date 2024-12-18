@@ -224,14 +224,12 @@ workflow {
 
   if ( params.sift_run_type != "NONE" ) {
     errors = errors.concat(run_sift_pipeline( translated, sqlite_db_prep ))
-  }
-  else {
+  } else {
     sift_run = "done"
   }
   if ( params.pph_run_type  != "NONE" ) {
     errors = errors.concat(run_pph2_pipeline( translated, sqlite_db_prep ))
-  }
-  else {
+  } else {
     polyphen_run = "done"
   }
 

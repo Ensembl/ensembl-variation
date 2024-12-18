@@ -106,6 +106,9 @@ process store_pph2_scores {
     val species
     tuple val(peptide), path(weka_output), val(model)
 
+  output:
+    stdout
+
   """
   store_polyphen_scores.pl ${species} ${params.offline} ${params.sqlite_db} \
                            ${params.port} ${params.host} ${params.user} ${params.pass} ${params.database} \
@@ -130,6 +133,8 @@ workflow run_pph2_pipeline {
     wait = delete_prediction_data.out
     get_pph2_version()
     update_meta("polyphen_version", get_pph2_version.out)
+  } else {
+    wait = "ready"
   }
   // Run PolyPhen-2 and Weka
   pph2 = run_pph2_on_all_aminoacid_substitutions(translated)
