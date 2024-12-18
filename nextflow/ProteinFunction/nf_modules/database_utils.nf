@@ -98,22 +98,30 @@ process init_sqlite_db {
 
   """
   #!/usr/bin/perl
-  my $dbh = DBI->connect("dbi:SQLite:dbname=${params.sqlite_db}","","");
 
-  $dbh->do("DROP TABLE IF EXISTS predictions");
-  $dbh->do("CREATE TABLE predictions(md5, analysis, matrix)");
+  use DBI;
+  
+  my \$dbh = DBI->connect("dbi:SQLite:dbname=${params.sqlite_db}","","");
+  \$dbh->do("DROP TABLE IF EXISTS predictions");
+  \$dbh->do("CREATE TABLE predictions(md5, analysis, matrix)");
   """
 }
 
 process postprocess_sqlite_db {
+  input:
+    val sift_run
+    val polyphen_run
+
   output: stdout
 
   cache false
 
   """
   #!/usr/bin/perl
-  my $dbh = DBI->connect("dbi:SQLite:dbname=${params.sqlite_db}","","");
+  
+  use DBI;
 
-  $dbh->do("CREATE INDEX md5_idx ON predictions(md5)");
+  my \$dbh = DBI->connect("dbi:SQLite:dbname=${params.sqlite_db}","","");
+  \$dbh->do("CREATE INDEX md5_idx ON predictions(md5)");
   """
 }
