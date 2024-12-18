@@ -207,14 +207,12 @@ workflow {
   // Run protein function prediction
   if ( params.sift_run_type != "NONE" ) {
     sift_run = run_sift_pipeline( translated, sqlite_db_prep )
-  }
-  else {
+  } else {
     sift_run = "done"
   }
   if ( params.pph_run_type  != "NONE" ) {
     run_pph2_pipeline( translated, sqlite_db_prep )
-  }
-  else {
+  } else {
     polyphen_run = "done"
   }
 
