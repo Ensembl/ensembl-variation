@@ -71,6 +71,8 @@ def check_JVM_mem (min=0.4) {
     @param min Min memory in GiB (default: 0.4)
   */
 
+  // converts min to float to avoid error while rounding
+  min = min / 10.0 * 10.0
   mem = Runtime.getRuntime().maxMemory() / (1024 ** 3) // in GiB
   if (mem < min) {
     log.error """
