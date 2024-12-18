@@ -21,10 +21,9 @@ params.database = null
 params.offline  = false
 
 // SQLite database params
-params.sqlite   = false
-params.sqlite_dir = params.outdir
-params.sqlite_db  = null
-
+params.sqlite   = params.offline
+params.sqlite_dir = params.outdir.startsWith("/") ? params.outdir : "${workflow.launchDir}/${params.outdir}" // supports Unix-like only
+params.sqlite_db  = "${params.sqlite_dir}/${params.species}_PolyPhen_SIFT.db"
 // SIFT params
 params.sift_run_type = "NONE"
 params.median_cutoff = 2.75 // as indicated in SIFT's README
@@ -113,15 +112,8 @@ if (!params.offline && (!params.host || !params.port || !params.user || !params.
   exit 1, "ERROR: --host, --port, --user, --pass and --database need to be defined"
 }
 
-if (!params.offline && !params.sqlite) {
-  log.info "WARNING: --offline mode selected, setting --sqlite to true."
-  params.sqlite = true
-}
-
-if (params.sqlite) {
-  if (!params.sqlite_db) {
-    params.sqlite_db = params.sqlite_dir + "/" + params.species + 'PolyPhen_SIFT.db'
-  } 
+if (params.offline) {
+  log.info "INFO: --offline mode selected, --sqlite will be turned on by default. If you do not wish to generate SQLite db please use --sqlite 0."
 }
 
 // Check run type for each protein function predictor
@@ -213,10 +205,20 @@ workflow {
   translated = translated.unique { it.md5 }
 
   // Run protein function prediction
-  if ( params.sift_run_type != "NONE" ) run_sift_pipeline( translated, sqlite_db_prep )
-  if ( params.pph_run_type  != "NONE" ) run_pph2_pipeline( translated, sqlite_db_prep )
+  if ( params.sift_run_type != "NONE" ) {
+    sift_run = run_sift_pipeline( translated, sqlite_db_prep )
+  }
+  else {
+    sift_run = "done"
+  }
+  if ( params.pph_run_type  != "NONE" ) {
+    run_pph2_pipeline( translated, sqlite_db_prep )
+  }
+  else {
+    polyphen_run = "done"
+  }
 
   if ( params.sqlite ) {
-    postprocess_sqlite_db()
+    postprocess_sqlite_db(sift_run, polyphen_run)
   }
 }
