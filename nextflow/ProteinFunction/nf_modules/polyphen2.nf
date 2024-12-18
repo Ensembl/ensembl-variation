@@ -98,9 +98,12 @@ process store_pph2_scores {
     val species
     tuple val(peptide), path(weka_output), val(model)
 
+  output:
+    stdout
+
   """
-  store_polyphen_scores.pl $species ${params.port} ${params.host} \
-                           ${params.user} ${params.pass} ${params.database} \
+  store_polyphen_scores.pl ${species} ${params.offline} ${params.sqlite_db} \
+                           ${params.port} ${params.host} ${params.user} ${params.pass} ${params.database} \
                            ${peptide.seqString} ${weka_output} ${model}
   """
 }
@@ -110,16 +113,20 @@ include { delete_prediction_data; update_meta } from './database_utils.nf'
 include { filter_existing_translations        } from './translations.nf'
 
 workflow run_pph2_pipeline {
-  take: translated
+  take: 
+    translated
+    sqlite_db_prep
   main:
-  if ( params.pph_run_type == "UPDATE" ) {
+  if ( params.pph_run_type == "UPDATE" && !params.offline ) {
     translated = filter_existing_translations( "polyphen_%", translated )
     wait = "ready"
-  } else if ( params.pph_run_type == "FULL" ) {
+  } else if ( params.pph_run_type == "FULL" && !params.offline ) {
     delete_prediction_data("polyphen_%")
     wait = delete_prediction_data.out
     get_pph2_version()
     update_meta("polyphen_version", get_pph2_version.out)
+  } else {
+    wait = "ready"
   }
   // Run PolyPhen-2 and Weka
   run_pph2_on_all_aminoacid_substitutions(translated)
@@ -129,4 +136,6 @@ workflow run_pph2_pipeline {
   run_weka(weka_model, run_pph2_on_all_aminoacid_substitutions.out)
   store_pph2_scores(wait, // wait for data deletion
                     params.species, run_weka.out)
+  emit:
+    store_sift_scores.out
 }

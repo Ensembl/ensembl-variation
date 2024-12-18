@@ -18,7 +18,12 @@ params.port     = null
 params.user     = null
 params.pass     = null
 params.database = null
+params.offline  = false
 
+// SQLite database params
+params.sqlite   = params.offline
+params.sqlite_dir = params.outdir.startsWith("/") ? params.outdir : "${workflow.launchDir}/${params.outdir}" // supports Unix-like only
+params.sqlite_db  = "${params.sqlite_dir}/${params.species}_PolyPhen_SIFT.db"
 // SIFT params
 params.sift_run_type = "NONE"
 params.median_cutoff = 2.75 // as indicated in SIFT's README
@@ -84,7 +89,9 @@ if (params.help) {
 // Module imports
 include { decompress }                from './nf_modules/utils.nf'
 include { translate_fasta }           from './nf_modules/translations.nf'
-include { store_translation_mapping } from './nf_modules/database_utils.nf'
+include { store_translation_mapping;
+          init_sqlite_db;
+          postprocess_sqlite_db } from './nf_modules/database_utils.nf'
 include { run_sift_pipeline }         from './nf_modules/sift.nf'
 include { run_pph2_pipeline }         from './nf_modules/polyphen2.nf'
 
@@ -101,8 +108,12 @@ if (!params.translated) {
   }
 }
 
-if (!params.host || !params.port || !params.user || !params.pass || !params.database) {
-  exit 1, "Error: --host, --port, --user, --pass and --database need to be defined"
+if (!params.offline && (!params.host || !params.port || !params.user || !params.pass || !params.database)) {
+  exit 1, "ERROR: --host, --port, --user, --pass and --database need to be defined"
+}
+
+if (params.offline) {
+  log.info "INFO: --offline mode selected, --sqlite will be turned on by default. If you do not wish to generate SQLite db please use --sqlite 0."
 }
 
 // Check run type for each protein function predictor
@@ -156,6 +167,12 @@ def getFiles (files) {
 }
 
 workflow {
+  if (params.sqlite) { 
+    sqlite_db_prep = init_sqlite_db()
+  } else {
+    sqlite_db_prep = "ready"
+  }
+
   // Translate transcripts from GTF and FASTA if no translation FASTA is given
   if (!params.translated) {
     translate_fasta(getFiles(params.gtf), getFiles(params.fasta))
@@ -180,12 +197,26 @@ workflow {
                           name: "translation_mapping.tsv",
                           storeDir: params.outdir,
                           newLine: true) { it.id + "\t" + it.md5 }
-  store_translation_mapping(translation_mapping)
+  if (!params.offline) {
+    store_translation_mapping(translation_mapping)
+  }
 
   // Get unique translations based on MD5 hashes of their sequences
   translated = translated.unique { it.md5 }
 
   // Run protein function prediction
-  if ( params.sift_run_type != "NONE" ) run_sift_pipeline( translated )
-  if ( params.pph_run_type  != "NONE" ) run_pph2_pipeline( translated )
+  if ( params.sift_run_type != "NONE" ) {
+    sift_run = run_sift_pipeline( translated, sqlite_db_prep )
+  } else {
+    sift_run = "done"
+  }
+  if ( params.pph_run_type  != "NONE" ) {
+    run_pph2_pipeline( translated, sqlite_db_prep )
+  } else {
+    polyphen_run = "done"
+  }
+
+  if ( params.sqlite ) {
+    postprocess_sqlite_db(sift_run, polyphen_run)
+  }
 }
