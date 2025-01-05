@@ -512,8 +512,8 @@ sub get_species_data_tables {
     my @types = get_vcf_content_types($project);
 
     # Check if the file have population and genotype data and being showed
-    $species_list{$s_name}{Sample} = 1 if ( grep(/^genotype$/, @types) && genotype_samples_exists($s_name, $project) );
-    $species_list{$s_name}{Population} = 1 if ( grep(/^populations$/, @types) || is_freq_from_gts($s_name, $project) );
+    $species_list{$s_name}{Sample} = 1 if ( grep(/^genotype$/, @types) && genotype_samples_exists($s_name, $project, @hostnames) );
+    $species_list{$s_name}{Population} = 1 if ( grep(/^populations$/, @types) || is_freq_from_gts($s_name, $project, @hostnames) );
   }
 
   return \%species_list;

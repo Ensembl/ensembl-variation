@@ -369,7 +369,7 @@ foreach my $type (@type_order) {
           # Check if the file have genotype data and being showed
           if ( grep /^genotype$/, @types){
             # Check if either vcf config or database have the samples
-            if ( genotype_samples_exists($s_name, $project) ){
+            if ( genotype_samples_exists($s_name, $project, @hostnames) ){
               # Label
               $species_list{'vcf'}{$s_name}{label} = $label_name;
               

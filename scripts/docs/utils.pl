@@ -37,7 +37,7 @@ sub get_vcf_content_types {
 
 # Check if species have any population in database that would be calculated from genotypes
 sub is_freq_from_gts {
-  my ($species, $project) = @_;
+  my ($species, $project, @hostnames) = @_;
 
   foreach my $hostname (@hostnames) {
     my $sql = qq{SHOW DATABASES LIKE '%$species\%variation\_$e_version%'};
@@ -56,8 +56,8 @@ sub is_freq_from_gts {
 
 # Check if samples from a vcf files exist in either vcf config or database
 sub genotype_samples_exists {
-  my ($species, $project) = @_;
-  
+  my ($species, $project, @hostnames) = @_;
+
   # Get samples from vcf file
   my @samples;
   foreach my $file (get_all_files($project)){
