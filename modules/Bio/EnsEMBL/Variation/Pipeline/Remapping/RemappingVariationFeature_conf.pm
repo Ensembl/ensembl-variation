@@ -91,6 +91,7 @@ sub pipeline_analyses {
       -logic_name => 'pre_run_checks',
       -module     => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::PreRunChecks',
       -input_ids  => [{},],
+      -rc_name           => 'default_mem',
       -max_retry_count => 0,
       -flow_into  => {
         1 => ['init_mapping']
@@ -146,6 +147,7 @@ sub pipeline_analyses {
     {
       -logic_name => 'finish_filter_mapping',
       -module     => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::FinishFilterMapping',
+      -rc_name           => 'default_mem',
       -flow_into => {
         1 => ['load_mapping'],
       },
@@ -156,6 +158,7 @@ sub pipeline_analyses {
     {
       -logic_name => 'load_mapping',
       -module     => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::LoadMapping',
+      -rc_name           => 'default_mem',
       -flow_into => {
         1 => ['init_variant_qc'],
       },
@@ -196,6 +199,7 @@ sub pipeline_analyses {
     {
       -logic_name => 'load_mapping',
       -module     => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::LoadMapping',
+      -rc_name           => 'default_mem',
     },
     );
   }

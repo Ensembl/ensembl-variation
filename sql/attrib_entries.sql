@@ -351,6 +351,17 @@ INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES 
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (563, 'mutated_samples', 'Number mutated samples', 'Number of mutated samples from the Cancer Gene Census');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (564, 'samples_tested', 'Number samples tested', 'Number of samples tested from the Cancer Gene Census');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (565, 'samples_mutation', 'Number samples with mutation type', 'Number of samples with mutation type from the Cancer Gene Census');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (566, 'wb_auto_summary', 'WormBase-imported automated summary', 'WormBase automated summary text attribute');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (567, 'Ga4gh_id', 'Bacteria Sequence Checksum', 'Checksum generated sequence for all biological features Chromosomes, super contigs, cDNA, CDS, Peptides');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (568, 'md5_toplevel', 'Toplevel Sequence Checksum MD5', 'Toplevel genomic sequences checksum like chromosomes and supercontigs');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (569, 'sha512t24u_toplevel', 'Toplevel Sequence Checksum SHA512', 'Toplevel genomic sequences checksum like chromosomes and supercontigs');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (570, 'sha512t24u_cds', 'sha512 Checksum for cds sequences', 'sha512 Checksum for cds sequences');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (571, 'md5_cds', 'md5 Checksum for cds sequences', 'md5 Checksum for cds sequences');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (572, 'sha512t24u_cdna', 'sha512 Checksum for cdna sequences', 'sha512 Checksum for cdna sequences');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (573, 'md5_cdna', 'md5 Checksum for cdna sequences', 'md5 Checksum for cdna sequences');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (574, 'sha512t24u_pep', 'sha512 Checksum for translation sequences ', 'sha512 Checksum for translation sequences');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (575, 'md5_pep', 'md5 Checksum for translation sequences', 'md5 Checksum for translation sequences ');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (576, 'gencode_primary', 'GENCODE primary annotation', 'Gencode Primary replaces Gencode Basic for protein coding genes as the set of the most biologically relevant transcripts. Protein coding transcripts are compared to MANE Select or to Ensembl Canonical where MANE Select is not yet defined. The features (exons and introns) that are novel to the reference transcript are filtered and assessed for biological relevance using conservation and expression data. The transcripts having the filtered features are retained for the set. For noncoding genes, the Gencode Primary set is identical to the Gencode Basic set.');
 
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (1, 469, 'SO:0001483');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (2, 470, 'SNV');
@@ -938,6 +949,9 @@ INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (675, 477, '
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (676, 545, 'seedstor_links');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (677, 470, 'complex_chromosomal_rearrangement');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (678, 542, 'G2P');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (679, 477, 'barley50k');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (680, 477, 'EMS_Kronos_Exome_Capture');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (681, 477, 'Watkins_Collection');
 
 INSERT IGNORE INTO attrib_set (attrib_set_id, attrib_id) VALUES ( 1, 1);
 INSERT IGNORE INTO attrib_set (attrib_set_id, attrib_id) VALUES ( 1, 2);

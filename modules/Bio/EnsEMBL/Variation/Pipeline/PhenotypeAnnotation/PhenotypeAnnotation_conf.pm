@@ -148,7 +148,7 @@ sub default_options {
 
         default_slurm_options => '--partition=production --time=12:00:00 --mem=2G',
         highmem_slurm_options => '--partition=production --time=12:00:00 --mem=15G',
-        long_slurm_options    => '--partition=production --time=24:00:00 --mem=2G',
+        long_slurm_options    => '--partition=production --time=48:00:00 --mem=4G',
 
         # connection parameters for the hive database, you should supply the hive_db_password
         # option on the command line to init_pipeline.pl (parameters for the target database

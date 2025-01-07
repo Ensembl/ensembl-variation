@@ -674,7 +674,7 @@ sub display_codon_allele_string {
     $ref_tva->{shift_hash} = $self->{shift_hash};
     
     my $ref_display_codon = $ref_tva->display_codon;
-    
+
     return undef unless $ref_display_codon;
     
     return $ref_display_codon.'/'.$display_codon;
@@ -866,6 +866,12 @@ sub codon {
     my $cds_obj = $self->_get_alternate_cds();
     return undef unless defined($cds_obj);
     $cds = ( $self->{is_reference} ? $tv->_translateable_seq() : $cds_obj->seq() );
+
+    # modifies the $cds at the specific positions
+    # this is necessary for RefSeq transcripts that have edited alleles saved in @edit_attrs
+    if($self->{is_reference} && scalar @edit_attrs > 0) {
+      substr($cds, $tv->cds_start(undef, $tr->strand * $shifting_offset) -1, $vf_nt_len) = $seq;
+    }
 
     # and extract the codon sequence
     my $codon = ( $self->{is_reference} ? substr($cds, $codon_cds_start-1, $codon_len ) : substr($cds, $codon_cds_start-1, $codon_len + ($allele_len - $vf_nt_len)));
@@ -1439,8 +1445,8 @@ sub hgvs_transcript {
 
   if(scalar @edit_attrs > 0) {
     my $ref = $tv->get_reference_TranscriptVariationAllele;
-    $hgvs_notation->{ref} = $ref->variation_feature_seq;
-    $hgvs_notation->{alt} = $self->variation_feature_seq;
+    $hgvs_notation->{ref} = $ref->feature_seq; # ref allele relative to the feature (transcript)
+    $hgvs_notation->{alt} = $self->feature_seq; # alt allele relative to the feature (transcript)
   }
 
   my $misalignment_offset = 0;
