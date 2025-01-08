@@ -5,8 +5,8 @@ use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix;
 use Digest::MD5 qw(md5_hex);
 
-my ($species, $port, $host, $user, $pass, $dbname,
-    $offline, $sqlite,
+my ($species, $offline, $sqlite,
+    $port, $host, $user, $pass, $dbname,
     $peptide, $output_file, $model) = @ARGV;
 
 # Extract model name
@@ -79,7 +79,7 @@ if ( $any_results ){
   }
 
   if ($sqlite){
-    my $dbh = DBI->connect("dbi:SQLite:dbname=$db","","");
+    my $dbh = DBI->connect("dbi:SQLite:dbname=$sqlite","","");
     my $sth = $dbh->prepare("INSERT INTO predictions VALUES(?, ?, ?)");
 
     my $attrib_id = $model_name eq "humdiv" ? 269 : 268;

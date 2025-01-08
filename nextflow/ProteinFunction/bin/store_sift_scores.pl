@@ -5,8 +5,8 @@ use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix;
 use Digest::MD5 qw(md5_hex);
 
-my ($species, $port, $host, $user, $pass, $dbname,
-    $offline, $sqlite,
+my ($species, $offline, $sqlite,
+    $port, $host, $user, $pass, $dbname,
     $peptide, $res_file) = @ARGV;
 
 # parse the results file
@@ -66,7 +66,7 @@ if ($results_available == 1 ){
   }
 
   if ($sqlite){
-    my $dbh = DBI->connect("dbi:SQLite:dbname=$db","","");
+    my $dbh = DBI->connect("dbi:SQLite:dbname=$sqlite","","");
     my $sth = $dbh->prepare("INSERT INTO predictions VALUES(?, ?, ?)");
     $sth->execute($pred_matrix->translation_md5, 267, $pred_matrix->serialize)
   }
