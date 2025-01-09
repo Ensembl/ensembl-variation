@@ -544,10 +544,14 @@ sub source_table {
 
         my $row = set_row($s_header, $source, $version, $description, $data_type_string, '', '');
 
-        $source_table .= qq{
-          <tr class="bg$bg">
-            $row
-          </tr>};
+        if (defined $row) {
+          $source_table .= qq{
+            <tr class="bg$bg">
+              $row
+            </tr>};
+          if ($bg == 1) { $bg = 2; }
+          else { $bg = 1; }
+        }
       }
     }
   }
@@ -681,31 +685,33 @@ sub source_table {
     
     my $row = set_row($s_header,$source,$s_version,$s_description,$data_type_string,$s_phenotype,$s_somatic_status) if $counts;
     
-    # Is chip ?
-    if ($s_type eq 'chip') {
-      $chip_table .= qq{
-      <tr class="bg$cbg">
+    if (defined $row) {
+      # Is chip ?
+      if ($s_type eq 'chip') {
+        $chip_table .= qq{
+        <tr class="bg$cbg">
+          $row
+        </tr>};
+        if ($cbg == 1) { $cbg = 2; }
+        else { $cbg = 1; }
+      }
+      # Is lsdb ?
+      elsif ($s_type eq 'lsdb') {
+        $lsdb_table .= qq{
+        <tr class="bg$lbg">
         $row
-      </tr>};
-      if ($cbg == 1) { $cbg = 2; }
-      else { $cbg = 1; }
-    }
-    # Is lsdb ?
-    elsif ($s_type eq 'lsdb') {
-      $lsdb_table .= qq{
-      <tr class="bg$lbg">
-       $row
-      </tr>};
-      if ($lbg == 1) { $lbg = 2; }
-      else { $lbg = 1; }
-    }
-    else {
-      $source_table .= qq{
-      <tr class="bg$bg">
-        $row
-      </tr>};
-      if ($bg == 1) { $bg = 2; }
-      else { $bg = 1; }
+        </tr>};
+        if ($lbg == 1) { $lbg = 2; }
+        else { $lbg = 1; }
+      }
+      else {
+        $source_table .= qq{
+        <tr class="bg$bg">
+          $row
+        </tr>};
+        if ($bg == 1) { $bg = 2; }
+        else { $bg = 1; }
+      }
     }
   }
   
