@@ -118,7 +118,6 @@ if ( $sections eq "all" || grep(/^${section}$/, @sections) ){
   `cp $input_dir/$subdir/$file_name $tmp_file`;
   $content_before = get_content($section,'start');
   $content_after  = get_content($section,'end');
-  print "perl $dirname/species_list.pl -v $version -o $tmp_section -config $vcf_config_file -d_dir $data_dir -hlist $hlist -user $user -phost $phost";
   `perl $dirname/species_list.pl -v $version -o $tmp_section -config $vcf_config_file -d_dir $data_dir -hlist $hlist -user $user -phost $phost`;
   $new_content = `cat $tmp_section`;
   `rm -f $tmp_section`;

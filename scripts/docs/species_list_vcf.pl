@@ -244,19 +244,19 @@ my $html_content = qq{
     </tr>
 
     <tr class="ss_header">
-      <th $th_border_left_top>Species</th>  
-      <th $th_border_left_top>Variant</th>
+      <th style="$th_bg">Species</th>  
+      <th style="$th_bg;$th_border_left">Variant</th>
       <th style="$th_bg;padding-left:0px">
         <span class="_ht ht" title="Variant count difference with the previous Ensembl release (v.$p_version)">
           <small>(e!$p_version &rarr; e!$e_version)</small>
         </span>
       </th>
-      <th style="$th_bg">
+      <th style="$th_bg;$th_border_left">
         <a class="_ht" style="text-decoration:none" title="See detailed counts" href=species_detailed_counts.html#genotype>
           Sample
         </a>
       </th>
-      <th style="$th_bg">
+      <th style="$th_bg;$th_border_left">
         <a class="_ht" style="text-decoration:none" title="See detailed counts" href=species_detailed_counts.html#genotype>
           Population
         </a>
