@@ -189,12 +189,8 @@ foreach my $project (@{ $vcf_config->{'collections'} }) {
     
 
     # Check if the file have genotype data and being showed
-    if ( grep /^genotype$/, @types){
-      # Check if either vcf config or database have the samples
-      if ( genotype_samples_exists($s_name, $project, @hostnames) ){
-        $species_list{$s_name}{genotype} = 1;
-      }
-    }
+    $species_list{$s_name}{Sample} = 1 if ( grep(/^genotype$/, @types) && genotype_samples_exists($s_name, $project, @hostnames) );
+    $species_list{$s_name}{Population} = 1 if ( grep(/^populations$/, @types) || is_freq_from_gts($s_name, $project, @hostnames) );
     
     # Get the species labels
     my $label_name = ucfirst($s_name);
@@ -242,8 +238,14 @@ my $th_border_left_top = qq{style="$th_border_left;text-align:center"};
 my $html_content = qq{
   <table class="ss" style="width:auto">
     <tr class="ss_header">
-      <th style="$th_bg">Species</th>  
-      <th style="$th_bg">Variant</th>
+      <th></th>
+      <th colspan="2"></th>
+      <th $th_border_left_top colspan="2">Genotype</th>
+    </tr>
+
+    <tr class="ss_header">
+      <th $th_border_left_top>Species</th>  
+      <th $th_border_left_top>Variant</th>
       <th style="$th_bg;padding-left:0px">
         <span class="_ht ht" title="Variant count difference with the previous Ensembl release (v.$p_version)">
           <small>(e!$p_version &rarr; e!$e_version)</small>
@@ -251,7 +253,12 @@ my $html_content = qq{
       </th>
       <th style="$th_bg">
         <a class="_ht" style="text-decoration:none" title="See detailed counts" href=species_detailed_counts.html#genotype>
-          Genotype
+          Sample
+        </a>
+      </th>
+      <th style="$th_bg">
+        <a class="_ht" style="text-decoration:none" title="See detailed counts" href=species_detailed_counts.html#genotype>
+          Population
         </a>
       </th>
     </tr>
@@ -289,8 +296,11 @@ foreach my $display_name (sort keys(%display_list)) {
     <td style="text-align:right">$var_p_count</td>\n};
   
   
-  my $has_data = ($species_list{$sp}{genotype}) ? qq{<img src="/i/16/check.png" title="Data available" />} : '-';
-  $html_content .= qq{    <td style="text-align:center">$has_data</td>\n};
+  my $has_sample_data = ($species_list{$sp}{Sample}) ? qq{<img src="/i/16/check.png" title="Data available" />} : '-';
+  $html_content .= qq{    <td style="text-align:center">$has_sample_data</td>\n};
+
+  my $has_pop_data = ($species_list{$sp}{Population}) ? qq{<img src="/i/16/check.png" title="Data available" />} : '-';
+  $html_content .= qq{    <td style="text-align:center">$has_pop_data</td>\n};
   
   $html_content .= qq{  </tr>};
   $bg = set_bg();
