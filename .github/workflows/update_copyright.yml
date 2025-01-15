@@ -17,7 +17,7 @@ name: "Update Copyright year at the start of every year"
 
 on: 
   schedule:
-    -cron: '15 15 1 1 *'
+    - cron: '15 15 1 1 *'
 
 jobs:
   copyright-update:
