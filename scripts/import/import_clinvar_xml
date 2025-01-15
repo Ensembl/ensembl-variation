@@ -655,7 +655,7 @@ sub get_feature{
                            $attrib->{Attribute}->{Type} =~ /HGVS,\s+genomic,\s+top\s+level/ );
 
       # Make sure the chr matches the hgvs chromosome
-      if($feature{accession} =~ $attrib->{Attribute}->{Accession}) {
+      if(defined $feature{accession} && $feature{accession} =~ $attrib->{Attribute}->{Accession}) {
         $feature{hgvs_g} = $attrib->{Attribute}->{Change};
       }
       elsif(defined $feature{ypar} && $feature{ypar}{accession} =~ $attrib->{Attribute}->{Accession}) {
@@ -1436,7 +1436,7 @@ sub get_variant_by_slice_allele{
 
   return undef unless defined $cv_allele;
 
-  if(!defined $record->{feature_info}->{end} || $record->{feature_info}->{start} != $record->{feature_info}->{end}) {
+  if(!defined $record->{feature_info}->{start} || !defined $record->{feature_info}->{end} || ($record->{feature_info}->{start} != $record->{feature_info}->{end})) {
      print "too long for slice look up: ", $record->{feature_info}->{hgvs_g}, "\n" if $DEBUG == 1;
      return undef;
    }
