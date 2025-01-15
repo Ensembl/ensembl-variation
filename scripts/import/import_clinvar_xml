@@ -878,7 +878,7 @@ sub get_submitters{
       push @{$mainXrefs->{'dbSNP'}}, @{$mainXrefs->{'measureXrefs'}{$tmpMeasure}{'dbSNP'}{'rs'}} if defined $mainXrefs->{'measureXrefs'}{$tmpMeasure}{'dbSNP'} && defined $mainXrefs->{'measureXrefs'}{$tmpMeasure}{'dbSNP'}{'rs'};
     }
     # make sure the list contains unique rsIDs to deal with haplotypes/records encountered with multiple sets using same rsID
-    @{$mainXrefs->{'dbSNP'}} = keys {map { $_ => 1 } @{$mainXrefs->{'dbSNP'}} } if defined $mainXrefs->{'dbSNP'};
+    @{$mainXrefs->{'dbSNP'}} = keys %{ { map { $_ => 1 } @{$mainXrefs->{'dbSNP'}} } } if defined $mainXrefs->{'dbSNP'};
   }
 
   return \@submitters, \@submitters_somatic;
