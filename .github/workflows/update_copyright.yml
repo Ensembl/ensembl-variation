@@ -30,19 +30,21 @@ jobs:
       pull-requests: write
 
     steps:
-      -uses : actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      -name: Update Copyright files
+      - name: Update Copyright files
         run: |
-          find . -type f -exec sed -i "s/Copyright \[2016-$(date +%Y --date='1 year ago')\]/Copyright [2016-$(date +%Y)]/g" {} +
+          last_year=$(date +%Y --date='1 year ago')
+          current_year=$(date +%Y)
+          find . -type f -exec sed -i "s/Copyright \[2016-${last_year}\]/Copyright [2016-${current_year}]/g" {} +
       
-      -uses: EndBug/add-and-commit@v9
+      - uses: EndBug/add-and-commit@v9
         with: 
           new_branch: ${{ env.branch_name }}
           add: 'Copyright changes'
           message: "Update copyright year"
 
-      -name : Create pull request
+      - name : Create pull request
         env: 
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: | 
