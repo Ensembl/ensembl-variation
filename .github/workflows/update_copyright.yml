@@ -41,7 +41,7 @@ jobs:
       - uses: EndBug/add-and-commit@v9
         with: 
           new_branch: ${{ env.branch_name }}
-          add: 'Copyright changes'
+          add: '.'
           message: "Update copyright year"
 
       - name : Create pull request
