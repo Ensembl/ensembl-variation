@@ -30,7 +30,7 @@ jobs:
       pull-requests: write
 
     steps:
-      -uses : actions/checkout@4
+      -uses : actions/checkout@v4
 
       -name: Update Copyright files
         run: |
