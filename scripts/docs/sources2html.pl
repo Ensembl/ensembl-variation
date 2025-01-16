@@ -552,6 +552,9 @@ sub source_table {
           if ($bg == 1) { $bg = 2; }
           else { $bg = 1; }
         }
+        # else {
+        #   $species_news{$species}{$s_new_type} -= 1 if $s_new_type;
+        # }
       }
     }
   }
@@ -713,6 +716,9 @@ sub source_table {
         else { $bg = 1; }
       }
     }
+    else {
+      $species_news{$species}{$s_new_type} -= 1 if $s_new_type;
+    }
   }
   
   
@@ -769,12 +775,17 @@ sub source_table {
     
     my $row = set_row($s_header,$source,$s_version,$set_description,$data_type_string,'','') if $count;
 
-    $chip_table .= qq{
-    <tr class="bg$cbg">
-      $row
-    </tr>};
-    if ($cbg == 1) { $cbg = 2; }
-    else { $cbg = 1; }
+    if (defined $row) {
+      $chip_table .= qq{
+      <tr class="bg$cbg">
+        $row
+      </tr>};
+      if ($cbg == 1) { $cbg = 2; }
+      else { $cbg = 1; }
+    }
+    else {
+      $species_news{$species}{$s_new_type} -= 1 if $s_new_type;
+    }
 
   }
  
