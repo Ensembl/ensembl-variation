@@ -42,7 +42,7 @@ require "$dirname/utils.pl";
 ##########             CONFIGURE                        #######
 ###############################################################
 
-my ($e_version,$html_file,$source_id,$source,$s_version,$s_description,$s_url,$s_type,$s_status,$s_data_types,$s_order,$hlist,$phost,$skip_name,$config,$d_dir,$help);
+my ($e_version,$html_file,$source_id,$source,$s_version,$s_description,$s_url,$s_type,$s_status,$s_data_types,$s_order,$hlist,$phost,$skip_name,$config,$d_dir,$p_data,$help);
 my ($set_id,$set_name,$set_description);
 
 ## EG options
@@ -60,6 +60,7 @@ GetOptions(
      'skip_name!' => \$skip_name, 
      'config=s'   => \$config,
      'd_dir=s'    => \$d_dir,
+     'p_data=s' => \$p_data,
      'etype=s'    => \$etype
 );
 
@@ -255,6 +256,17 @@ close IN;
 
 my $vcf_config = JSON->new->decode($json_string) or throw("ERROR: Failed to parse config file $vcf_config_file\n");
 
+# read previous release data
+my $prev_data;
+if ($p_data) {
+  open IN, $p_data or throw("ERROR: Could not read from config file $p_data");
+  local $/ = undef;
+  $json_string = <IN>;
+  close IN;
+
+  $prev_data = JSON->new->decode($json_string) or throw("ERROR: Failed to parse config file $p_data");
+}
+
 ###############################################################
 ##########             MAIN PART                       ########
 ###############################################################
@@ -271,7 +283,7 @@ foreach my $hostname (@hostnames) {
   while (my ($dbname) = $sth->fetchrow_array) {
     next if ($dbname !~ /^[a-z][a-z_]*_[a-z0-9]+_variation_\d+_\d+$/i);
     next if ($dbname =~ /^(master_schema|drosophila|saccharomyces|ciona)/ || $dbname =~ /^homo_sapiens_variation_\d+_37$/ || $dbname =~ /private/);
-    
+
     $db_found ++;
     print STDERR "${dbname}\n";
     $dbname =~ /^(.+)_variation/;
@@ -474,12 +486,20 @@ sub source_table {
   
   # For variation dbs where data is based on VCF
   if ($is_vcf) {
+    # Add previous EVA version to p_list
+    if ($prev_data) {
+      my $p_version = $prev_data->{$name}->{EVA} || undef;
+      if (defined $p_version) {
+        push @p_sources, 'EVA';
+        $p_list->{EVA} = $p_version;
+      }
+    }
 
     foreach my $project (@{ $vcf_config->{'collections'} }) {
       next if $project->{annotation_type} eq 'cadd' || $project->{annotation_type} eq 'gerp';
 
       if (lc( $project->{species} ) eq $name) {
-        my ($source, $source_url, $version, $description, $info, $count, $example_url);
+        my ($source, $source_url, $description, $info, $count, $example_url);
 
         # determine type of data the file has
         my @types = get_vcf_content_types($project);
@@ -495,23 +515,23 @@ sub source_table {
           my @eva_release = grep {/release_/} (split /\//, $filename_template);
 
           if(@eva_release){
-              $version = $eva_release[0];
-              $version =~ s/release_//;
+              $s_version = $eva_release[0];
+              $s_version =~ s/release_//;
           }
           else{
-              $version = "-";
+              $s_version = "-";
           }
 
           $description = "Variants imported from EVA";
         }
 
         # Assuming the EVA release VCF file will not have genotypes
-        if ( (grep(/^genotype$/, @types) || grep(/^frequency$/, @types)) && $source_name =~ /^(PRJ)/ ){
+        if ( (grep(/^genotype$/, @types) || grep(/^populations$/, @types)) && $source_name =~ /^(PRJ)/ ){
           # Set source url using study id
           $source_url = $eva_study_url;
           $source_url =~ s/###ID###/$source_name/g;
 
-          $version = "-";
+          $s_version = "-";
 
           $description = "Variants with genotypes imported from EVA";
         }
@@ -538,11 +558,24 @@ sub source_table {
         $data_type_string .= qq{\n$spaces  <div class="$eg_class">$example</div>};
         $data_type_string .= qq{\n$spaces  <div style="clear:both"></div>\n$spaces</div>};
 
-        # Set a row for this vcf file
         my $s_header   = '<td style="width:4px;padding:0px;margin:0px';
+        # New version?
+        my $s_new_type;
+        if ($p_list->{$source} ne $s_version && $source_name eq "EVA"){
+          $s_new_type = 'version';
+          $has_new_version = 1;
+
+          $species_news{$species}{$s_new_type} += 1;
+          my $borders = ";border-top:1px solid #FFF;border-bottom:1px solid #FFF";
+          
+          $s_header .= $borders if ($bg == 1);
+          # $s_new = '<span style="color:'.$colours{$s_new_type}.'">New '.$s_new_type.'</span>' if ($s_new_type);
+          $s_header .= ';background-color:'.$colours{$s_new_type};
+        }
         $s_header .= '"></td>';
 
-        my $row = set_row($s_header, $source, $version, $description, $data_type_string, '', '');
+        # Set a row for this vcf file
+        my $row = set_row($s_header, $source, $s_version, $description, $data_type_string, '', '');
 
         if (defined $row) {
           $source_table .= qq{
@@ -552,9 +585,9 @@ sub source_table {
           if ($bg == 1) { $bg = 2; }
           else { $bg = 1; }
         }
-        # else {
-        #   $species_news{$species}{$s_new_type} -= 1 if $s_new_type;
-        # }
+        else {
+          $species_news{$species}{$s_new_type} -= 1 if $s_new_type;
+        }
       }
     }
   }
@@ -1343,6 +1376,7 @@ sub usage {
     -config         The location of the vcf_config.json file. By default it uses the existing one in the same repository.   
     -d_dir          The directory location of where the local vcf files are stored. By default it looks in - 
                     /nfs/production/flicek/ensembl/production/ensemblftp/data_files/vertebrates    
+    -p_data         Location of the json file that contain result of the previous release for comparison. (Required)
     -site           The URL of the website (optional)
     -etype          The type of Ensembl, e.g. Plant (optional)
   } . "\n";
