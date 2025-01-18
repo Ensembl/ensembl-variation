@@ -1,181 +1,264 @@
 {
    "bison_bison_bison" : {
+      "p_count_num" : 0,
       "count" : "<span class=\"vdoc_var_count vdoc_thousand\" title=\"Over 19,000 variants\">19 K</span>",
       "count_num" : 19748,
+      "EVA" : "6",
       "name" : "American bison",
-      "label" : "Bison bison bison",
-      "EVA" : 5
+      "p_count" : "-",
+      "label" : "Bison bison bison"
    },
    "callithrix_jacchus" : {
+      "p_count_num" : -1,
       "count" : "<span class=\"vdoc_var_count vdoc_million_1\" title=\"Over 14 million variants\">14 M</span>",
-      "count_num" : 14112349,
+      "count_num" : 14112348,
+      "EVA" : "6",
       "name" : "White-tufted-ear marmoset",
-      "label" : "Callithrix jacchus",
-      "EVA" : 5
+      "p_count" : "<span title=\"1 less variants\"><small>(-1)</small></span>",
+      "label" : "Callithrix jacchus"
    },
    "sander_lucioperca" : {
+      "p_count_num" : 0,
       "count" : "<span class=\"vdoc_var_count vdoc_thousand\" title=\"Over 975,000 variants\">975 K</span>",
       "count_num" : 975373,
+      "EVA" : "6",
       "name" : "Pike-perch",
-      "label" : "Sander lucioperca",
-      "EVA" : 5
+      "p_count" : "-",
+      "label" : "Sander lucioperca"
    },
    "ficedula_albicollis" : {
+      "p_count_num" : 0,
       "count" : "<span class=\"vdoc_var_count vdoc_thousand\" title=\"Over 37,000 variants\">37 K</span>",
       "count_num" : 37728,
+      "EVA" : "6",
       "name" : "Collared flycatcher",
-      "label" : "Ficedula albicollis",
-      "EVA" : 5
+      "p_count" : "-",
+      "label" : "Ficedula albicollis"
    },
    "macaca_mulatta" : {
+      "p_count_num" : 0,
       "count" : "<span class=\"vdoc_var_count vdoc_million_1\" title=\"Over 50 million variants\">50 M</span>",
       "count_num" : 50618586,
+      "EVA" : "6",
       "name" : "Macaque",
-      "label" : "Macaca mulatta",
-      "EVA" : 5
+      "p_count" : "-",
+      "label" : "Macaca mulatta"
+   },
+   "peromyscus_maniculatus_bairdii" : {
+      "p_count_num" : 81962782,
+      "count" : "<span class=\"vdoc_var_count vdoc_million_1\" title=\"Over 81 million variants\">81 M</span>",
+      "count_num" : 81962782,
+      "EVA" : "6",
+      "name" : "Northern American deer mouse",
+      "p_count" : "<span style=\"color:#090\" title=\"Over 81 million more variants\"><small>(+81 million)</small></span>",
+      "label" : "Peromyscus maniculatus bairdii"
    },
    "pan_troglodytes" : {
+      "p_count_num" : 0,
       "count" : "<span class=\"vdoc_var_count vdoc_million_1\" title=\"Over 22 million variants\">22 M</span>",
       "count_num" : 22851915,
+      "EVA" : "6",
       "name" : "Chimpanzee",
-      "label" : "Pan troglodytes",
-      "EVA" : 5
+      "p_count" : "-",
+      "label" : "Pan troglodytes"
    },
    "coturnix_japonica" : {
+      "p_count_num" : 0,
       "count" : "<span class=\"vdoc_var_count vdoc_thousand\" title=\"Over 8,000 variants\">8 K</span>",
       "count_num" : 8668,
+      "EVA" : "6",
       "name" : "Japanese quail",
-      "label" : "Coturnix japonica",
-      "EVA" : 5
+      "p_count" : "-",
+      "label" : "Coturnix japonica"
+   },
+   "microcebus_murinus" : {
+      "p_count_num" : 129295,
+      "count" : "<span class=\"vdoc_var_count vdoc_thousand\" title=\"Over 129,000 variants\">129 K</span>",
+      "count_num" : 129295,
+      "EVA" : "6",
+      "name" : "Mouse Lemur",
+      "p_count" : "<span style=\"color:#090\" title=\"Over 129,000 more variants\"><small>(+129,000)</small></span>",
+      "label" : "Microcebus murinus"
    },
    "bos_grunniens" : {
-      "count" : "<span class=\"vdoc_var_count vdoc_thousand\" title=\"Over 64,000 variants\">64 K</span>",
-      "count_num" : 64648,
+      "p_count_num" : 30833304,
+      "count" : "<span class=\"vdoc_var_count vdoc_million_1\" title=\"Over 30 million variants\">30 M</span>",
+      "count_num" : 30897952,
+      "EVA" : "6",
       "name" : "Domestic yak",
-      "label" : "Bos grunniens",
-      "EVA" : 5
+      "p_count" : "<span style=\"color:#090\" title=\"Over 30 million more variants\"><small>(+30 million)</small></span>",
+      "label" : "Bos grunniens"
    },
    "anas_platyrhynchos" : {
-      "count" : "<span class=\"vdoc_var_count vdoc_million_1\" title=\"Over 29 million variants\">29 M</span>",
+      "p_count_num" : 0,
+      "count" : "<span class=\"vdoc_var_count vdoc_thousand\" title=\"Over 337,000 variants\">337 K</span>",
       "count_num" : 337418,
+      "EVA" : "6",
       "name" : "Mallard",
-      "label" : "Anas platyrhynchos",
-      "EVA" : 5
+      "p_count" : "-",
+      "label" : "Anas platyrhynchos"
    },
    "macaca_fascicularis" : {
+      "p_count_num" : 0,
       "count" : "<span class=\"vdoc_var_count vdoc_million_2\" title=\"Over 1.6 million variants\">1.6 M</span>",
       "count_num" : 1602562,
+      "EVA" : "6",
       "name" : "Crab-eating macaque",
-      "label" : "Macaca fascicularis",
-      "EVA" : 5
+      "p_count" : "-",
+      "label" : "Macaca fascicularis"
    },
    "oreochromis_niloticus" : {
+      "p_count_num" : 0,
       "count" : "<span class=\"vdoc_var_count vdoc_thousand\" title=\"Over 63,000 variants\">63 K</span>",
       "count_num" : 63731,
+      "EVA" : "6",
       "name" : "Nile tilapia",
+      "p_count" : "-",
       "label" : "Oreochromis niloticus",
-      "EVA" : 5
+      "Population" : 1
    },
    "oncorhynchus_mykiss" : {
+      "p_count_num" : 0,
       "count" : "<span class=\"vdoc_var_count vdoc_thousand\" title=\"Over 33,000 variants\">33 K</span>",
       "count_num" : 33871,
+      "EVA" : "6",
       "name" : "Rainbow trout",
-      "label" : "Oncorhynchus mykiss",
-      "EVA" : 5
+      "p_count" : "-",
+      "label" : "Oncorhynchus mykiss"
    },
    "cavia_porcellus" : {
+      "p_count_num" : 0,
       "count" : "<span class=\"vdoc_var_count vdoc_thousand\" title=\"Over 844,000 variants\">844 K</span>",
       "count_num" : 844442,
+      "EVA" : "6",
       "name" : "Guinea Pig",
-      "label" : "Cavia porcellus",
-      "EVA" : 5
+      "p_count" : "-",
+      "label" : "Cavia porcellus"
    },
    "taeniopygia_guttata" : {
+      "p_count_num" : 0,
       "count" : "<span class=\"vdoc_var_count vdoc_million_2\" title=\"Over 1.5 million variants\">1.5 M</span>",
       "count_num" : 1568534,
+      "EVA" : "6",
       "name" : "Zebra finch",
-      "label" : "Taeniopygia guttata",
-      "EVA" : 5
+      "p_count" : "-",
+      "label" : "Taeniopygia guttata"
    },
    "meleagris_gallopavo" : {
+      "p_count_num" : -2,
       "count" : "<span class=\"vdoc_var_count vdoc_thousand\" title=\"Over 5,000 variants\">5 K</span>",
-      "count_num" : 5729,
+      "count_num" : 5727,
+      "EVA" : "6",
       "name" : "Turkey",
-      "label" : "Meleagris gallopavo",
-      "EVA" : 5
+      "p_count" : "<span title=\"2 less variants\"><small>(-2)</small></span>",
+      "label" : "Meleagris gallopavo"
    },
    "seriola_dumerili" : {
+      "p_count_num" : -2377,
       "count" : "<span class=\"vdoc_var_count vdoc_million_2\" title=\"Over 9 million variants\">9 M</span>",
-      "count_num" : 9094931,
+      "count_num" : 9092554,
+      "EVA" : "6",
       "name" : "Greater amberjack",
-      "label" : "Seriola dumerili",
-      "EVA" : 5
+      "p_count" : "<span title=\"Over 2,000 less variants\"><small>(-2,000)</small></span>",
+      "label" : "Seriola dumerili"
    },
    "salmo_salar" : {
+      "p_count_num" : 0,
       "count" : "<span class=\"vdoc_var_count vdoc_million_1\" title=\"Over 15 million variants\">15 M</span>",
       "count_num" : 15298711,
+      "EVA" : "6",
       "name" : "Atlantic salmon",
+      "p_count" : "-",
       "label" : "Salmo salar",
-      "genotype" : 1,
-      "EVA" : 5
+      "Sample" : 1,
+      "Population" : 1
    },
    "neovison_vison" : {
+      "p_count_num" : 0,
       "count" : "<span class=\"vdoc_var_count vdoc_thousand\" title=\"Over 34,000 variants\">34 K</span>",
       "count_num" : 34816,
+      "EVA" : "6",
       "name" : "American mink",
+      "p_count" : "-",
       "label" : "Neovison vison",
-      "EVA" : 5
+      "Population" : 1
    },
    "microtus_ochrogaster" : {
+      "p_count_num" : 0,
       "count" : "<span class=\"vdoc_var_count vdoc_thousand\" title=\"Over 8,000 variants\">8 K</span>",
       "count_num" : 8166,
+      "EVA" : "6",
       "name" : "Prairie vole",
-      "label" : "Microtus ochrogaster",
-      "EVA" : 5
+      "p_count" : "-",
+      "label" : "Microtus ochrogaster"
    },
    "pongo_abelii" : {
+      "p_count_num" : 0,
       "count" : "<span class=\"vdoc_var_count vdoc_million_2\" title=\"Over 9.5 million variants\">9.5 M</span>",
       "count_num" : 9587649,
+      "EVA" : "6",
       "name" : "Sumatran orangutan",
-      "label" : "Pongo abelii",
-      "EVA" : 5
+      "p_count" : "-",
+      "label" : "Pongo abelii"
    },
    "nomascus_leucogenys" : {
+      "p_count_num" : 0,
       "count" : "<span class=\"vdoc_var_count vdoc_million_2\" title=\"Over 1.1 million variants\">1.1 M</span>",
       "count_num" : 1114820,
+      "EVA" : "6",
       "name" : "Gibbon",
-      "label" : "Nomascus leucogenys",
-      "EVA" : 5
+      "p_count" : "-",
+      "label" : "Nomascus leucogenys"
+   },
+   "manacus_vitellinus" : {
+      "p_count_num" : 124060,
+      "count" : "<span class=\"vdoc_var_count vdoc_thousand\" title=\"Over 124,000 variants\">124 K</span>",
+      "count_num" : 124060,
+      "EVA" : "6",
+      "name" : "Golden-collared manakin",
+      "p_count" : "<span style=\"color:#090\" title=\"Over 124,000 more variants\"><small>(+124,000)</small></span>",
+      "label" : "Manacus vitellinus"
    },
    "chlorocebus_sabaeus" : {
+      "p_count_num" : 0,
       "count" : "<span class=\"vdoc_var_count vdoc_million_1\" title=\"Over 67 million variants\">67 M</span>",
       "count_num" : 67673192,
+      "EVA" : "6",
       "name" : "Vervet-AGM",
+      "p_count" : "-",
       "label" : "Chlorocebus sabaeus",
-      "genotype" : 1,
-      "EVA" : 5
+      "Sample" : 1,
+      "Population" : 1
    },
    "dicentrarchus_labrax" : {
+      "p_count_num" : 0,
       "count" : "<span class=\"vdoc_var_count vdoc_thousand\" title=\"Over 37,000 variants\">37 K</span>",
       "count_num" : 37125,
+      "EVA" : "6",
       "name" : "European seabass",
-      "label" : "Dicentrarchus labrax",
-      "EVA" : 5
+      "p_count" : "-",
+      "label" : "Dicentrarchus labrax"
    },
    "parus_major" : {
+      "p_count_num" : -1255,
       "count" : "<span class=\"vdoc_var_count vdoc_thousand\" title=\"Over 497,000 variants\">497 K</span>",
-      "count_num" : 498441,
+      "count_num" : 497186,
+      "EVA" : "6",
       "name" : "Great Tit",
-      "genotype" : 1,
+      "p_count" : "<span title=\"Over 1,000 less variants\"><small>(-1,000)</small></span>",
       "label" : "Parus major",
-      "EVA" : 5
+      "Sample" : 1,
+      "Population" : 1
    },
    "oryctolagus_cuniculus" : {
+      "p_count_num" : 0,
       "count" : "<span class=\"vdoc_var_count vdoc_thousand\" title=\"Over 83,000 variants\">83 K</span>",
-      "count_num": 83331,
+      "count_num" : 83331,
+      "EVA" : "6",
       "name" : "Rabbit",
+      "p_count" : "-",
       "label" : "Oryctolagus cuniculus",
-      "genotype" : 1,
-      "EVA" : 5
+      "Sample" : 1,
+      "Population" : 1
    }
 }

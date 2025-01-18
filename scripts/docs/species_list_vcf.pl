@@ -152,7 +152,7 @@ if ($p_data) {
   $json_string = <IN>;
   close IN;
 
-  my $prev_data = JSON->new->decode($json_string) or throw("ERROR: Failed to parse config file $p_data");
+  $prev_data = JSON->new->decode($json_string) or throw("ERROR: Failed to parse config file $p_data");
 }
 
 ###############################################################
@@ -181,10 +181,14 @@ foreach my $project (@{ $vcf_config->{'collections'} }) {
 
   # We are only interested with species which are vcf-only for now
   if ( grep /^source$/, @types){
+    # keep EVA version for source page
+    $species_list{$s_name}{EVA} = get_eva_version($project);
+
     # Count the number of variations if the vcf file is used as source
     my $count_var = get_variant_count($project);
     if ($count_var && $count_var > 0){
       $species_list{$s_name}{count} = round_count($count_var);
+      $species_list{$s_name}{count_num} = $count_var;
     }
     
 
@@ -222,9 +226,10 @@ foreach my $project (@{ $vcf_config->{'collections'} }) {
     # Count difference with previous release
     if ($prev_data) {
       # count the difference
-      my $count_p_var = $prev_data->{$s_name}->{count};
-      $count_p_var =~ s/<[^>]*.//g;
+      my $count_p_var = $prev_data->{$s_name}->{count_num};
+
       $species_list{$s_name}{'p_count'} = round_count_diff($count_var-$count_p_var);
+      $species_list{$s_name}{'p_count_num'} = $count_var-$count_p_var;
     }
   }
 }
