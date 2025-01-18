@@ -1,3 +1,5 @@
+use Scalar::Util qw(looks_like_number);
+
 # Determine what type data contains in the vcf file
 sub get_vcf_content_types {
   my ($project) = @_;
@@ -103,6 +105,20 @@ sub genotype_samples_exists {
   return 0;
 }
 
+# Get EVA version from file path
+sub get_eva_version {
+  my ($project) = @_;
+
+  foreach my $file (get_all_files($project)){
+    next unless $file =~ /^https:\/\/ftp\.ebi\.ac\.uk\/pub\/databases\/eva/;
+    $file =~ /^https:\/\/ftp\.ebi\.ac\.uk\/pub\/databases\/eva\/rs_releases\/release_(\d+)/;
+    my $version = $1;
+    
+    return $version if looks_like_number($version);
+  }
+
+  return "-";
+}
 
 # Get number of variant from a vcf file
 sub get_variant_count {
