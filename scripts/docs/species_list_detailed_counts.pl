@@ -367,49 +367,41 @@ foreach my $type (@type_order) {
           my @types = get_vcf_content_types($project);
           
           # Check if the file have genotype data and being showed
-          if ( grep /^genotype$/, @types){
-            # Check if either vcf config or database have the samples
-            if ( genotype_samples_exists($s_name, $project, @hostnames) ){
+          my $has_sample_data = 1 if ( grep(/^genotype$/, @types) && genotype_samples_exists($s_name, $project, @hostnames) );
+          my $has_pop_data = 1 if ( grep(/^populations$/, @types) || is_freq_from_gts($s_name, $project, @hostnames) );
+    
+          if ( defined $has_sample_data || defined $has_pop_data ){
+            # Count the number of variations if the vcf file is used as source
+            my $count_var = get_variant_count($project);
+            
+            # Count difference with previous release
+            # TBD - CURRENT PREV DATA FILE HAVE COUNT FOR SOURCE VARIANT DATA 
+            # WE NEED SEPARATE GENOTYPE DATA TO HAVE THIS DIFF WORK 
+            # my $count_p_var = $prev_data ? $prev_data->{$s_name}->{count_num} : 0;
+            $count_p_var = $count_var;
+            
+            if ($count_var && $count_var > 0){
               # Label
               $species_list{'vcf'}{$s_name}{label} = $label_name;
               
               # Disply name
               $species_list{'vcf'}{$s_name}{'name'} = $display_name;
               $display_list{'vcf'}{$display_name} = $s_name;
+
+              $species_list{'vcf'}{$s_name}{'a'} = $count_var if $has_sample_data;
+              $species_list{'vcf'}{$s_name}{'b'} = $count_var if $has_pop_data;
               
-              # Count the number of variations if the vcf file is used as source
-              my $count_var = get_variant_count($project);
-              if ($count_var && $count_var > 0){
-                $species_list{'vcf'}{$s_name}{'a'} = $count_var;
-                # We assume for vcf file sample and population variation count would be same
-                $species_list{'vcf'}{$s_name}{'b'} = $count_var;
-              }
-              
-              # Count difference with previous release
-              my $count_p_var;
-              if ($prev_data) {
-                $count_p_var = $prev_data->{$s_name}->{count};
-                $count_p_var =~ s/<[^>]*.//g;
-              }
-              else{
-                $count_p_var = 0;
-              }
-              
-              # WE NEED TO FIX THIS - FOR e109 WE DON'T HAVE INCREASE IN COUNT
-              # CURRENT PREV DATA FILE ONLY HAVE VARIANT DATA AND NOT GENOTYPE DATA
-              $count_p_var = $count_var;
-              
-              $species_list{'vcf'}{$s_name}{'p_a'} = ($count_var-$count_p_var);
-              $species_list{'vcf'}{$s_name}{'p_b'} = ($count_var-$count_p_var);
-              
-              $b_type = "num";
+              $species_list{'vcf'}{$s_name}{'p_a'} = ($count_var-$count_p_var) if $has_sample_data;
+              $species_list{'vcf'}{$s_name}{'p_b'} = ($count_var-$count_p_var) if $has_pop_data;
             }
+            
+            $b_type = "num";
           }
         }
       }
     }
   }
-  
+
   # Get html content with derived data and append 
   my ($html_content, $count_species) = generate_html_content(\%species_list,\%display_list,$label_a,$label_b,$b_type);
   $html .= qq{\n  <h2 id="$anchor" style="margin-top:40px">$type data</h2>};
