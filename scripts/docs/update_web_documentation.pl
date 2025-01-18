@@ -344,7 +344,7 @@ if ( $sections eq "all" || grep(/^${section}$/, @sections) ){
   $tmp_file  = $file_name;
 
   print localtime() . "\t# Start sources list ...\n";
-  `perl $dirname/sources2html.pl -v $version -o $tmp_file -hlist $hlist -phost $phost -config $vcf_config_file -d_dir $data_dir`;
+  `perl $dirname/sources2html.pl -v $version -o $tmp_file -hlist $hlist -phost $phost -config $vcf_config_file -d_dir $data_dir -p_data $p_data`;
 
   $copy2subdir = ($no_subdir) ? '' : $subdirs{$file_name};
   copy_updated_file($copy2subdir,$file_name,$tmp_file);
