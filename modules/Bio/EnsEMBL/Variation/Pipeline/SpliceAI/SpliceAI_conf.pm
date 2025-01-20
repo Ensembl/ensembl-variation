@@ -60,7 +60,7 @@ sub default_options {
         output_dir                 => $self->o('main_dir') . '/output', # final output files already merged by chromosome
         fasta_file                 => $self->o('fasta_file'),
         gene_annotation            => $self->o('gene_annotation'),
-        step_size                  => 500000, # number of variants used to split the main vcf files
+        step_size                  => 1000000, # number of variants used to split the main vcf files
         check_transcripts          => 0, # if set to 1 checks which are the new MANE Select transcripts for the last months and only calculates SpliceAI scores for these variants overlapping these transcripts
         transcripts_from_file      => undef,
         time_interval              => 4, # checks which transcripts were updated/created in the last 4 months; only used if check_transcripts = 1 and we want to check the new transcripts in the core db
@@ -86,7 +86,7 @@ sub resource_classes {
     return {
         %{$self->SUPER::resource_classes},
         'gpu'      => {
-                        'SLURM' => '--time=5:00:00 --gres=gpu:a100:1 --mem=24G'
+                        'SLURM' => '--time=16:00:00 --gres=gpu:1 --mem=28G'
                       },
         '4Gb_job'  => {
                         'SLURM' => "--partition=standard --time=4:00:00 --mem=8G"
