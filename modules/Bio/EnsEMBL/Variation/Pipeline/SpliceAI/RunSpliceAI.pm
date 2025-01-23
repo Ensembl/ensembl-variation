@@ -71,7 +71,7 @@ sub run_spliceai {
   my $tmp_dir = $main_dir . "/tmp";
 
   # activate conda env
-  $self->run_system_command("conda activate spliceai");
+  my $activate_env = "export PATH=/hps/software/users/ensembl/variation/conda/miniconda3/bin && source /hps/software/users/ensembl/variation/conda/miniconda3/etc/profile.d/conda.sh && conda activate spliceai";
 
   my $cmd = "spliceai -I $vcf_input_dir_chr/$vcf_file -O $output_vcf_files_dir/$vcf_file -R $fasta_file -A $gene_annotation -B 4096 -T 256 -t $tmp_dir";
 
@@ -80,7 +80,7 @@ sub run_spliceai {
     $cmd .= " -M 1";
   }
 
-  $self->run_system_command($cmd);
+  $self->run_system_command("$activate_env && $cmd");
 
 }
 
