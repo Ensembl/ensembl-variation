@@ -16,7 +16,6 @@ process translate_fasta {
 
   tag "${gtf} + ${fasta}"
   container "quay.io/biocontainers/agat:0.9.0--pl5321hdfd78af_0"
-  label 'highmem'
   publishDir "${params.outdir}"
 
   input:
@@ -47,7 +46,7 @@ process translate_fasta {
 }
 
 // module imports                                                               
-include { get_current_MD5_translations } from './database_utils.nf'        
+include { get_current_MD5_translations } from './database.nf'        
 
 workflow filter_existing_translations {
   // Filter out translation already present in database

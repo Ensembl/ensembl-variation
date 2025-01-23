@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016-2023] EMBL-European Bioinformatics Institute
+# Copyright [2016-2025] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,6 +33,7 @@ use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Utils::Exception qw(verbose throw warning);
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
 use Bio::EnsEMBL::Variation::Utils::SpecialChar qw(replace_char decode_text);
+use Bio::EnsEMBL::Variation::Utils::Reports qw(report_counts);
 
 use FindBin qw( $Bin );
 use Getopt::Long;
@@ -158,6 +159,10 @@ our $default_cs = $csa->fetch_by_name("chromosome");
 
 my $int_dba = Bio::EnsEMBL::Registry->get_DBAdaptor('multi', 'intvar');
 
+# count number of rows before import
+my @count_tables = qw(structural_variation structural_variation_feature structural_variation_sample structural_variation_association);
+report_counts($vdb, "before", \@count_tables);
+
 # set the target assembly
 $target_assembly ||= $default_cs->version;
 
@@ -269,7 +274,7 @@ foreach my $in_file (@files) {
 # Post processing for mouse annotation (delete duplicated entries in structural_variation_sample)
 post_processing_annotation() if ($species =~ /mouse|mus/i);
 post_processing_feature();
-post_processing_sample();
+post_processing_sample() if ($source_name eq 'DGVa');
 post_processing_phenotype();
 post_processing_clinical_significance();
 post_processing_failed_variants();
@@ -279,6 +284,9 @@ meta_coord();
 update_internal_db();
 verifications(); # URLs
 cleanup() if (!defined($debug));
+
+# count number of rows after import
+report_counts($vdb, "after", \@count_tables);
 
 debug(localtime()." All done!");
 
@@ -420,7 +428,7 @@ sub study_table{
     $study_ftp = "https://www.ncbi.nlm.nih.gov/dbvar/studies/$study_ftp";
   }
 
-  my $assembly_desc = " [remapped from build $assembly]" if ($mapping and $assembly ne $target_assembly);
+  my $assembly_desc = $mapping and ($assembly ne $target_assembly) ? " [remapped from build $assembly]" : "";
 
   $stmt = qq{ SELECT st.study_id, st.description, st.external_reference FROM study st, source s
               WHERE s.source_id=st.source_id AND s.name='$source_name' and st.name='$study'};
@@ -1238,7 +1246,7 @@ sub get_header_info {
     ($label, $info) = split(' ', $line);
   } 
   elsif ($line =~ /\:/) {
-    $line =~ /^(.+)\:\s+(.+)$/;
+    $line =~ /^(.+?)\:\s+(.+)$/;
     $label = $1;
     $info  = $2;
   }

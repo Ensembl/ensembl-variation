@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016-2023] EMBL-European Bioinformatics Institute
+# Copyright [2016-2025] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -288,7 +288,20 @@ my %test_output = (
             "ENSP00000435307.1:p.Arg151Lys",
             "2 base sustitution, stop gained [-1]",
             ],
-
+      39 => ["NC_000011.9:g.8806701_8806704dup",
+            "AGGC",
+            "ENST00000532930.1:n.235-2_236dup",
+            "AGGC",
+            "",
+            "3 base duplication, transcript strand match",
+            ],
+      40 => ["NC_000011.9:g.8806701_8806704dup",
+            "AGGC",
+            "ENST00000532930.1:n.235-2_236dup",
+            "GCCT",
+            "",
+            "3 base duplication, transcript strand reverse",
+            ],
 );
 
 my %test_output_shifted = (   
@@ -483,10 +496,16 @@ my %test_input = (
              "ENST00000530998.1:c.451_452delinsAA",
              "ENSP00000435307.1:p.Arg151Lys",
              ],
+      39 => ["NC_000011.9:g.8806701_8806704dup",
+             "ENST00000532930.1:n.235-2_236dup",
+             ],
+      40 => ["NC_000011.9:g.8806701_8806704dup",
+             "ENST00000313726.6:n.324+25360_324+25363dup",
+             ],
 );
 
 my %test_input_shifted = (
-     28 => ["X:g.131215392_131215393insA",
+     28 => ["X:g.131215393_131215394insA",
             "ENST00000298542.4:c.905+998dup", 
             "X:g.131215401dup",
            ],    
@@ -530,9 +549,9 @@ my %test_input_shifted = (
 
 ## results which change on left-shifting - not shifted
 my %test_output_no_shift = ( 
-     1 => ["X:g.131215393dup",
+     1 => ["X:g.131215394dup",
            "A",
-           "ENST00000298542.4:c.905+997dup", 
+           "ENST00000298542.4:c.905+997dup",
            "T",
            "",
            "duplication, intronic rc transcript"
@@ -544,19 +563,19 @@ my %test_output_no_shift = (
            "ENSP00000435307.1:p.Arg151_Ser152insTer",
             "insertion, stop gained [-1]"
            ],
-     3 =>  ["NC_000013.10:g.51519667_51519668insG",    ##rs17857128
+     3 =>  ["NC_000013.10:g.51519668dup",
            "G",
-           "ENST00000336617.2:c.615_616insG",
+           "ENST00000336617.2:c.616dup",
            "G",
            "ENSP00000337623.2:p.Glu206GlyfsTer13",
            "insertion, frameshift",
            ],
-     4 =>  ["NC_000006.11:g.30558477_30558478insA",
+     4 =>  ["NC_000006.11:g.30558477G>A",
            "A",
-           "ENST00000396515.3:c.716_717insA",
+           "ENST00000396515.3:c.716G>A",
            "A", 
            "ENSP00000379772.3:p.Ter239=",
-           "insertion, stop retained"
+           "substitution, stop retained"
           ],
      5 => ["NC_000001.10:g.154140413_154140415del",
            "-", 
@@ -566,9 +585,9 @@ my %test_output_no_shift = (
             "deletion, stop loss",
             "TAA"
           ],
-     6 => ["NC_000012.11:g.102061070_102061071insT",
+     6 => ["NC_000012.11:g.102061071dup",
            "T",
-           "ENST00000360610.2:c.2336-440_2336-439insT", 
+           "ENST00000360610.2:c.2336-439dup", 
            "T",
            "",
            "insertion, coding intron downstream"
@@ -586,8 +605,8 @@ my %test_output_no_shift = (
 
 
 my %test_input_no_shift = ( 
-     1 => ["X:g.131215393dup",
-           "ENST00000298542.4:c.905+997dup", 
+     1 => ["X:g.131215394dup",
+           "ENST00000298542.4:c.905+997dup",
           ],    
      2 => ["NC_000011.9:g.32417913_32417914insCCTACGAGTACTACC",
            "ENST00000530998.1:c.451_452insGGTAGTACTCGTAGG",
@@ -597,9 +616,9 @@ my %test_input_no_shift = (
            "ENST00000336617.2:c.615_616insG",
            "ENSP00000337623.2:p.Glu206GlyfsTer13",
            ],
-     4 => ["NC_000006.11:g.30558477_30558478insA",
-           "ENST00000396515.3:c.716_717insA",
-           "ENST00000396515.3:c.716_717insA(p.=)",
+     4 => ["NC_000006.11:g.30558477G>A",
+           "ENST00000396515.3:c.716G>A",
+           "ENST00000396515.3:c.716G>A(p.=)",
            "ENSP00000379772.3:p.Ter239=",
           ],
      5 => ["NC_000001.10:g.154140413_154140415del",
@@ -675,7 +694,6 @@ sub get_results{
  
   ## create variation feature from hgvs string
   my $variation_feature ;
-        
   eval{
     $variation_feature = $variationfeature_adaptor->fetch_by_hgvs_notation( $input );
   };
@@ -710,7 +728,7 @@ sub test_output{
   ## genomic level
   my $hgvs_genomic      = $variation_feature->get_all_hgvs_notations("", "g");
 
-  ok(  $hgvs_genomic->{$allele} eq $output->[0], "$input genomic level $output->[0], $output->[5]" );
+  is_deeply(  $hgvs_genomic->{$allele}, $output->[0], "$input genomic level $output->[0], $output->[5]" );
   if($DEBUG==1){print "TEMP: $input => gen; expected $output->[0]\t returns: $hgvs_genomic->{$allele} for allele:$allele\n";} 
 
   ## transcript level - transcript to be supplied as ref feature  - alt allele may be complimented wrt genomic reference 
@@ -718,7 +736,7 @@ sub test_output{
 
   my $hgvs_coding  = $variation_feature->get_all_hgvs_notations($transcript, "c");
 
-  ok( $hgvs_coding->{$allele} eq $output->[2], "$input ->  transcript level from VF $output->[2], $output->[5]");
+  is_deeply( $hgvs_coding->{$allele}, $output->[2], "$input ->  transcript level from VF $output->[2], $output->[5]");
   if($DEBUG==1){  print "TEMP: $input => trans; expected $output->[2]\t returns: $hgvs_coding->{$allele} for allele:$allele\n\n";}
 
   ## protein level - transcript to be supplied as ref feature - alt allele may be complimented
@@ -733,14 +751,14 @@ sub test_output{
 
     ##get from TVA too
     my $tva = $transcript_variation->get_all_alternate_BaseVariationFeatureOverlapAlleles();
-    ok( $tva->[0]->hgvs_transcript() eq $output->[2], "$input ->  transcript level from TVA $output->[2], $output->[5]");
+    is_deeply( $tva->[0]->hgvs_transcript(), $output->[2], "$input ->  transcript level from TVA $output->[2], $output->[5]");
 
     if (defined $output->[6]){ ## check reference sequence as used in HGVS is as expected
-      ok( $tva->[0]->hgvs_transcript_reference() eq $output->[6], "$input ->  transcript level correct ref,$output->[6] ");
+      is_deeply( $tva->[0]->hgvs_transcript_reference(), $output->[6], "$input ->  transcript level correct ref,$output->[6] ");
     }
 
 
-    ok( $hgvs_protein->{$allele} eq $output->[4], "$input -> protein level - $output->[4]  $output->[5]");
+    is_deeply( $hgvs_protein->{$allele}, $output->[4], "$input -> protein level - $output->[4]  $output->[5]");
     if($DEBUG==1){   print "TEMP: $input => prot; expected $output->[4]\t returns: $hgvs_protein->{$allele} for allele:$allele\n";}
   }
 }
@@ -818,5 +836,50 @@ my $hgvs_ins_2 = "NC_000003.11:g.10191482_10191483ins56";
 dies_ok { $vf_adaptor->fetch_by_hgvs_notation( $hgvs_ins_2 ) } 'fetch_by_hgvs_notation Throw unsupported insertion: incomplete description';
 my $hgvs_u = "NC_000002.11:g.(?_46746507)(?46746514)del";
 dies_ok { $vf_adaptor->fetch_by_hgvs_notation( $hgvs_u ) } 'Throw on unsupported HGVS notation';
+
+{
+  # Test trimming of alleles in hgvs_genomic when type is delins
+  # Test delins that is trimmed to an insertion
+  my $vfa = $vdba->get_variationFeatureAdaptor();
+  my $sa = $cdba->get_SliceAdaptor();
+  my $slice = $sa->fetch_by_region('chromosome', 11);
+
+  my $new_vf = Bio::EnsEMBL::Variation::VariationFeature->new(
+   -start => 8806705,
+   -end   => 8806704,
+   -slice => $slice,
+   -allele_string => '-/GCCT',
+   -strand => -1,
+   -map_weight => 1,
+   -adaptor => $vfa,
+   -variation_name => 'newSNP'
+  );
+
+  my ($hgvs_expected, $hgvs_genomic);
+  
+  $hgvs_expected = 'NC_000011.9:g.8806701_8806704dup';
+  $hgvs_genomic = $new_vf->hgvs_genomic();
+
+  is( $hgvs_genomic->{'GCCT'}, $hgvs_expected, 'hgvs_genomic, vf reverse strand');
+
+  my $ta = $cdba->get_transcriptAdaptor;
+  
+  my $tr_forward = $ta->fetch_by_stable_id("ENST00000532930");
+  my $tr_reverse = $ta->fetch_by_stable_id("ENST00000313726");
+
+  my $tvs = $new_vf->get_all_TranscriptVariations([$tr_forward, $tr_reverse]);
+  foreach my $tv (@{$tvs}) {
+      my $tva = $tv->get_all_alternate_BaseVariationFeatureOverlapAlleles();
+      
+      if ($tv->transcript->stable_id eq "ENST00000532930") {
+            $hgvs_expected = "ENST00000532930.1:n.235-2_236dup";
+            is( $tva->[0]->hgvs_transcript, $hgvs_expected, 'hgvs_transcript, vf reverse strand, transcript forward strand');
+      }
+      else {
+            $hgvs_expected = "ENST00000313726.6:n.324+25360_324+25363dup";
+            is( $tva->[0]->hgvs_transcript, $hgvs_expected, 'hgvs_transcript, vf reverse strand, transcript reverse strand');
+      }
+  }
+}
 
 done_testing(); 

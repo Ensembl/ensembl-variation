@@ -1,5 +1,5 @@
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016-2023] EMBL-European Bioinformatics Institute
+# Copyright [2016-2025] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -103,7 +103,7 @@ ok($cons->label() eq 'intron variant',                                        "c
 ok($cons->SO_term() eq 'intron_variant',                                      "consequence SO_term"); 
 ok($cons->SO_accession() eq 'SO:0001627',                                     "consequence SO_accession"); 
 ok($cons->tier() eq '3',                                                      "consequence tier"); 
-ok($cons->rank() eq '21',                                                     "consequence rank"); 
+ok($cons->rank() eq '28',                                                     "consequence rank"); 
 ok($cons->NCBI_term() eq 'intron',                                            "consequence NCBI term"); 
 ok($cons->impact() eq 'MODIFIER',                                             "consequence impact"); 
 ok($cons->display_term() eq 'INTRONIC',                                       "consequence display_term"); 
@@ -361,6 +361,7 @@ ok($vfs16a->[0]->variation_name() eq $vf_somatic_name, "somatic vf with phenotyp
 # test fetching VF with empty consequence type column
 is($vfa->fetch_by_dbID(997738282)->display_consequence, 'sequence_variant', 'empty consequence column');
 
+ok(scalar @{$vfa->fetch_all_by_location_identifier('18:40228819:A_G')} == 1, "fetch_all_by_location_identifier '18:40228819:A_G'");
 
 # test fetch Iterator
 print "\n# Test - fetch_Iterator\n";
@@ -439,11 +440,39 @@ $dbh->do(qq{DELETE FROM variation_feature WHERE variation_feature_id=$dbID;}) or
 
 print "\n# Test - fetch_by_hgvs_notation\n";
 my $hgvs_str = '9:g.139568335_1395683374GGCCGCTGGTGGGGATGGCTTCCAGCACCTGCACTGTGAC>GCGCAG';
-throws_ok {$vfa->fetch_by_hgvs_notation($hgvs_str); } qr/Region requested must be smaller than 5kb/, 'Throw on region longer than 5kbt.';
+throws_ok {$vfa->fetch_by_hgvs_notation($hgvs_str); } qr/Region requested must be smaller than/, 'HGVSg notation using a (too) long region throws an error';
 $hgvs_str = 'Q00872:p.Ala53Val';
 ok($vfa->fetch_by_hgvs_notation($hgvs_str)->allele_string eq 'C/T', 'HGVSp notation using UniProt ID');
 ok($vfa->fetch_by_hgvs_notation('ENST00000470094:c.55_111del')->end eq 32954180, 'HGVSc multi-exon deletion');
 ok($vfa->fetch_by_hgvs_notation('NM_000484:c.196_*3del')->end eq 27542743, 'HGVSc multi-exon *deletion');
+
+# test HGVS protein when codon is within two exons
+# forward strand
+my $vf_hgvs = $vfa->fetch_by_hgvs_notation('ENSP00000422007.1:p.Gly469Glu');
+ok($vf_hgvs->start eq 66326707, 'HGVSp multi-exon (forward) 1 start');
+ok($vf_hgvs->end   eq 66326707, 'HGVSp multi-exon (forward) 1 end');
+
+$vf_hgvs = $vfa->fetch_by_hgvs_notation('ENSP00000427406.1:p.P81F');
+ok($vf_hgvs->start eq 130027801, 'HGVSp multi-exon (forward) 2 start');
+ok($vf_hgvs->end   eq 130027802, 'HGVSp multi-exon (forward) 2 end');
+
+$vf_hgvs = $vfa->fetch_by_hgvs_notation('ENSP00000400908.1:p.E21S');
+ok($vf_hgvs->start eq 102008309, 'HGVSp multi-exon (forward) 3 start');
+ok($vf_hgvs->end   eq 102010980, 'HGVSp multi-exon (forward) 3 end');
+
+# reverse strand
+$vf_hgvs = $vfa->fetch_by_hgvs_notation('ENSP00000293261:p.Arg232Met');
+ok($vf_hgvs->start eq 48846578, 'HGVSp multi-exon (reverse) 1');
+ok($vf_hgvs->end   eq 48846578, 'HGVSp multi-exon (reverse) 1');
+
+$vf_hgvs = $vfa->fetch_by_hgvs_notation('ENSP00000324740.4:p.G91F');
+ok($vf_hgvs->start eq 751804, 'HGVSp multi-exon (reverse) 2 start');
+ok($vf_hgvs->end   eq 756557, 'HGVSp multi-exon (reverse) 2 end');
+
+$vf_hgvs = $vfa->fetch_by_hgvs_notation('ENSP00000385444.1:p.R527T');
+ok($vf_hgvs->start eq 32716, 'HGVSp multi-exon (reverse) 3');
+ok($vf_hgvs->end   eq 32716, 'HGVSp multi-exon (reverse) 3');
+
 
 print "\n# Test - fetch_by_spdi_notation\n";
 my $spdi_str = 'NC_000013.10:32954017::';

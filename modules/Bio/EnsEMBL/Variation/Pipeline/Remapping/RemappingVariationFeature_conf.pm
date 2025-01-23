@@ -1,6 +1,6 @@
 =head1 LICENSE
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2023] EMBL-European Bioinformatics Institute
+Copyright [2016-2025] EMBL-European Bioinformatics Institute
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -91,6 +91,7 @@ sub pipeline_analyses {
       -logic_name => 'pre_run_checks',
       -module     => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::PreRunChecks',
       -input_ids  => [{},],
+      -rc_name           => 'default_mem',
       -max_retry_count => 0,
       -flow_into  => {
         1 => ['init_mapping']
@@ -99,17 +100,17 @@ sub pipeline_analyses {
     {   
       -logic_name        => 'init_mapping', 
       -module            => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::InitVariationFeatureMapping',
-      -rc_name           => 'default_mem',
+      -rc_name           => 'default_mem_long',
       -analysis_capacity => 5,
       -flow_into => { 
         '2->A' => ['run_mapping'],
         'A->1' => ['init_parse_mapping']
-      },		
+      },
     },
     {
       -logic_name => 'run_mapping',
       -module     => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::RunMapping',
-      -rc_name    => 'high_mem',
+      -rc_name    => 'extra_mem',
     },
     {
       -logic_name        => 'init_parse_mapping', 
@@ -146,6 +147,7 @@ sub pipeline_analyses {
     {
       -logic_name => 'finish_filter_mapping',
       -module     => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::FinishFilterMapping',
+      -rc_name           => 'default_mem',
       -flow_into => {
         1 => ['load_mapping'],
       },
@@ -156,6 +158,7 @@ sub pipeline_analyses {
     {
       -logic_name => 'load_mapping',
       -module     => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::LoadMapping',
+      -rc_name           => 'default_mem',
       -flow_into => {
         1 => ['init_variant_qc'],
       },
@@ -174,13 +177,13 @@ sub pipeline_analyses {
       -logic_name        => 'variant_qc',
       -module            => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::VariationFeatureQC',
       -analysis_capacity => 5,
-      -rc_name           => 'default_mem',
+      -rc_name           => 'extra_long',
     },
     {
       -logic_name => 'finish_variant_qc',
       -module     => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::FinishVariationFeatureQC',
       -max_retry_count => 0,
-      -rc_name    => 'default_mem',
+      -rc_name    => 'high_mem_long',
        -flow_into => {
         1 => ['compare_prev_assembly'],
       },
@@ -196,6 +199,7 @@ sub pipeline_analyses {
     {
       -logic_name => 'load_mapping',
       -module     => 'Bio::EnsEMBL::Variation::Pipeline::Remapping::LoadMapping',
+      -rc_name           => 'default_mem',
     },
     );
   }
@@ -203,4 +207,3 @@ sub pipeline_analyses {
 }
 
 1;
-

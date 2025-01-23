@@ -1,5 +1,5 @@
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016-2023] EMBL-European Bioinformatics Institute
+# Copyright [2016-2025] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -86,9 +86,10 @@ die "Failed to import required data structures from config module '$config':\n$@
 
 my $hdr = q{package Bio::EnsEMBL::Variation::Utils::Constants;
 
-#####################################################################
-# NB: THIS FILE HAS BEEN AUTOMATICALLY GENERATED, EDIT WITH CAUTION #
-#####################################################################
+##############################################################################
+#   NB: AUTOMATICALLY GENERATED FILE; AVOID MANUAL EDITING! EDIT Config.pm   #
+#   AND THEN RUN perl scripts/misc/create_config_consts.pl > Constants.pm    #
+##############################################################################
 
 use strict;
 use warnings;

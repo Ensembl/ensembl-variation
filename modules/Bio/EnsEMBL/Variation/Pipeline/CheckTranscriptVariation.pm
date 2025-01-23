@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2023] EMBL-European Bioinformatics Institute
+Copyright [2016-2025] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -53,6 +53,27 @@ sub run {
     ## Update meta table with this analysis
     $self->update_meta();
 
+    my $species = $self->param('species');
+    my $adaptor = $self->get_adaptor($species, 'variation');
+    my $dbname = $adaptor->dbc()->dbname();
+
+    # prepare old_server_uri to which to compare against
+    my $old_server_uri = $self->param('old_server_uri');
+
+    unless ($old_server_uri) {
+      my $user    = $adaptor->dbc()->user;
+      my $port    = $adaptor->dbc()->port;
+      my $host    = $adaptor->dbc()->host;
+      my $pass    = $adaptor->dbc()->pass;
+      my $release = $self->param('ensembl_release') - 1;
+      $old_server_uri ||= sprintf("mysql://%s:%s@%s:%s/%s",
+                                $user, $pass, $host, $port, $release);
+    }
+
+    $self->param('dc_output_ids', { dbname => $dbname, old_server_uri => [ $old_server_uri ] });
+    if ($self->param('run_dc')) {
+      $self->dataflow_output_id($self->param('dc_output_ids'), 1);
+    }
 }
 
 =head2 get_new_results
@@ -370,4 +391,3 @@ sub update_meta {
 }
 
 1;
-

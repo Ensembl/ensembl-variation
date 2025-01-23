@@ -1,5 +1,5 @@
 -- Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
--- Copyright [2016-2023] EMBL-European Bioinformatics Institute
+-- Copyright [2016-2025] EMBL-European Bioinformatics Institute
 -- 
 -- Licensed under the Apache License, Version 2.0 (the "License");
 -- you may not use this file except in compliance with the License.
@@ -1413,7 +1413,7 @@ CREATE TABLE IF NOT EXISTS variation_set_structural_variation (
 */
 
 CREATE TABLE transcript_variation (
-    transcript_variation_id             INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+    transcript_variation_id             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     variation_feature_id                INT(11) UNSIGNED NOT NULL,
     feature_stable_id                   VARCHAR(128) DEFAULT NULL,
     allele_string                       TEXT,
@@ -1450,9 +1450,9 @@ CREATE TABLE transcript_variation (
                                             'feature_truncation',
                                             'protein_altering_variant',
                                             'start_retained_variant',
-										'splice_donor_5th_base_variant',
-										'splice_donor_region_variant',
-										'splice_polypyrimidine_tract_variant'
+                                            'splice_donor_5th_base_variant',
+                                            'splice_donor_region_variant',
+                                            'splice_polypyrimidine_tract_variant'
                                         ),
     cds_start                           INT(11) UNSIGNED,
     cds_end                             INT(11) UNSIGNED,
@@ -1824,7 +1824,7 @@ CREATE TABLE meta (
 
   meta_id 		INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
   species_id  INT UNSIGNED DEFAULT 1,
-  meta_key    VARCHAR( 40 ) NOT NULL,
+  meta_key    VARCHAR( 64 ) NOT NULL,
   meta_value  VARCHAR( 255 ) NOT NULL,
 
   PRIMARY KEY ( meta_id ),
@@ -1835,13 +1835,10 @@ CREATE TABLE meta (
 
 
 # Add schema type and schema version to the meta table.
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type', 'variation'), (NULL, 'schema_version', '110');
-
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_type', 'variation'), (NULL, 'schema_version', '114');
 
 # Patch IDs for new release
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_109_110_a.sql|schema version');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_109_110_b.sql|Add DDG2P data_source_attrib to variation_citation');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_109_110_c.sql|Add new clinical_significance values to variation, variation_feature and structural_variation');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_113_114_a.sql|schema version');
 
 /**
 @header  Failed tables

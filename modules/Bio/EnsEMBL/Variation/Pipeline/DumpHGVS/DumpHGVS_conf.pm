@@ -1,6 +1,6 @@
 =head1 LICENSE
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2023] EMBL-European Bioinformatics Institute
+Copyright [2016-2025] EMBL-European Bioinformatics Institute
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -91,10 +91,14 @@ sub resource_classes {
     my ($self) = @_;
     return {
         %{$self->SUPER::resource_classes},  # inherit 'default' from the parent class
-            'test_mem'    => { 'LSF' => '-q production -R"select[mem>100] rusage[mem=100]" -M100'},
-            'default_mem' => { 'LSF' => '-q production -R"select[mem>2000] rusage[mem=2000]" -M2000'},
-            'medium_mem'  => { 'LSF' => '-q production -R"select[mem>4000] rusage[mem=4000]" -M4000'},
-            'high_mem'    => { 'LSF' => '-q production -R"select[mem>8000] rusage[mem=8000]" -M8000'},
+            'test_mem'    => { 'LSF' => '-q production -R"select[mem>100] rusage[mem=100]" -M100',
+                               'SLURM' => '--partition=production --time=12:00:00 --mem=1G' },
+            'default_mem' => { 'LSF' => '-q production -R"select[mem>2000] rusage[mem=2000]" -M2000',
+                               'SLURM' => '--partition=production --time=12:00:00 --mem=4G' },
+            'medium_mem'  => { 'LSF' => '-q production -R"select[mem>4000] rusage[mem=4000]" -M4000',
+                               'SLURM' => '--partition=production --time=12:00:00 --mem=8G'},
+            'high_mem'    => { 'LSF' => '-q production -R"select[mem>8000] rusage[mem=8000]" -M8000',
+                               'SLURM' => '--partition=production --time=12:00:00 --mem=12G' },
     };
 }
 
@@ -125,12 +129,13 @@ sub pipeline_analyses {
           bin_size => $self->o('bin_size')
       },
       -rc_name           => 'medium_mem',
-      -max_retry_count   => 0,
-      -analysis_capacity => 5,
+      -max_retry_count   => 2,
+      -analysis_capacity => 400,
     },
     {
       -logic_name => 'finish_dump_hgvs',
       -module     => 'Bio::EnsEMBL::Variation::Pipeline::DumpHGVS::FinishDumpHGVS',
+      -rc_name    => 'default_mem',
       -max_retry_count   => 0,
     },
   );

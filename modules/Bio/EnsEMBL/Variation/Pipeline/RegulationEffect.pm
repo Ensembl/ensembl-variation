@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2023] EMBL-European Bioinformatics Institute
+Copyright [2016-2025] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -60,15 +60,9 @@ sub run {
     my @regulatory_features = grep { $_->seq_region_end <= $seq_region_end  } @{$regulatory_feature_adaptor->fetch_all_by_Slice($slice)||[]};
     $self->add_regulatory_feature_variations(\@regulatory_features);
 
-    if ($self->param('use_experimentally_validated_mf')) {
-      foreach my $rf (@regulatory_features) {
-        my $motif_features = $rf->get_all_experimentally_verified_MotifFeatures();
-        $self->add_motif_feature_variations($motif_features);
-      }
-    } else {
-      my @motif_features = grep { $_->seq_region_end <= $seq_region_end  } @{$motif_feature_adaptor->fetch_all_by_Slice($slice)||[]};
-      $self->add_motif_feature_variations(\@motif_features);
-    }
+    my @motif_features = grep { $_->seq_region_end <= $seq_region_end  } @{$motif_feature_adaptor->fetch_all_by_Slice($slice)||[]};
+    $self->add_motif_feature_variations(\@motif_features);
+
     return;
 }
 
@@ -89,6 +83,9 @@ sub add_regulatory_feature_variations {
   my $slice_adaptor = $cdba->get_SliceAdaptor; 
 
   foreach my $regulatory_feature (@$regulatory_features) {
+    # skip EMER feature types as they can have very long names
+    next if $regulatory_feature->feature_so_term eq 'epigenetically_modified_region';
+
     my $slice = $slice_adaptor->fetch_by_Feature($regulatory_feature) or die "Failed to get slice around RegulatoryFeature: " . $regulatory_feature->stable_id;
     for my $vf ( @{ $slice->get_all_VariationFeatures }, @{ $slice->get_all_somatic_VariationFeatures } ) {
       my $rfv = Bio::EnsEMBL::Variation::RegulatoryFeatureVariation->new(

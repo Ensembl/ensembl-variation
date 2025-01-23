@@ -1,5 +1,5 @@
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016-2023] EMBL-European Bioinformatics Institute
+# Copyright [2016-2025] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -678,6 +678,28 @@ my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
 my $vdb = $multi->get_DBAdaptor('variation');
 my $cdb = $multi->get_DBAdaptor('core');
 my $rdb = $multi->get_DBAdaptor('funcgen');
+
+# test partial exons and intron
+$config = copy_config($base_config, {
+  database => 1,
+  hgvs => 1,
+
+  # core adaptors
+  sa  => $cdb->get_SliceAdaptor,
+  ta  => $cdb->get_TranscriptAdaptor,
+  ga  => $cdb->get_GeneAdaptor,
+  csa => $cdb->get_CoordSystemAdaptor,
+
+  # var adaptors
+  va    => $vdb->get_VariationAdaptor,
+  vfa   => $vdb->get_VariationFeatureAdaptor,
+  tva   => $vdb->get_TranscriptVariationAdaptor,
+  svfa  => $vdb->get_StructuralVariationFeatureAdaptor,
+});
+
+($vf) = @{parse_line($config, '22:g.50654268_50655147del')};
+$cons = get_all_consequences($config, [$vf]);
+ok($cons && $cons->[0]->{Extra}->{HGVSp} eq 'ENSP00000370288.2:p.Leu492_Ala510del', "testing HGVSp covering full intron and partial exons");
 
 # make DB config
 $config = copy_config($base_config, {

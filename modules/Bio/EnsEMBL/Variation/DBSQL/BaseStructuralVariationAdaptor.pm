@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2023] EMBL-European Bioinformatics Institute
+Copyright [2016-2025] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -57,7 +57,7 @@ package Bio::EnsEMBL::Variation::DBSQL::BaseStructuralVariationAdaptor;
 use Bio::EnsEMBL::Variation::BaseStructuralVariation;
 use Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
-use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
+use Bio::EnsEMBL::Utils::Scalar qw(assert_ref wrap_array);
 use DBI qw(:sql_types);
 
 our @ISA = ('Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor');
@@ -247,6 +247,76 @@ sub fetch_all_by_Source {
   return $result;
 }
 
+# Internal method for getting the internal dbIDs for a list of names
+sub _name_to_dbID {
+    my $self = shift;
+    my $name_list = shift;
+
+    $name_list = wrap_array($name_list);
+    throw ("A list of names is required") unless (scalar(@{$name_list}));
+
+    # Use a hash to store the name to dbID mapping
+    my %dbIDs;
+
+    # Statement to get the dbIDs from structural_variation
+    my $stmt = qq{
+        SELECT sv.variation_name, sv.structural_variation_id
+        FROM   structural_variation sv
+        WHERE
+    };
+    my $sth;
+
+    # Work on batches of $batch_size;
+    my $batch_size = 200;
+    # Make a local copy of the list to work on
+    my $local_list = [@{$name_list}];
+    while (scalar(@{$local_list})) {
+        # Get the next batch and construct the constraint
+        my @names = splice(@{$local_list},0,$batch_size);
+        my $constraint = "('" . join("','",@names) . "')";
+        $constraint = "sv.variation_name" . qq{ IN $constraint};
+
+        # Prepare a statement
+        $sth = $self->prepare($stmt . qq{ $constraint });
+        $sth->execute();
+
+        # Fetch the results and populate the hash
+        my ($name,$dbID);
+        $sth->bind_columns(\$name,\$dbID);
+        while ($sth->fetch()) {
+            $dbIDs{$name} = $dbID;
+        }
+    }
+
+    # Return a hashref with the name -> dbID mapping
+    return \%dbIDs;
+}
+
+=head2 fetch_all_by_name_list
+
+  Arg [1]    : reference to list of names $list
+  Example    : @vars = @{$sva->fetch_all_by_name_list(["esv1815690", "cnvi0111251"])};
+  Description: Retrieves a set of structural variations via their names. This is
+               faster than repeatedly calling fetch_by_name if there are a large
+               number of variations to retrieve
+  Returntype : reference to list of Bio::EnsEMBL::Variation::StructuralVariation objects
+  Exceptions : throw on bad argument
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub fetch_all_by_name_list {
+    my $self = shift;
+    my $list = shift;
+
+    # Get a list of dbIDs for the names
+    my $dbIDs = $self->_name_to_dbID($list);
+
+    # Then fetch the variations by dbID list instead
+    my @dbID_list = values(%{$dbIDs});
+    return $self->fetch_all_by_dbID_list(\@dbID_list);
+}
 
 =head2 fetch_all_by_dbID_list
 

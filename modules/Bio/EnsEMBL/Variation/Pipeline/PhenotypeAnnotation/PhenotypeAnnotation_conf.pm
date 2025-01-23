@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2023] EMBL-European Bioinformatics Institute
+Copyright [2016-2025] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -143,8 +143,12 @@ sub default_options {
         default_lsf_options => '-qproduction -R"select[mem>2000] rusage[mem=2000]" -M2000',
         medmem_lsf_options  => '-qproduction -R"select[mem>4000] rusage[mem=4000]" -M4000',
         urgent_lsf_options  => '-qproduction -R"select[mem>2000] rusage[mem=2000]" -M2000',
-        highmem_lsf_options => '-qproduction -R"select[mem>15000] rusage[mem=15000] span[hosts=1]" -M15000 -n4', # this is LSF speak for "give me 15GB of memory"
+        highmem_lsf_options => '-qproduction -R"select[mem>15000] rusage[mem=15000] span[hosts=1]" -M15000 -n4',
         long_lsf_options    => '-qproduction -R"select[mem>2000] rusage[mem=2000]" -M2000',
+
+        default_slurm_options => '--partition=production --time=12:00:00 --mem=2G',
+        highmem_slurm_options => '--partition=production --time=12:00:00 --mem=15G',
+        long_slurm_options    => '--partition=production --time=48:00:00 --mem=4G',
 
         # connection parameters for the hive database, you should supply the hive_db_password
         # option on the command line to init_pipeline.pl (parameters for the target database
@@ -176,10 +180,13 @@ sub default_options {
 sub resource_classes {
     my ($self) = @_;
     return {
-          'default' => { 'LSF' => $self->o('default_lsf_options') },
+          'default' => { 'LSF' => $self->o('default_lsf_options'),
+                         'SLURM' => $self->o('default_slurm_options') },
           'urgent'  => { 'LSF' => $self->o('urgent_lsf_options')  },
-          'highmem' => { 'LSF' => $self->o('highmem_lsf_options') },
-          'long'    => { 'LSF' => $self->o('long_lsf_options')    },
+          'highmem' => { 'LSF' => $self->o('highmem_lsf_options'),
+                         'SLURM' => $self->o('highmem_slurm_options') },
+          'long'    => { 'LSF' => $self->o('long_lsf_options'),
+                         'SLURM' => $self->o('long_slurm_options') },
           'medmem'  => { 'LSF' => $self->o('medmem_lsf_options') },
     };
 }
@@ -210,7 +217,7 @@ sub pipeline_analyses {
 
                 '5' => [ 'import_rgd' ],
                 '6' => [ 'import_zfin' ],
-		'14' => [ 'import_wormbase' ],
+                '14' => [ 'import_wormbase' ],
             },
         },
 
@@ -242,7 +249,7 @@ sub pipeline_analyses {
             },
             -input_ids      => [], #default
             -hive_capacity  => 1,
-            -rc_name    => 'default',
+            -rc_name    => 'long',
             -flow_into  => {
                 2 => [ 'check_gwas']
             },
@@ -582,18 +589,18 @@ sub pipeline_analyses {
             },
         },
         {   -logic_name => 'import_wormbase',
-      	    -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportWORMBASE',
-      	    -parameters => {
-      	    	source_version => $self->o('wormbase_release'),
+            -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportWORMBASE',
+            -parameters => {
+              source_version => $self->o('wormbase_release'),
                       @common_params,
                   },
-      	    -input_ids  => [],
-      	    -hive_capacity  => 1,
-      	    -rc_name    => 'default',
-      	    -flow_into  => {
-            		1 => [ 'check_phenotypes']
-      	    },
-        },    
+            -input_ids  => [],
+            -hive_capacity  => 1,
+            -rc_name    => 'default',
+            -flow_into  => {
+                1 => [ 'check_phenotypes']
+            },
+        },
         {   -logic_name => 'import_ontology_mapping',
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::OntologyMapping',
             -parameters => {

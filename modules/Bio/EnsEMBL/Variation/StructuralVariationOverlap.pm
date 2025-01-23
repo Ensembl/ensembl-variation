@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2023] EMBL-European Bioinformatics Institute
+Copyright [2016-2025] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -38,6 +38,7 @@ use Bio::EnsEMBL::Variation::StructuralVariationOverlapAllele;
 use Bio::EnsEMBL::Utils::Scalar qw(assert_ref);
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Utils::Argument qw(rearrange);
+use Bio::EnsEMBL::Variation::Utils::VariationEffect qw(MAX_DISTANCE_FROM_TRANSCRIPT overlap _compare_seq_region_names);
 
 use base qw(Bio::EnsEMBL::Variation::BaseVariationFeatureOverlap);
 
@@ -56,17 +57,36 @@ sub new {
     }
 
     # call the superclass constructor
-    my $self = $class->SUPER::new(%args);
-    
-    # construct a fake 'allele'
-    
-    $self->add_StructuralVariationOverlapAllele(
-        Bio::EnsEMBL::Variation::StructuralVariationOverlapAllele->new_fast({
-            structural_variation_overlap => $self,
-            allele_number                => 1,  
-        })
-    );
+    my $self      = $class->SUPER::new(%args);
+    my $vf        = $self->base_variation_feature;
+    my $breakends = $vf->get_breakends;
 
+    if (!@$breakends) {
+        # construct a fake 'allele'
+        $self->add_StructuralVariationOverlapAllele(
+            Bio::EnsEMBL::Variation::StructuralVariationOverlapAllele->new_fast({
+                structural_variation_overlap => $self,
+                allele_number                => 1,
+            })
+        );
+    } else {
+        # construct alternate alleles (breakends)
+        my $feature = $self->feature;
+        my $num = 0;
+        for ($vf, @$breakends) {
+            if (_close_to_feature($_, $feature)) {
+                $self->add_StructuralVariationOverlapAllele(
+                    Bio::EnsEMBL::Variation::StructuralVariationOverlapAllele->new(
+                        -structural_variation_overlap => $self,
+                        -symbolic_allele              => $_->{string},
+                        -breakend                     => $_,
+                        -allele_number                => $num,
+                    )
+                );
+            }
+            $num++;
+        }
+    }
     return $self;
 }
 
@@ -105,6 +125,24 @@ sub new_fast {
     }
 
     return $self;
+}
+
+sub _close_to_feature {
+    my $vf = shift;
+    my $feature = shift;
+
+    my $chr = $vf->{seq_region_name} || $vf->{chr};
+    return 0 unless (
+      defined $chr and
+      defined $feature and defined $feature->seq_region_name and
+      _compare_seq_region_names($chr, $feature->seq_region_name)
+    );
+
+    # check if breakend is within/around feature
+    my $slice = $feature->feature_Slice;
+    $slice = $slice->expand(MAX_DISTANCE_FROM_TRANSCRIPT, MAX_DISTANCE_FROM_TRANSCRIPT);
+    return 0 unless overlap($vf->{start}, $vf->{end}, $slice->start, $slice->end);
+    return 1;
 }
 
 sub structural_variation_feature {

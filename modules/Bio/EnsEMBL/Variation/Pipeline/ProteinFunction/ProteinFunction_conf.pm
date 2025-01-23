@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2023] EMBL-European Bioinformatics Institute
+Copyright [2016-2025] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -68,7 +68,7 @@ sub default_options {
         hive_root_dir           => $ENV{'HOME'} . '/src/ensembl-hive',
         
         pipeline_name           => 'protein_function',
-        pipeline_dir            => '/hps/nobackup/production/ensembl/'.$ENV{USER}.'/'.$self->o('pipeline_name'),
+        pipeline_dir            => '/hps/nobackup/flicek/ensembl/variation/'.$ENV{USER}.'/'.$self->o('pipeline_name'),
         species_dir             => $self->o('pipeline_dir').'/'.$self->o('species'),
         # directory used for the hive's own output files
 
@@ -138,9 +138,15 @@ sub default_options {
         
         default_lsf_options => '-qproduction -R"select[mem>2000] rusage[mem=2000]" -M2000',
         medmem_lsf_options  => '-qproduction -R"select[mem>8000] rusage[mem=8000]" -M8000',
-        urgent_lsf_options  => '-qproduction -R"select[mem>2000] rusage[mem=2000]" -M2000',
         highmem_lsf_options => '-qproduction -R"select[mem>24000] rusage[mem=24000]" -M24000',
-        long_lsf_options    => '-qproduction -R"select[mem>2000] rusage[mem=2000]" -M2000',
+
+        default_slurm_options      => '--partition=production --time=1:30:00 --mem=2G',
+        default_long_slurm_options => '--partition=production --time=6:00:00 --mem=2G',
+        medmem_slurm_options       => '--partition=production --time=6:00:00 --mem=8G',
+        medmem_long_slurm_options  => '--partition=production --time=24:00:00 --mem=8G',
+        highmem_slurm_options      => '--partition=production --time=2:30:00 --mem=24G',
+        highmem_med_slurm_options  => '--partition=production --time=24:00:00 --mem=24G',
+        highmem_long_slurm_options => '--partition=production --time=120:00:00 --mem=24G',
 
         # Polyphen specific parameters
 
@@ -211,24 +217,24 @@ sub default_options {
         dbnsfp_max_workers      => 50,
         dbnsfp_working          => $self->o('species_dir').'/dbnsfp_working',
         dbnsfp_annotation       => { GRCh37 =>
-                                      { file => $self->o('variation_data') . '/dbNSFP/4.3a/dbNSFP4.3a_grch37.gz',
-                                        version => '4.3a',
+                                      { file => $self->o('variation_data') . '/dbNSFP/4.9c/dbNSFP4.9c_grch37.gz',
+                                        version => '4.9c',
                                       },
                                      GRCh38 =>
-                                      { file => $self->o('variation_data') . '/dbNSFP/4.3a/dbNSFP4.3a_grch38.gz',
-                                        version => '4.3a',
+                                      { file => $self->o('variation_data') . '/dbNSFP/4.9c/dbNSFP4.9c_grch38.gz',
+                                        version => '4.9c',
                                       } 
                                     },
         cadd_run_type         => NONE,
         cadd_max_workers      => 50,
         cadd_working          => $self->o('species_dir').'/cadd_working',
         cadd_annotation       => { GRCh37 =>
-                                      { file => $self->o('variation_data') . '/CADD/v1.6/grch37/CADD_GRCh37_1.6_whole_genome_SNVs.tsv.gz',
-                                        version => 'v1.6',
+                                      { file => $self->o('variation_data') . '/CADD/v1.7/grch37/CADD_GRCh37_1.7_whole_genome_SNVs.tsv.gz',
+                                        version => 'v1.7',
                                       },
                                    GRCh38 =>
-                                      { file => $self->o('variation_data') . '/CADD/v1.6/grch38/CADD_GRCh38_1.6_whole_genome_SNVs.tsv.gz',
-                                        version => 'v1.6',
+                                      { file => $self->o('variation_data') . '/CADD/v1.7/grch38/CADD_GRCh38_1.7_whole_genome_SNVs.tsv.gz',
+                                        version => 'v1.7',
                                       } 
                                   },
     };
@@ -251,11 +257,20 @@ sub pipeline_create_commands {
 sub resource_classes {
     my ($self) = @_;
     return {
-          'default' => { 'LSF' => $self->o('default_lsf_options') },
-          'medmem'  => { 'LSF' => $self->o('medmem_lsf_options')  },
-          'urgent'  => { 'LSF' => $self->o('urgent_lsf_options')  },
-          'highmem' => { 'LSF' => $self->o('highmem_lsf_options') },
-          'long'    => { 'LSF' => $self->o('long_lsf_options')    },
+          'default'      => { 'LSF' => $self->o('default_lsf_options'),
+                              'SLURM' => $self->o('default_slurm_options') },
+          'default_long' => { 'LSF' => $self->o('default_lsf_options'),
+                              'SLURM' => $self->o('default_long_slurm_options') },
+          'medmem'       => { 'LSF' => $self->o('medmem_lsf_options'),
+                              'SLURM' => $self->o('medmem_slurm_options')  },
+          'medmem_long'  => { 'LSF' => $self->o('medmem_lsf_options'),
+                              'SLURM' => $self->o('medmem_long_slurm_options')  },
+          'highmem'      => { 'LSF' => $self->o('highmem_lsf_options'),
+                              'SLURM' => $self->o('highmem_slurm_options') },
+          'highmem_med'  => { 'LSF' => $self->o('highmem_lsf_options'),
+                              'SLURM' => $self->o('highmem_med_slurm_options') },
+          'highmem_long' => { 'LSF' => $self->o('highmem_lsf_options'),
+                              'SLURM' => $self->o('highmem_long_slurm_options') },
     };
 }
 
@@ -322,7 +337,7 @@ sub pipeline_analyses {
             -max_retry_count => 0,
             -input_ids      => [],
             -hive_capacity  => $self->o('pph_max_workers'),
-            -rc_name        => 'highmem',
+            -rc_name        => 'highmem_med',
             -flow_into      => {
                 2   => [ 'run_weka' ],
             },
@@ -357,7 +372,7 @@ sub pipeline_analyses {
             -max_retry_count => 0,
             -input_ids      => [],
             -hive_capacity  => $self->o('sift_max_workers'),
-            -rc_name        => 'medmem',
+            -rc_name        => 'medmem_long',
             -flow_into      => {
                 -1 => ['run_sift_highmem']
             }
@@ -421,7 +436,7 @@ sub pipeline_analyses {
             -input_ids            => [], #default
             -hive_capacity        => 1,
             -analysis_capacity    => 1,
-            -rc_name              => 'default',
+            -rc_name              => 'default_long',
             -failed_job_tolerance => 0,
             -max_retry_count      => 0,
         },
@@ -430,4 +445,3 @@ sub pipeline_analyses {
 }
 
 1;
-

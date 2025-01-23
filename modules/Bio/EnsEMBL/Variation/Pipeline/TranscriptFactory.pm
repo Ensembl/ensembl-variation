@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2023] EMBL-European Bioinformatics Institute
+Copyright [2016-2025] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -68,6 +68,7 @@ sub run {
   my @transcript_ids_fan = (); # e-hive speak: fan transcript_ids (run for each transcript_id in parallel) 
 
   for my $transcript (@{ $gene->get_all_Transcripts }) { 
+    next if ($self->param('gencode_primary') and !$transcript->gencode_primary);
     push @transcript_ids_fan, {
       transcript_stable_id => $transcript->stable_id,
       max_distance => $max_distance,

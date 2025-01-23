@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2023] EMBL-European Bioinformatics Institute
+Copyright [2016-2025] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -92,7 +92,7 @@ sub default_options {
         vf_per_slice => 2_000_000, # if number of vf exceeds this we split the slice and dump for each split slice
         max_split_slice_length => 5e6, # 1e7
 
-        data_dir => '/nfs/production/panda/ensembl/variation/data/',
+        data_dir => '/nfs/production/flicek/ensembl/variation/data/',
 
         ancestral_alleles_file_dir => {'homo_sapiens' => {
                                           'GRCh37' => $self->o('data_dir') . 'ancestral_alleles/GRCh37',
@@ -167,9 +167,12 @@ sub resource_classes {
     my ($self) = @_;
     return {
         %{$self->SUPER::resource_classes},
-        'default' => { 'LSF' => '-q production -R"select[mem>1500] rusage[mem=1500]" -M1500'},
-        'medium'  => { 'LSF' => '-q production -R"select[mem>4500] rusage[mem=4500]" -M4500'},
-        'high'    => { 'LSF' => '-q production -R"select[mem>8500] rusage[mem=8500]" -M8500'},
+        'default' => { 'LSF' => '-q production -R"select[mem>1500] rusage[mem=1500]" -M1500',
+                       'SLURM' => '--partition=production --time=10:00:00 --mem=4G'},
+        'medium'  => { 'LSF' => '-q production -R"select[mem>4500] rusage[mem=4500]" -M4500',
+                       'SLURM' => '--partition=production --time=10:00:00 --mem=8G'},
+        'high'    => { 'LSF' => '-q production -R"select[mem>8500] rusage[mem=8500]" -M8500',
+                       'SLURM' => '--partition=production --time=10:00:00 --mem=12G'},
     };
 }
 sub pipeline_analyses {

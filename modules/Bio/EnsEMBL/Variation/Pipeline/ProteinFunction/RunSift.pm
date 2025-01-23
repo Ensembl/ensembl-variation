@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2023] EMBL-European Bioinformatics Institute
+Copyright [2016-2025] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -153,7 +153,8 @@ sub run {
           close $error_fh;
           chomp $error_msg;
           if ($error_msg =~ /Not enough sequences \(only \d\) found by the PSI-BLAST search!|PSI-BLAST found no hits/) {
-            $self->_insert_error_msg($translation_md5, 'Not enough sequences found by PSI-BLAST search', 'sift');
+            $self->_insert_error_msg(
+              $translation_md5, 'Not enough sequences found by PSI-BLAST search', 'sift');
             return;
           } else {
             die "Alignment for $translation_md5 failed - cmd: $flat_cmd: $stderr";
@@ -200,15 +201,22 @@ sub run {
     my ($exit_code, $stderr, $flat_cmd) = $self->run_system_command($cmd);
 
     if ($exit_code != 0) {
-      # If there was not enough sequences selected, skip it
       my $error_file = "protein.alignedfasta.error";
-      if (-s $error_file) {
+
+      if ($stderr =~ /over 100\% identical with your protein query/) {
+        $self->_insert_error_msg(
+          $translation_md5, 'Sequence is over 100 percent identical to protein query', 'sift');
+        return;
+      } elsif (-s $error_file) {
+        # If there was not enough sequences selected, skip it
         open my $error_fh, "<", $error_file or die $!;
         my $error_msg = <$error_fh>;
         close $error_fh;
         chomp $error_msg;
+
         if ($error_msg =~ /\d sequence\(s\) were chosen\. Less than the minimum number of sequences required/) {
-          $self->_insert_error_msg($translation_md5, 'Less than the minimum number of sequences required', 'sift');
+          $self->_insert_error_msg(
+            $translation_md5, 'Less than the minimum number of sequences required', 'sift');
           return;
         } else {
           die("Failed to run for $translation_md5 with $flat_cmd: error $exit_code = [$stderr]\n");

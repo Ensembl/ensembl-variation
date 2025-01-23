@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2023] EMBL-European Bioinformatics Institute
+Copyright [2016-2025] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -69,11 +69,18 @@ sub new {
 
   my $self = $class->SUPER::new(@_);
 
-  if (! grep {$_ eq $self->annotation_file_version} ('3.5a', '4.0a', '4.1a', '4.2a', '4.3a')) {
+  my @versions = ('3.5a', '4.0a', '4.1a', '4.2a', '4.3a', '4.4a', '4.5c', '4.6c', '4.7c', '4.8c', '4.9c');
+  if (! grep {$_ eq $self->annotation_file_version} @versions) {
     die "dbNSFP version " . $self->annotation_file_version . " is not supported.";
   }
 
-  $self->analysis([qw/dbnsfp_revel dbnsfp_meta_lr dbnsfp_mutation_assessor/]);
+  my @analysis;
+  if ($self->annotation_file_version =~ /a$/) {
+    # include extra scores if using academic licenced file
+    @analysis = qw/dbnsfp_revel/;
+  }
+  push @analysis, qw/dbnsfp_meta_lr dbnsfp_mutation_assessor/;
+  $self->analysis(\@analysis);
 
   return $self;
 }
@@ -189,7 +196,7 @@ my $column_names = {
       },
     },
   },
-    '4.3a' => {
+  '4.3a' => {
     assembly_unspecific => {
       chr => '#chr',
       ref => 'ref',
@@ -198,6 +205,144 @@ my $column_names = {
       aaalt => 'aaalt',
       aaref => 'aaref',
       revel_score => 'REVEL_score',
+      meta_lr_score => 'MetaLR_score',
+      meta_lr_pred => 'MetaLR_pred',
+      mutation_assessor_score => 'MutationAssessor_rankscore',
+      mutation_assessor_pred => 'MutationAssessor_pred',
+    },
+    'assembly_specific' => {
+      'GRCh37' => {
+        pos => 'hg19_pos(1-based)'
+      },
+      'GRCh38' => {
+        pos => 'pos(1-based)'
+      },
+    },
+  },
+  '4.4a' => {
+    assembly_unspecific => {
+      chr => '#chr',
+      ref => 'ref',
+      refcodon => 'refcodon',
+      alt => 'alt',
+      aaalt => 'aaalt',
+      aaref => 'aaref',
+      revel_score => 'REVEL_score',
+      meta_lr_score => 'MetaLR_score',
+      meta_lr_pred => 'MetaLR_pred',
+      mutation_assessor_score => 'MutationAssessor_rankscore',
+      mutation_assessor_pred => 'MutationAssessor_pred',
+    },
+    'assembly_specific' => {
+      'GRCh37' => {
+        pos => 'hg19_pos(1-based)'
+      },
+      'GRCh38' => {
+        pos => 'pos(1-based)'
+      },
+    },
+  },
+  '4.5c' => {
+    assembly_unspecific => {
+      chr => '#chr',
+      ref => 'ref',
+      refcodon => 'refcodon',
+      alt => 'alt',
+      aaalt => 'aaalt',
+      aaref => 'aaref',
+      revel_score => 'undef',
+      meta_lr_score => 'MetaLR_score',
+      meta_lr_pred => 'MetaLR_pred',
+      mutation_assessor_score => 'MutationAssessor_rankscore',
+      mutation_assessor_pred => 'MutationAssessor_pred',
+    },
+    'assembly_specific' => {
+      'GRCh37' => {
+        pos => 'hg19_pos(1-based)'
+      },
+      'GRCh38' => {
+        pos => 'pos(1-based)'
+      },
+    },
+  },
+  '4.6c' => {
+    assembly_unspecific => {
+      chr => '#chr',
+      ref => 'ref',
+      refcodon => 'refcodon',
+      alt => 'alt',
+      aaalt => 'aaalt',
+      aaref => 'aaref',
+      revel_score => 'undef',
+      meta_lr_score => 'MetaLR_score',
+      meta_lr_pred => 'MetaLR_pred',
+      mutation_assessor_score => 'MutationAssessor_rankscore',
+      mutation_assessor_pred => 'MutationAssessor_pred',
+    },
+    'assembly_specific' => {
+      'GRCh37' => {
+        pos => 'hg19_pos(1-based)'
+      },
+      'GRCh38' => {
+        pos => 'pos(1-based)'
+      },
+    },
+  },
+  '4.7c' => {
+    assembly_unspecific => {
+      chr => '#chr',
+      ref => 'ref',
+      refcodon => 'refcodon',
+      alt => 'alt',
+      aaalt => 'aaalt',
+      aaref => 'aaref',
+      revel_score => 'undef',
+      meta_lr_score => 'MetaLR_score',
+      meta_lr_pred => 'MetaLR_pred',
+      mutation_assessor_score => 'MutationAssessor_rankscore',
+      mutation_assessor_pred => 'MutationAssessor_pred',
+    },
+    'assembly_specific' => {
+      'GRCh37' => {
+        pos => 'hg19_pos(1-based)'
+      },
+      'GRCh38' => {
+        pos => 'pos(1-based)'
+      },
+    },
+  },
+  '4.8c' => {
+    assembly_unspecific => {
+      chr => '#chr',
+      ref => 'ref',
+      refcodon => 'refcodon',
+      alt => 'alt',
+      aaalt => 'aaalt',
+      aaref => 'aaref',
+      revel_score => 'undef',
+      meta_lr_score => 'MetaLR_score',
+      meta_lr_pred => 'MetaLR_pred',
+      mutation_assessor_score => 'MutationAssessor_rankscore',
+      mutation_assessor_pred => 'MutationAssessor_pred',
+    },
+    'assembly_specific' => {
+      'GRCh37' => {
+        pos => 'hg19_pos(1-based)'
+      },
+      'GRCh38' => {
+        pos => 'pos(1-based)'
+      },
+    },
+  },
+  '4.9c' => {
+    assembly_unspecific => {
+      chr => '#chr',
+      ref => 'ref',
+      refcodon => 'refcodon',
+      alt => 'alt',
+      aaalt => 'aaalt',
+      aaref => 'aaref',
+      revel_score => 'undef',
       meta_lr_score => 'MetaLR_score',
       meta_lr_pred => 'MetaLR_pred',
       mutation_assessor_score => 'MutationAssessor_rankscore',
@@ -253,7 +398,7 @@ sub load_predictions_for_triplets {
 
 sub add_predictions {
   my ($self, $data, $i, $mutated_aa) = @_;
-  if ($data->{revel_score} ne '.') {
+  if (defined $data->{revel_score} && $data->{revel_score} ne '.') {
     my $prediction = ($data->{revel_score} >= $REVEL_CUTOFF) ? 'likely disease causing' : 'likely benign';
     $self->add_prediction($i, $mutated_aa, 'dbnsfp_revel', $data->{revel_score}, $prediction);
   }
@@ -265,8 +410,8 @@ sub add_predictions {
     my $prediction;
     if ($self->annotation_file_version eq '3.5a') {
       $prediction = $predictions->{dbnsfp_mutation_assessor}->{$data->{mutation_assessor_pred}};  
-    } elsif (grep {$_ eq $self->annotation_file_version} ('4.0a', '4.1a', '4.2a', '4.3a')) {
-      # In 4.0a the prediction is not always provided and we need to assign it based on the score thresholds     
+    } elsif ($self->annotation_file_version =~ /^4\./) {
+      # In version 4 files, the prediction is not always provided and we need to assign it based on the score thresholds     
       # The rankscore cutoffs between "H" and "M", "M" and "L", and "L" and "N", are 0.9307, 0.52043 and 0.19675,
       my $score = $data->{mutation_assessor_score}; 
       if ($score >= 0.9307) {
@@ -309,11 +454,15 @@ sub get_dbNSFP_row {
   }
   my $assembly_unspecific = $column_names->{$dbnsfp_version}->{assembly_unspecific};
   foreach my $column_name (keys %{$assembly_unspecific}) {
-    $data->{$column_name} = $raw_data{$assembly_unspecific->{$column_name}};
+    if (defined $assembly_unspecific->{$column_name}) {
+      $data->{$column_name} = $raw_data{$assembly_unspecific->{$column_name}};
+    }
   }
   my $assembly_specific =  $column_names->{$dbnsfp_version}->{assembly_specific}->{$assembly}; 
   foreach my $column_name (keys %{$assembly_specific}) {
-    $data->{$column_name} = $raw_data{$assembly_specific->{$column_name}};
+    if (defined $assembly_specific->{$column_name}) {
+      $data->{$column_name} = $raw_data{$assembly_specific->{$column_name}};
+    }
   }
   return $data;
 }

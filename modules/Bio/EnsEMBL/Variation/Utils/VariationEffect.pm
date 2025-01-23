@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2023] EMBL-European Bioinformatics Institute
+Copyright [2016-2025] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file excepst in compliance with the License.
@@ -55,12 +55,13 @@ use warnings;
 
 use base qw(Exporter);
 
-our @EXPORT_OK = qw(overlap _intron_overlap within_feature within_cds MAX_DISTANCE_FROM_TRANSCRIPT within_intron stop_lost stop_retained start_lost frameshift $UPSTREAM_DISTANCE $DOWNSTREAM_DISTANCE);
+our @EXPORT_OK = qw(overlap _intron_overlap _compare_seq_region_names within_feature within_cds MAX_DISTANCE_FROM_TRANSCRIPT within_intron stop_lost stop_retained start_lost frameshift $UPSTREAM_DISTANCE $DOWNSTREAM_DISTANCE $CHROMOSOME_SYNONYMS);
 
 use constant MAX_DISTANCE_FROM_TRANSCRIPT => 5000;
 
 our $UPSTREAM_DISTANCE = MAX_DISTANCE_FROM_TRANSCRIPT;
 our $DOWNSTREAM_DISTANCE = MAX_DISTANCE_FROM_TRANSCRIPT;
+our $CHROMOSOME_SYNONYMS = {};
 
 #
 # Interface with some of the module function XS reimplementation
@@ -107,12 +108,34 @@ sub _intron_overlap {
   }
 }
 
+sub _compare_seq_region_names {
+  my ($region1, $region2) = @_;
+  if ($CHROMOSOME_SYNONYMS) {
+    return 1 if
+      (
+        exists $CHROMOSOME_SYNONYMS->{$region1} &&
+        grep /^$region2$/, keys %{$CHROMOSOME_SYNONYMS->{$region1}}
+      ) || (
+        exists $CHROMOSOME_SYNONYMS->{$region2} &&
+        grep /^$region1$/, keys %{$CHROMOSOME_SYNONYMS->{$region2}}
+      );
+  }
+  return lc $region1 eq lc $region2;
+}
+
 sub within_feature {
-    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    my ($bvfoa, $feat, $bvfo, $bvf, $match_seq_region_names) = @_;
     $bvf  ||= $bvfoa->base_variation_feature;
     $feat ||= $bvfoa->feature;
-    
-    return overlap(
+    $match_seq_region_names ||= 0;
+
+    my $cmp_chr = 1;
+    if ($match_seq_region_names) {
+      my $chr  = $bvf->{chr} || $bvf->{slice}->{seq_region_name};
+      $cmp_chr = _compare_seq_region_names($chr, $feat->{slice}->{seq_region_name});
+    }
+
+    return $cmp_chr && overlap(
         $bvf->{start}, 
         $bvf->{end},
         $feat->{start}, 
@@ -154,6 +177,18 @@ sub complete_overlap_feature {
     );
 }
 
+sub _supporting_cnv_terms {
+  #if variant is CNV, return class SO terms for its supporting variants
+  my $bvf = shift;
+
+  return if $bvf->class_SO_term(undef, 1) ne "copy_number_variation";
+  return unless defined $bvf->structural_variation;
+
+  my $support_vars  = $bvf->structural_variation->get_all_SupportingStructuralVariants;
+  my @support_terms = map { $_->class_SO_term } @{$support_vars};
+  return @support_terms;
+}
+
 sub deletion {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
     $bvf ||= $bvfoa->base_variation_feature;
@@ -169,11 +204,12 @@ sub deletion {
     
     # structural variant depends on class
     if($bvf->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature')) {
-        return (
-            ($bvf->class_SO_term(undef, 1) eq 'deletion') or
-            ($bvf->class_SO_term(undef, 1) =~ /deletion/i) or
-            ($bvf->class_SO_term(undef, 1) =~ /loss/i)
-        );
+      return (
+          copy_number_loss(@_) or
+          ($bvf->class_SO_term(undef, 1) eq 'deletion') or
+          ($bvf->class_SO_term(undef, 1) =~ /deletion/i) or
+          grep(/deletion/i, _supporting_cnv_terms($bvf))
+      );
     }
     
     else { return 0; }
@@ -194,13 +230,14 @@ sub insertion {
     
     # structural variant depends on class
     if($bvf->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature')) {
-        return (
-            duplication(@_) or
-            tandem_duplication(@_) or
-            ($bvf->class_SO_term(undef, 1) eq 'insertion') or
-            ($bvf->class_SO_term(undef, 1) =~ /insertion/i) or
-            ($bvf->class_SO_term(undef, 1) =~ /gain/i)
-        );
+      my $class_SO_term = $bvf->class_SO_term(undef, 1);
+
+      return (
+          copy_number_gain(@_) or
+          ($bvf->class_SO_term(undef, 1) eq 'insertion') or
+          ($bvf->class_SO_term(undef, 1) =~ /insertion/i) or
+          grep(/insertion/i, _supporting_cnv_terms($bvf))
+      );
     }
     
     else { return 0; }
@@ -209,15 +246,23 @@ sub insertion {
 sub copy_number_gain {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
     $bvf ||= $bvfoa->base_variation_feature;
-    
-    return (duplication(@_) or tandem_duplication(@_) or $bvf->class_SO_term(undef, 1) =~ /gain/i);
+
+    return (
+        duplication(@_) or
+        tandem_repeat(@_) or
+        $bvf->class_SO_term(undef, 1) =~ /gain/i or
+        grep(/gain/i, _supporting_cnv_terms($bvf))
+    );
 }
 
 sub copy_number_loss {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
     $bvf ||= $bvfoa->base_variation_feature;
     
-    return $bvf->class_SO_term(undef, 1) =~ /loss/i;
+    return (
+      $bvf->class_SO_term(undef, 1) =~ /loss/i or
+      grep(/loss/i, _supporting_cnv_terms($bvf))
+    );
 }
 
 sub duplication {
@@ -227,13 +272,14 @@ sub duplication {
     return (
         (
             ($bvf->class_SO_term(undef, 1) eq 'duplication') or
-            ($bvf->class_SO_term(undef, 1) =~ /duplication/i)
+            ($bvf->class_SO_term(undef, 1) =~ /duplication/i) or
+            grep(/duplication/i, _supporting_cnv_terms($bvf))
         ) and
-        (not tandem_duplication(@_))
+        (not tandem_repeat(@_))
     );
 }
 
-sub tandem_duplication {
+sub tandem_repeat {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
     $bvf ||= $bvfoa->base_variation_feature;
     
@@ -255,9 +301,23 @@ sub tandem_duplication {
     if($bvf->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature')) {
         return (
             ($bvf->class_SO_term(undef, 1) eq 'tandem_duplication') or
-            ($bvf->class_SO_term(undef, 1) =~ /tandem_duplication/i) 
+            ($bvf->class_SO_term(undef, 1) eq 'tandem_repeat') or
+            ($bvf->class_SO_term(undef, 1) =~ /tandem/i) or
+            grep(/tandem/i, _supporting_cnv_terms($bvf))
         );
     }
+}
+
+sub chromosome_breakpoint {
+  my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+  $bvf ||= $bvfoa->base_variation_feature;
+
+  if ($bvf->isa('Bio::EnsEMBL::Variation::StructuralVariationFeature')) {
+    return (
+      ($bvf->class_SO_term(undef, 1) eq 'chromosome_breakpoint') or
+      ($bvf->class_SO_term(undef, 1) =~ /chromosome_breakpoint/i)
+    );
+  }
 }
 
 sub feature_ablation {
@@ -281,6 +341,7 @@ sub feature_elongation {
     return 0 if $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele');
     
     return (
+        within_cdna(@_) and
         complete_within_feature($bvfoa, $feat, $bvfo, $bvf) and
         (copy_number_gain(@_) or insertion(@_))
     );
@@ -288,10 +349,18 @@ sub feature_elongation {
 
 sub feature_truncation {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+    $bvf  ||= $bvfoa->base_variation_feature;
     $feat ||= $bvfoa->base_variation_feature_overlap->feature;
-    
+
     return 0 if $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele');
     
+    if(chromosome_breakpoint(@_)) {
+        return 1 if within_feature($bvfoa, $feat, $bvfo, $bvfoa->breakend, 1);
+    }
+
+    # require transcripts (but not other feature types) to be within cDNA
+    return 0 if $feat->isa('Bio::EnsEMBL::Transcript') and not within_cdna(@_);
+
     return (
         (
             partial_overlap_feature($bvfoa, $feat, $bvfo, $bvf) or
@@ -803,6 +872,7 @@ sub start_lost {
             my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
         
             return 0 unless $ref_pep;
+            return 0 unless $alt_pep && $alt_pep ne 'X';
             
             # allow for introducing additional bases that retain start codon e.g. atg -> aCGAtg
             $cache->{start_lost} = (
@@ -866,7 +936,7 @@ sub _inv_start_altered {
         substr($utr_and_translateable, $cdna_start - 1, ($cdna_end - $cdna_start) + 1) = $vf_feature_seq;
         my $new_sc = substr($utr_and_translateable, $atg_start, 3);
 
-        return $cache->{inv_start_altered} = 1 if substr($utr_and_translateable, $atg_start, 3) ne 'ATG';
+        return $cache->{inv_start_altered} = 1 if $new_sc ne 'ATG';
     }
 
     return $cache->{inv_start_altered};
@@ -882,7 +952,12 @@ sub start_retained_variant {
 
     my $pre = $bvfoa->_pre_consequence_predicates;
 
-    return ($pre->{increase_length} || $pre->{decrease_length}) && _overlaps_start_codon(@_) && !_ins_del_start_altered(@_);
+    return 0 unless _overlaps_start_codon(@_);
+    if ($pre->{snp}) {
+        return !_snp_start_altered(@_);
+    } else { 
+        return !_ins_del_start_altered(@_);
+    }
 }
 
 sub _overlaps_start_codon {
@@ -910,6 +985,42 @@ sub _overlaps_start_codon {
     }
 
     return $cache->{overlaps_start_codon};
+}
+
+sub _snp_start_altered {
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+
+    my $cache = $bvfoa->{_predicate_cache} ||= {};
+
+    unless(exists($cache->{snp_start_altered})) {
+        $cache->{snp_start_altered} = 1;
+
+        return 0 if $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptStructuralVariationAllele');
+        return 0 unless $bvfoa->seq_is_unambiguous_dna();
+
+        $bvfo ||= $bvfoa->base_variation_feature_overlap;
+
+        # get cDNA coords
+        my ($cdna_start, $cdna_end) = ($bvfo->cdna_start, $bvfo->cdna_end);
+        return 0 unless $cdna_start && $cdna_end;
+
+        # make and edit UTR + translateable seq
+        my $translateable = $bvfo->_translateable_seq();
+        my $utr = $bvfo->_five_prime_utr();
+        my $utr_and_translateable = ($utr ? $utr->seq : '').$translateable;
+
+        my $vf_feature_seq = $bvfoa->feature_seq;
+        $vf_feature_seq = '' if $vf_feature_seq eq '-';
+
+        substr($utr_and_translateable, $cdna_start - 1, ($cdna_end - $cdna_start) + 1) = $vf_feature_seq;
+        
+        # get the aa now in place of prevoius start codon and see it is ATG
+        # it can happen for non-ATG variant (e.g - gene WT1, transcript ENST00000332351)
+        my $aa_replacing_start_codon = substr($utr_and_translateable, 0 - length($translateable), 3);
+        $cache->{snp_start_altered} = 0 if $aa_replacing_start_codon eq "ATG";
+    }
+
+    return $cache->{snp_start_altered};
 }
 
 sub _ins_del_start_altered {
@@ -944,6 +1055,15 @@ sub _ins_del_start_altered {
 
         substr($utr_and_translateable, $cdna_start - 1, ($cdna_end - $cdna_start) + 1) = $vf_feature_seq;
 
+        # check if still retain start
+        if ($utr) {
+            my $atg_start = length($utr->seq);
+            my $new_sc = substr($utr_and_translateable, $atg_start, 3);
+            my $new_utr = substr($utr_and_translateable, 0, length($utr->seq));
+
+            return $cache->{ins_del_start_altered} if ($new_utr eq $utr->seq && $new_sc eq 'ATG');
+        }
+
         # sequence shorter, we know it has been altered
         return $cache->{ins_del_start_altered} = 1 if length($utr_and_translateable) < length($translateable);
 
@@ -958,7 +1078,7 @@ sub synonymous_variant {
     
     return 0 unless $ref_pep;
 
-    return ( ($alt_pep eq $ref_pep) and (not stop_retained(@_) and ($alt_pep !~ /X/) and ($ref_pep !~ /X/)) );
+    return ( ($alt_pep eq $ref_pep) and (not stop_retained(@_) and not start_retained_variant(@_) and ($alt_pep !~ /X/) and ($ref_pep !~ /X/)) );
 }
 
 sub missense_variant {
@@ -970,8 +1090,10 @@ sub missense_variant {
     return 0 if stop_lost(@_);
     return 0 if stop_gained(@_);
     return 0 if partial_codon(@_);
+    return 0 if stop_retained(@_); # added because a variant can not be stop_retained and misense 
     
-    return ( $ref_pep ne $alt_pep ) && ( length($ref_pep) == length($alt_pep) );
+    # also need to check that the translated sequence is not the same i think . 
+    return ( $ref_pep ne $alt_pep ) && ( length($ref_pep) == length($alt_pep)  );
 }
 
 sub inframe_insertion {
@@ -1044,7 +1166,7 @@ sub inframe_deletion {
         return 0 if partial_codon(@_);
 
         my ($ref_codon, $alt_codon) = _get_codon_alleles(@_);
-        
+        my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
         return 0 unless defined $ref_codon;
         return 0 unless length($alt_codon) < length ($ref_codon);
         
@@ -1109,7 +1231,7 @@ sub stop_lost {
 
     # use cache for this method as it gets called a lot
     my $cache = $bvfoa->{_predicate_cache} ||= {};
-
+    
     unless(exists($cache->{stop_lost})) {
         $cache->{stop_lost} = 0;
 
@@ -1127,7 +1249,6 @@ sub stop_lost {
     #        }
             
             my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
-
             if(defined($ref_pep) && defined($alt_pep)) {
                 $cache->{stop_lost} = ( ($alt_pep !~ /\*/) and ($ref_pep =~ /\*/) );
             }
@@ -1165,6 +1286,9 @@ sub stop_retained {
     # use cache for this method as it gets called a lot
     my $cache = $bvfoa->{_predicate_cache} ||= {};
 
+    return 0 if partial_codon(@_);
+    return 0 if stop_lost(@_);
+
     unless(exists($cache->{stop_retained})) {
         $bvfo ||= $bvfoa->base_variation_feature_overlap;
         $bvf  ||= $bvfo->base_variation_feature;
@@ -1180,28 +1304,54 @@ sub stop_retained {
         my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
 
         if(defined($alt_pep) && $alt_pep ne '') {
-            return 0 unless $alt_pep =~/^\*/; 
-
-            ## handle inframe insertion of a stop just before the stop (no ref peptide)
-            if(
-              $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele') &&
-              $bvfo->_peptide &&
-              $bvfo->translation_start() > length($bvfo->_peptide)
-            ) {
-              $cache->{stop_retained} = 1;
-            }
-            else {
-                return 0 unless $ref_pep;
-
-                $cache->{stop_retained} = ( $alt_pep =~ /^\*/ && $ref_pep =~ /^\*/ );
-            }
+         
+          ## handle inframe insertion of a stop just before the stop (no ref peptide)
+          $cache->{stop_retained} = ref_eq_alt_sequence(@_);
         }
         else {
             $cache->{stop_retained} = ($pre->{increase_length} || $pre->{decrease_length}) && _overlaps_stop_codon(@_) && !_ins_del_stop_altered(@_);
         }
-    }
 
+    }
+    
     return $cache->{stop_retained};
+}
+
+sub ref_eq_alt_sequence {
+   my ($bvfoa, $feat, $bvfo, $bvf) = @_; 
+   
+   $bvfo ||= $bvfoa->base_variation_feature_overlap;
+   my $ref_seq = $bvfo->_peptide;
+
+   my $mut_seq = $ref_seq;
+   my $tl_start = $bvfo->translation_start;
+   my $tl_end = $bvfo->translation_end;
+   
+   my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
+
+   return 0 if $ref_pep eq "X" && $alt_pep eq "X"; # this is to account for incomplete coding terminal;
+
+   # this is to account for synonymous variant if $ref_pep eq $alt_pep 
+   # as there is no resulting change to the amino acid sequence, it is not stop_retained
+   #return 0 if $ref_pep ne "*" && $alt_pep ne "*" && $ref_pep eq $alt_pep;
+
+   # this is a logic from the former logic 
+   return 1 if ($bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele') && defined($ref_seq) && $tl_start > length($ref_seq) && $alt_pep =~ /^\*/);
+
+   substr($mut_seq, $tl_start-1, $tl_end - $tl_start + 1) = $alt_pep; # creating a mutated sequence from the ref sequence. 
+
+   my $mut_substring = substr($mut_seq, 0, length($ref_seq)); # getting a substring up to the length of the ref sequence for comparison from index 0 to the length of the ref seq;
+   
+   my $final_stop = substr($mut_seq, length($ref_seq)) if length($ref_seq) < length($mut_seq); # getting the length of the $mut_seq from the length of the ref_seq to the end 
+   
+   my $final_stop_length = length($final_stop) if defined($final_stop) ne '';
+   
+   # 1 is if the ref_pep and the first letter of the alt_pep is the same and the alt_pep has * in it 
+   # 2 is the ref_seq eq $mut_substring and the final stop length is less than 3
+   # 3 is * in ref_pep and the same index position exists for both the ref and alt pep
+   return 1 if ( ($ref_pep eq substr($alt_pep, 0, 1) && $alt_pep =~ /\*/) ||
+       ($ref_seq eq $mut_substring && defined($final_stop_length) && $final_stop_length < 3) || ( $ref_pep =~ /\*/ && (index($ref_pep, "*") + 1 == index($alt_pep, "*") + 1) ));
+   return 0;
 }
 
 sub _overlaps_stop_codon {
@@ -1275,7 +1425,6 @@ sub _ins_del_stop_altered {
         )->translate(
             undef, undef, undef, $bvfo->_codon_table
         )->seq;
-
         $cache->{ins_del_stop_altered} = !($pep && $pep eq '*');
     }
 
@@ -1290,6 +1439,7 @@ sub frameshift {
     if($bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele')) {
 
         return 0 if partial_codon(@_);
+        return 0 if stop_retained(@_);
     
         return 0 unless defined $bvfo->cds_start && defined $bvfo->cds_end;
         
@@ -1337,10 +1487,11 @@ sub partial_codon {
         $cache->{_partial_codon} = 0;
 
         $bvfo ||= $bvfoa->base_variation_feature_overlap;
-        
+   
         return 0 unless defined $bvfo->translation_start;
 
         my $cds_length = length $bvfo->_translateable_seq;
+
 
         my $codon_cds_start = ($bvfo->translation_start * 3) - 2;
 
@@ -1447,4 +1598,3 @@ sub contains_entire_feature {
 }
 
 1;
-

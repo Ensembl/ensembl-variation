@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2023] EMBL-European Bioinformatics Institute
+Copyright [2016-2025] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -339,6 +339,7 @@ sub cache_size {
   Arg[1]     : chromosome
   Arg[2]     : start
   Arg[3]     : end
+  Arg[4]     : file (if not defined, retrieves data from all $self->files)
   Description: Get data from files specified in $self->files for a given
                genomic region
   Returntype : hashref
@@ -347,7 +348,7 @@ sub cache_size {
 =cut
 
 sub get_data {
-  my ($self, $c, $s, $e) = @_;
+  my ($self, $c, $s, $e, $f) = @_;
 
   die("ERROR: No chromosome specified\n") unless $c;
   die("ERROR: No start specified\n") unless $s;
@@ -359,7 +360,7 @@ sub get_data {
 
   my $pos_string = join("_", $c, $s, $e);
 
-  my $cache = $self->cache;
+  my $cache = $self->cache($f);
 
   # check results cache first
   if(exists($cache->{results}) && exists($cache->{results}->{$pos_string})) {
@@ -417,10 +418,10 @@ sub get_data {
     $r_s -= $expand_left;
     $r_e += $expand_right;
 
-    my $tmp_data = $self->_get_data_uncached($c, $r_s, $r_e);
+    my $tmp_data = $self->_get_data_uncached($c, $r_s, $r_e, $f);
 
     # cache the data
-    $self->_add_data_to_cache($c, $r_s, $r_e, $tmp_data) if $use_data_cache;
+    $self->_add_data_to_cache($c, $r_s, $r_e, $f, $tmp_data) if $use_data_cache;
 
     # we don't need to filter it unless we're using the cache
     push @result, $use_data_cache ? @{$self->_filter_by_pos($tmp_data, $s, $e)} : @$tmp_data;
@@ -442,13 +443,14 @@ sub get_data {
     @uniq_result = map {$_->[1]} @result;
   }
 
-  $self->_add_result_to_cache($pos_string, \@uniq_result);
+  $self->_add_result_to_cache($f, $pos_string, \@uniq_result);
   
   return \@uniq_result;
 }
 
 =head2 cache
 
+  Arg[1]     : File (optional; if not defined, conglomerate data from all files)
   Description: Get cache (empty if no cache available)
   Returntype : hash
   Status     : Experimental
@@ -456,8 +458,14 @@ sub get_data {
 =cut
 
 sub cache {
-  my $self = shift;
-  my $cache = $self->{_tabix_cache} ||= {};
+  my ($self, $file) = @_;
+
+  my $cache;
+  if (defined $file) {
+    $cache = $self->{_tabix_cache}->{$file} ||= {};
+  } else {
+    $cache = $self->{_tabix_cache} ||= {};
+  }
   return $cache;
 }
 
@@ -533,9 +541,9 @@ sub _get_data_uncached {
 }
 
 sub _add_data_to_cache {
-  my ($self, $c, $s, $e, $data) = @_;
+  my ($self, $c, $s, $e, $f, $data) = @_;
 
-  my $cache = $self->cache->{$c} ||= {};
+  my $cache = $self->cache($f)->{$c} ||= {};
 
   push @{$cache->{regions}}, [$s, $e];
   push @{$cache->{data}}, $data;
@@ -548,9 +556,9 @@ sub _add_data_to_cache {
 }
 
 sub _add_result_to_cache {
-  my ($self, $pos_string, $result) = @_;
+  my ($self, $file, $pos_string, $result) = @_;
 
-  my $cache = $self->cache;
+  my $cache = $self->cache($file);
 
   $cache->{results}->{$pos_string} = $result;
   push @{$cache->{results_order}}, $pos_string;
@@ -576,11 +584,12 @@ sub _filter_by_pos {
 }
 
 sub _get_data_hts {
-  my ($self, $c, $s, $e) = @_;
+  my ($self, $c, $s, $e, $f) = @_;
 
   my @data;
 
-  foreach my $file(@{$self->files}) {
+  my @files = defined $f ? ($f) : @{$self->files};
+  foreach my $file(@files) {
     my $hts_obj = $self->_hts_obj($file);
     my $valids = $self->{_valids}->{$file} ||= $hts_obj->seqnames;
 
@@ -604,11 +613,12 @@ sub _get_data_hts {
 }
 
 sub _get_data_pm {
-  my ($self, $c, $s, $e) = @_;
+  my ($self, $c, $s, $e, $f) = @_;
 
   my @data;
 
-  foreach my $file(@{$self->files}) {
+  my @files = defined $f ? ($f) : @{$self->files};
+  foreach my $file(@files) {
     my $tabix_obj = $self->_tabix_obj($file);
     my $valids = $self->{_valids}->{$file} ||= [$tabix_obj->getnames];
 
@@ -626,11 +636,12 @@ sub _get_data_pm {
 }
 
 sub _get_data_cl {
-  my ($self, $c, $s, $e) = @_;
+  my ($self, $c, $s, $e, $f) = @_;
   
   my @data;
 
-  foreach my $file(@{$self->files}) {
+  my @files = defined $f ? ($f) : @{$self->files};
+  foreach my $file(@files) {
     my $valids = $self->{_valids}->{$file} ||= [split("\n", `tabix -l $file`)];
 
     open TABIX, sprintf(

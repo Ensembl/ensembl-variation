@@ -1,5 +1,5 @@
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016-2023] EMBL-European Bioinformatics Institute
+# Copyright [2016-2025] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -131,9 +131,9 @@ while (my ($dbname) = $sth_h->fetchrow_array) {
   my %reg_config = (reg => $registry, species => $s_name, assembly => $assembly,
                     quiet => $quiet );
   my @params = ($output_dir);
-  my %db_config = (config => \%reg_config, params => \@params );
+  my %db_config = (config => \%reg_config, params => \@params, match => 'transcript' );
   mkdir $output_dir unless -d $output_dir;
-  my $dumpFile = GO::_prepare_filename(\%db_config, $registry);
+  my $dumpFile = $output_dir . "/" . GO::_prepare_filename(\%db_config, $registry);
   
   if ( -e $dumpFile & !$force ) {
     warn "Skipping $dumpFile. Use --force to override the existing file\n";

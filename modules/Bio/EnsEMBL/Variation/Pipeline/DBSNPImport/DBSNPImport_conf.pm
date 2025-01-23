@@ -1,6 +1,6 @@
 =head1 LICENSE
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2023] EMBL-European Bioinformatics Institute
+Copyright [2016-2025] EMBL-European Bioinformatics Institute
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -101,10 +101,14 @@ sub resource_classes {
     my ($self) = @_;
     return {
         %{$self->SUPER::resource_classes},  # inherit 'default' from the parent class
-            'test_mem'    => { 'LSF' => '-qproduction -R"select[mem>100] rusage[mem=100]" -M100'},
-            'default_mem' => { 'LSF' => '-qproduction -R"select[mem>1000] rusage[mem=1000]" -M1000'},
-            'medium_mem'  => { 'LSF' => '-qproduction -R"select[mem>4000] rusage[mem=4000]" -M4000'},
-            'high_mem'    => { 'LSF' => '-qproduction -R"select[mem>8000] rusage[mem=8000]" -M8000'},
+            'default_mem'      => { 'LSF' => '-qproduction -R"select[mem>1000] rusage[mem=1000]" -M1000',
+                                    'SLURM' => '--partition=production --time=1:00:00 --mem=1G'},
+            'default_mem_long' => { 'LSF' => '-qproduction -R"select[mem>1000] rusage[mem=1000]" -M1000',
+                                    'SLURM' => '--partition=production --time=24:00:00 --mem=1G'},
+            'medium_mem'       => { 'LSF' => '-qproduction -R"select[mem>4000] rusage[mem=4000]" -M4000',
+                                    'SLURM' => '--partition=production --time=1:00:00 --mem=4G'},
+            'high_mem'         => { 'LSF' => '-qproduction -R"select[mem>8000] rusage[mem=8000]" -M8000',
+                                    'SLURM' => '--partition=production --time=1:00:00 --mem=8G'},
     };
 }
 
@@ -137,7 +141,7 @@ sub pipeline_analyses {
     {
       -logic_name        => 'load_dbsnp_file',
       -module            => 'Bio::EnsEMBL::Variation::Pipeline::DBSNPImport::LoadDBSNPFile',
-      -rc_name           => 'default_mem',
+      -rc_name           => 'default_mem_long',
       -analysis_capacity => 30,
     },
     {

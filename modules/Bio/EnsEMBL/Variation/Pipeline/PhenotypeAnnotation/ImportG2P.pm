@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2023] EMBL-European Bioinformatics Institute
+Copyright [2016-2025] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -254,7 +254,7 @@ sub parse_input_file {
         push @phenotypes, {
           'id' => $gene->stable_id,
           'description' => $phen,
-          'MIM' => $id,
+          'external_id' => $id,
           'seq_region_id' => $gene->slice->get_seq_region_id,
           'seq_region_start' => $gene->seq_region_start,
           'seq_region_end' => $gene->seq_region_end,

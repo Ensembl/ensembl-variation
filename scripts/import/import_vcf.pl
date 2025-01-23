@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016-2023] EMBL-European Bioinformatics Institute
+# Copyright [2016-2025] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -43,6 +43,7 @@ use Bio::EnsEMBL::Variation::SampleGenotype;
 # use this for remapping
 use Bio::EnsEMBL::SimpleFeature;
 
+use File::Spec;
 use Getopt::Long;
 use FileHandle;
 use Socket;
@@ -61,6 +62,14 @@ my %Printable = ( "\\"=>'\\', "\r"=>'r', "\n"=>'n', "\t"=>'t', "\""=>'"' );
 $| = 1;
 
 my $config = configure();
+
+# Delete output file if it already exists
+if($config->{output_file}) {
+  my $file = $config->{output_file};
+  if(-e $file) {
+    unlink $file or die "ERROR: Unable to delete file $file: $!"
+  }
+}
 
 # open cross-process pipes for fork comms
 socketpair(CHILD, PARENT, AF_UNIX, SOCK_STREAM, PF_UNSPEC) or die "ERROR: Failed to open socketpair: $!";
@@ -85,6 +94,20 @@ my $elapsed = tv_interval($config->{start_time}, [gettimeofday]);
 
 debug($config, "Took $elapsed s");
 
+# Sort variation_feature
+if($config->{sort_vf}) {
+  debug($config, "Starting to sort table variation_feature...");
+  sort_vf_table();
+  debug($config, "Table variation_feature is sorted");
+}
+
+# Read if any variants where skipped due to missing seq_region
+if($config->{output_file}) {
+  my $skipped_lines = read_output_file();
+  warn "Skipped: $skipped_lines lines (missing_seq_region)\n" if($skipped_lines);
+}
+
+
 sub configure {
 
   # COMMAND LINE OPTIONS
@@ -99,6 +122,7 @@ sub configure {
 
     'help|h',
     'input_file|i=s',
+    'output_file|o=s',
     'tmpdir=s',
     'tmpfile=s',
     'config=s',
@@ -137,6 +161,8 @@ sub configure {
     'skip_tables=s',
     'add_tables=s',
     'version=i',
+    'url=s',
+    'data_types=s',
 
     'only_existing',
     'no_merge',
@@ -163,6 +189,7 @@ sub configure {
     'cache=s',
     'fasta=s',
     'chr_synonyms=s',
+    'sort_vf',
 
   # die if we can't parse arguments - better to get user to sort out their command line
   # than potentially do the wrong thing
@@ -413,29 +440,6 @@ sub configure {
     $config->{vep}->{fasta_db} = Bio::DB::Fasta->new($config->{fasta});
   }
 
-  # get terminal width for progress bars
-  my $width;
-
-  # module may not be installed
-  eval q{
-    use Term::ReadKey;
-  };
-
-  if(!$@) {
-    my ($w, $h);
-
-    # module may be installed, but e.g.
-    eval {
-      ($w, $h) = GetTerminalSize();
-    };
-
-    $width = $w if defined $w;
-  }
-
-  $width ||= 60;
-  $width -= 12;
-  $config->{terminal_width} = $width;
-
   return $config;
 }
 
@@ -565,7 +569,7 @@ sub main {
   if(defined $config->{disable_keys}) {
     debug($config, "Disabling keys");
 
-    foreach my $table(qw(allele population_genotype)) {#grep {$config->{tables}->{$_}} keys %$config->{tables}) {
+    foreach my $table(qw(allele population_genotype)) {
       $config->{dbVar}->do(qq{ALTER TABLE $table DISABLE KEYS;});
     }
   }
@@ -687,10 +691,6 @@ sub main {
       # parse into a hash
       $data->{$_} = $split[$headers{$_}] for keys %headers;
 
-      if($last_skipped > 100 && $last_skipped =~ /(5|0)00$/) {
-        debug($config, "WARNING: Skipped last $last_skipped variants. The last skipped variant is $data->{'#CHROM'} amd $data->{POS}. Are you sure this is running OK? Maybe --gp is enabled when it shouldn't be, or vice versa?");
-      }
-
       # skip non-variant lines
       if($data->{ALT} eq '.') {
         $config->{skipped}->{non_variant}++;
@@ -705,9 +705,6 @@ sub main {
       }
 
       $data->{info} = \%info;
-
-      # skip unwanted chromosomes
-      #next if defined($config->{chrom_regexp}) && $data->{'#CHROM'} !~ m/$chrom_regexp/;
 
       # use VEP's parse_line to get a skeleton VF
       ($data->{tmp_vf}) = @{parse_line($config, $data->{line})};
@@ -735,7 +732,13 @@ sub main {
       }
 
       if(defined($config->{chr_synonyms_list})) {
-        $chromosome = $config->{chr_synonyms_list}->{$data->{tmp_vf}->{chr}};
+        # Mastermind always uses the chromosome synonyms
+        if($config->{source} eq 'Mastermind') {
+          $chromosome = $config->{chr_synonyms_list}->{$data->{tmp_vf}->{chr}};
+        }
+        elsif($config->{chr_synonyms_list}->{$data->{tmp_vf}->{chr}}) {
+          $chromosome = $config->{chr_synonyms_list}->{$data->{tmp_vf}->{chr}};
+        }
       }
 
       if(!defined($config->{seq_region_ids}->{$chromosome})) {
@@ -929,7 +932,6 @@ sub main {
       last if defined($config->{test}) && $var_counter == $config->{test};
 
       if(defined($config->{forked})) {
-        debug($config, "Processed $var_counter lines (".$config->{forked}.")");
         store_session($config, md5_hex($data->{line})) if $var_counter % $config->{progress_update} == 0;
       }
       elsif($var_counter % $config->{progress_update} == 0) {
@@ -979,6 +981,11 @@ sub main {
 
   my $max_length = (sort {$a <=> $b} map {length($_)} (keys %{$config->{skipped}}, keys %{$config->{rows_added}}))[-1];
 
+  # write to output file
+  if($config->{output_file}) {
+    open(FH, '>>', $config->{output_file}) or die $!;
+  }
+
   # rows added
   debug($config, (defined($config->{test}) ? "(TEST) " : "")."Rows added:");
 
@@ -991,9 +998,17 @@ sub main {
 
   for my $key(sort keys %{$config->{skipped}}) {
     debug($config, (defined($config->{forked}) ? "SKIPPED\t" : "").$key.(' ' x (($max_length - length($key)) + 4)).$config->{skipped}->{$key});
+    
+    if($config->{output_file}) {
+      print FH "Lines skipped\t".$key."\t".$config->{skipped}->{$key}."\n";
+    }
   }
 
   store_session($config, "FINISHED");
+
+  if($config->{output_file}) {
+    close(FH);
+  }
 
   debug($config, "Finished!".(defined($config->{forked}) ? " (".$config->{forked}.")" : ""));
 }
@@ -1123,21 +1138,7 @@ sub run_forks {
         my @split = split /\s+/;
         push @forked_pids, $split[-1];
       }
-      if(/Processed/) {
-        $c++;
-        $in_progress{$fork} = 1;
-
-        #my ($q, $n) = ($config->{quiet}, $config->{no_progress});
-        #delete $config->{quiet};
-        #delete $config->{no_progress};
-        progress($config, $c, scalar keys %in_progress) if $c % $config->{progress_update} == 0;
-        #($config->{quiet}, $config->{no_progress}) = ($q, $n);
-        #if($c =~ /000$/) {
-        #  debug({}, "Processed $c lines");
-        #}
-      }
       elsif(/Finished/) {
-        #print "\n$_";
         $finished++;
         delete $in_progress{$fork};
         last if $finished == @chrs;
@@ -1260,7 +1261,7 @@ sub run_forks {
       # point the file handle to a tabix pipe
       my $in_file_handle = FileHandle->new;
 
-      $in_file_handle->open("tabix -h ".$config->{input_file}." $chr | ");
+      $in_file_handle->open("tabix -h ".$config->{input_file}." '$chr' | ");
       $config->{in_file_handle} = $in_file_handle;
 
       $config->{pid} = $$;
@@ -1311,6 +1312,7 @@ sub connect_to_dbs {
       $reg->load_registry_from_db(-host => $config->{host}, -port => $config->{port}, -user => $config->{user}, -pass => $config->{password});
     }
     else {
+      $config->{registry} = File::Spec->rel2abs( $config->{registry} );
       if(-e $config->{registry}) {
         $reg->load_all($config->{registry});
       }
@@ -1321,7 +1323,7 @@ sub connect_to_dbs {
 
     # connect to DB
     my $vdba = $reg->get_DBAdaptor($config->{species},'variation')
-      || usage( "Cannot find variation db for ".$config->{species}." in ".$config->{registry_file} );
+      || usage( "Cannot find variation db for ".$config->{species}." in ".$config->{registry} );
     $config->{dbVar} = $vdba->dbc->db_handle;
 
     debug($config, "Connected to database ", $vdba->dbc->dbname, " on ", $vdba->dbc->host, " as user ", $vdba->dbc->username);
@@ -1647,11 +1649,13 @@ sub get_seq_region_ids{
 
 # gets source_id - retrieves if name already exists, otherwise inserts
 sub get_source_id{
-  my $config = shift;
-  my $dbVar  = $config->{dbVar};
-  my $source = $config->{source};
-  my $desc   = $config->{source_description};
+  my $config  = shift;
+  my $dbVar   = $config->{dbVar};
+  my $source  = $config->{source};
+  my $desc    = $config->{source_description};
   my $version = $config->{version};
+  my $url     = $config->{url};
+  my $types   = $config->{data_types};
 
   my $source_id;
 
@@ -1667,8 +1671,8 @@ sub get_source_id{
       debug($config, "(TEST) Writing source name $source to source table");
     }
     else {
-      $sth = $dbVar->prepare(qq{insert into source(name, version, description) values(?,?,?)});
-      $sth->execute($source, $version, $desc);
+      $sth = $dbVar->prepare(qq{insert into source(name, version, description, url, data_types) values(?,?,?,?,?)});
+      $sth->execute($source, $version, $desc, $url, $types);
       $sth->finish();
       $source_id = $dbVar->last_insert_id(undef, undef, qw(source source_id));
     }
@@ -1933,8 +1937,6 @@ sub variation {
 
     # class
     $var->{class_attrib_id} = $class_id;
-
-    #$config->{variation_adaptor}->store($var);
   }
 
   # attach the variation to the variation feature
@@ -2000,7 +2002,13 @@ sub variation_feature {
   my $existing_vfs = [];
 
   my $chromosome = $vf->{chr};
-  $chromosome = $config->{chr_synonyms_list}->{$vf->{chr}} if $config->{chr_synonyms};
+  # Mastermind always uses the chromosome synonyms
+  if($config->{source} eq 'Mastermind') {
+    $chromosome = $config->{chr_synonyms_list}->{$vf->{chr}};
+  }
+  elsif($config->{chr_synonyms} && $config->{chr_synonyms_list}->{$vf->{chr}}) {
+    $chromosome = $config->{chr_synonyms_list}->{$vf->{chr}};
+  }
 
   $existing_vfs = $vfa->fetch_all_by_Variation($data->{variation}) if($var_in_db && !defined($config->{no_merge}));
 
@@ -2826,6 +2834,32 @@ sub read_chr_synonyms {
   return \%chr_synonyms_list;
 }
 
+# Sort table variation_feature
+sub sort_vf_table {
+  connect_to_dbs();
+  my $dbVar = $config->{dbVar};
+  my $stmt = $dbVar->prepare(qq{ ALTER TABLE variation_feature ORDER BY seq_region_id,seq_region_start,seq_region_end });
+  $stmt->execute() or die ("ERROR: cannot sort table variation_feature");
+}
+
+sub read_output_file {
+  my $skipped_lines = 0;
+
+  open(my $fh, '<', $config->{output_file}) or die $!;
+
+  while(my $row = <$fh>) {
+    chomp $row;
+    my @split = split "\t", $row;
+    if($split[0] eq "Lines skipped" && $split[1] eq "missing_seq_region") {
+      $skipped_lines += $split[2];
+    }
+  }
+
+  close($fh);
+
+  return $skipped_lines;
+}
+
 # prints usage message
 sub usage {
   my $usage =<<END;
@@ -2836,6 +2870,7 @@ Options
 -h | --help           Display this message and quit
 
 -i | --input_file     Input file - if not specified, attempts to read from STDIN
+-o | --output_file    Output file to write the number of imported/skipped lines [optional]
 --tmpdir              Temporary directory to write genotype dump file. Required if
                       writing to compressed_genotype_region
 --tmpfile             Name for temporary file [default: compress.txt]
@@ -2913,6 +2948,8 @@ Options
                       and --skip_tables will be skipped)
 --mart_genotypes      Use this flag to populate the uncompressed genotype tables. These
                       are used only to build BioMart databases
+
+--sort_vf             Sort table variation_feature after import
 
 --only_existing       Only write to tables when an existing variant is found. Existing
                       can be a variation with the same name, or a variant with the same
@@ -3013,8 +3050,6 @@ sub progress {
 
   my $prev_pm = $config->{progress_update} / ($prev_elapsed / 60);
   my $total_pm = $count / ($total_elapsed / 60);
-
-  printf("\r%s - Processed %8i variants (%8.2f per min / %8.2f per min overall ) ( %2i process%2s )", getTime, $count, $prev_pm, $total_pm, $proc, ($proc > 1 ? 'es' : '  '));
 
   $config->{prev_time} = [gettimeofday];
 }
