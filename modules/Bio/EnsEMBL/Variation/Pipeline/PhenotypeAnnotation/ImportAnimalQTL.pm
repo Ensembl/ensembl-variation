@@ -59,15 +59,13 @@ use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotype
 
 my %source_info;
 
-# AnimalQTLdb URL set up for Ensembl: https://www.animalgenome.org/QTLdb/export/ENS83H19HZS/
-#my $animalqtl_url = 'https://www.animalgenome.org/cgi-bin/QTLdb/index';
 my $animalqtl_baseURL='https://www.animalgenome.org/QTLdb/export/ENS83H19HZS/';
 
 my %animalQTL_species_url = (
   gallus_gallus => $animalqtl_baseURL.'QTLdb_chicken_GRCg7b.gff.gz', #Gallus gallus, chicken
   sus_scrofa => $animalqtl_baseURL.'QTLdb_pig_SS11.1.gff.gz', #Sus scrofa, pig
   ovis_aries => $animalqtl_baseURL.'QTLdb_sheep_OAR3.1.gff.gz',  # Ovis aries, sheep
-  bos_taurus => $animalqtl_baseURL.'QTLdb_cattle_ARS_UCD1.gff.gz', #Bos taurus, cow
+  bos_taurus => $animalqtl_baseURL.'QTLdb_cattle_ARS_UCD2.gff.gz', #Bos taurus, cow
   equus_caballus => $animalqtl_baseURL.'QTLdb_horse_EC3.gff.gz', #Equus caballus, horse 
   ovis_aries_rambouillet => $animalqtl_baseURL."QTLdb_sheep_OAR_rambo2.gff.gz", #Ovis aries rambo
   capra_hircus => $animalqtl_baseURL.'QTLdb_goatCHIR_ARS1.gff.gz', #capra hircus, goat
@@ -77,7 +75,7 @@ my %animalQTL_species_fileNames = (
   gallus_gallus => 'QTL_gallus_gallus_GRCg7b.gff3.gz',
   sus_scrofa => 'QTL_sus_scrofa_gbp_11.1.gff3.gz',
   ovis_aries => 'QTL_ovis_aries_OAR3.1.gff3.gz',
-  bos_taurus => 'QTL_bos_taurus_ARS_UCD1.gff3.gz',
+  bos_taurus => 'QTL_bos_taurus_ARS_UCD2.gff3.gz',
   equus_caballus => 'QTL_equus_caballus_EC3.gff3.gz',
   ovis_aries_rambouillet => 'QTL_ovis_aries_rambouillet_OAR_rambo2.gff3.gz',
   capra_hircus => 'QTL_capra_hircus_CHIR_ARS1.gff3.gz',
@@ -85,11 +83,11 @@ my %animalQTL_species_fileNames = (
 
 # use '0' if the data is not the same assembly and import should be skipped
 my %animalQTL_species_ok = (
-  gallus_gallus => 1, #Gallus gallus
-  sus_scrofa => 1, #Sus scrofa
-  ovis_aries => 1,  #Ovis aries: 
-  bos_taurus => 1, #Bos taurus
-  equus_caballus => 1, #Equus caballus
+  gallus_gallus => 1,
+  sus_scrofa => 1,
+  ovis_aries => 1,
+  bos_taurus => 1,
+  equus_caballus => 1,
   ovis_aries_rambouillet => 1,
   capra_hircus => 1
 );
