@@ -707,10 +707,10 @@ sub get_feature{
 
   # if haplotype present then save corresponding rsIDs for phenotype_feature_attrib entry
   if ($type eq $haplotype_type && defined $feature{haplo} && defined $feature{haplo}{rs} ) {
-    my @rsIDs = keys {map { $_ => 1 } @{$feature{haplo}{rs}}};
+    my @rsIDs = keys %{ { map { $_ => 1 } @{$feature{haplo}{rs}} } };
     $feature{haplo}{rs} = \@rsIDs;
     # only if more than 1 rsID present make them phenotype_feature_attribs
-    if( scalar @rsIDs >1 && (scalar keys $feature{measureXrefs}  == scalar @rsIDs) ){
+    if( scalar @rsIDs >1 && (scalar keys %{ $feature{measureXrefs}  == scalar @rsIDs }) ){
       my %index;
       @index{@rsIDs} = (0..$#rsIDs);
       foreach my $rs (@{$feature{haplo}{rs}}){
