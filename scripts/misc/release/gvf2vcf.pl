@@ -86,6 +86,9 @@ sub main {
 
     init_db_connections($config);
     init_data($config);
+    if( -e $config->{vcf_file} && !-z $config->{vcf_file}) {
+      unlink($config->{vcf_file}) or die $config->{vcf_file} . " already exists and can not delete it\n";
+    }
     my $fh_vcf = FileHandle->new('> ' . $config->{vcf_file});
     $config->{fh} = $fh_vcf;
     print_header($config);
