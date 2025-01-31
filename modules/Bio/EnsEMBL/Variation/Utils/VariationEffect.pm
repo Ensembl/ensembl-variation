@@ -1346,10 +1346,10 @@ sub ref_eq_alt_sequence {
    
    my $final_stop_length = length($final_stop) if defined($final_stop) ne '';
    
-   # 1 is if the ref_pep and the first letter of the alt_pep is the same and the alt_pep has * in it 
+   # 1 is if the ref_pep and the first letter of the alt_pep is the same and the alt_pep has * in it, lot of bug complaints with this step.
    # 2 is the ref_seq eq $mut_substring and the final stop length is less than 3
-   # 3 is * in ref_pep and the same index position exists for both the ref and alt pep
-   return 1 if ( ($ref_pep eq substr($alt_pep, 0, 1) && $alt_pep =~ /\*/) ||
+  # 3 is * in ref_pep and the same index position exists for both the ref and alt pep
+  return 1 if ( 
        ($ref_seq eq $mut_substring && defined($final_stop_length) && $final_stop_length < 3) || ( $ref_pep =~ /\*/ && (index($ref_pep, "*") + 1 == index($alt_pep, "*") + 1) ));
    return 0;
 }
@@ -1594,7 +1594,4 @@ sub contains_entire_feature {
     my $bvf  = $vfo->base_variation_feature;
     my $feat = $vfo->feature;
 
-    return ( ($bvf->{start} <= $feat->{start}) && ($bvf->{end} >= $feat->{end}) ); 
-}
-
-1;
+    return ( ($bvf->{start} <= $feat->{start}) && ($b
