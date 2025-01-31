@@ -1594,4 +1594,7 @@ sub contains_entire_feature {
     my $bvf  = $vfo->base_variation_feature;
     my $feat = $vfo->feature;
 
-    return ( ($bvf->{start} <= $feat->{start}) && ($b
+    return ( ($bvf->{start} <= $feat->{start}) && ($bvf->{end} >= $feat->{end}) ); 
+}
+
+1;
