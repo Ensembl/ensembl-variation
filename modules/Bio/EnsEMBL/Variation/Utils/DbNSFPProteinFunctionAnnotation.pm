@@ -69,7 +69,7 @@ sub new {
 
   my $self = $class->SUPER::new(@_);
 
-  my @versions = ('3.5a', '4.0a', '4.1a', '4.2a', '4.3a', '4.4a', '4.5c', '4.6c', '4.7c', '4.8c', '4.9c');
+  my @versions = ('3.5a', '4.0a', '4.1a', '4.2a', '4.3a', '4.4a', '4.5c', '4.6c', '4.7c', '4.8c', '4.9c', '4.9a');
   if (! grep {$_ eq $self->annotation_file_version} @versions) {
     die "dbNSFP version " . $self->annotation_file_version . " is not supported.";
   }
@@ -343,6 +343,29 @@ my $column_names = {
       aaalt => 'aaalt',
       aaref => 'aaref',
       revel_score => 'undef',
+      meta_lr_score => 'MetaLR_score',
+      meta_lr_pred => 'MetaLR_pred',
+      mutation_assessor_score => 'MutationAssessor_rankscore',
+      mutation_assessor_pred => 'MutationAssessor_pred',
+    },
+    'assembly_specific' => {
+      'GRCh37' => {
+        pos => 'hg19_pos(1-based)'
+      },
+      'GRCh38' => {
+        pos => 'pos(1-based)'
+      },
+    },
+  },
+  '4.9a' => {
+    assembly_unspecific => {
+      chr => '#chr',
+      ref => 'ref',
+      refcodon => 'refcodon',
+      alt => 'alt',
+      aaalt => 'aaalt',
+      aaref => 'aaref',
+      revel_score => 'REVEL_score',
       meta_lr_score => 'MetaLR_score',
       meta_lr_pred => 'MetaLR_pred',
       mutation_assessor_score => 'MutationAssessor_rankscore',
