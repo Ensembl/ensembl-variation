@@ -32,11 +32,16 @@ use DBI;
 use strict;
 use POSIX;
 use Getopt::Long;
+use JSON;
+use File::Basename;
+
+my $dirname = dirname(__FILE__);
+require "$dirname/utils.pl";
 
 ###############
 ### Options ###
 ###############
-my ($e_version,$html_file,$hlist,$phost,$user,$help);
+my ($e_version,$html_file,$hlist,$phost,$user,$config,$d_dir,$help);
 ## EG options
 my ($site, $etype);
 
@@ -50,7 +55,9 @@ GetOptions(
      'phost=s' => \$phost,
      'user=s'  => \$user,
      'site=s'  => \$site,
-     'etype=s' => \$etype
+     'etype=s' => \$etype,
+     'config=s' => \$config,
+     'd_dir=s'  => \$d_dir
 );
 
 if (!$e_version) {
@@ -78,6 +85,20 @@ my @hostnames = split /,/, $hlist;
 
 if ($site) {
   $server_name = $site;
+}
+
+# Get the vcf config file location
+my $vcf_config_file = $dirname . '/../../modules/Bio/EnsEMBL/Variation/DBSQL/vcf_config.json';
+
+if ($config){
+  $vcf_config_file = $config;
+}
+
+# Get the local dir where the vcf files are located
+my $data_dir = "/nfs/production/flicek/ensembl/production/ensemblftp/data_files/vertebrates";
+
+if ($d_dir){
+  $data_dir = $d_dir;
 }
 
 # Settings
@@ -115,6 +136,14 @@ my $sql   = qq{SHOW DATABASES LIKE '%$db_type\_$e_version%'};
 my $sql2  = qq{SELECT COUNT(variation_id) FROM variation};
 my $sql2a = qq{SELECT DISTINCT s.name FROM variation v, source s WHERE s.source_id=v.source_id ORDER BY s.name};
 my $sql_core = qq{SELECT meta_value FROM meta WHERE meta_key="species.display_name" LIMIT 1};
+
+# read config from JSON config file
+open IN, $vcf_config_file or throw("ERROR: Could not read from config file $vcf_config_file\n");
+local $/ = undef;
+my $json_string = <IN>;
+close IN;
+
+my $vcf_config = JSON->new->decode($json_string) or throw("ERROR: Failed to parse config file $vcf_config_file\n");
 
 foreach my $hostname (@hostnames) {
   
@@ -469,6 +498,24 @@ sub get_species_data_tables {
       $sth->finish();
     }
   }
+
+  foreach my $project (@{ $vcf_config->{'collections'} }) {
+    next if $project->{annotation_type} eq 'cadd' || $project->{annotation_type} eq 'gerp';
+    my $s_name = lc $project->{species};
+
+    next if ($s_name =~ /^(drosophila|saccharomyces|ciona)/);
+    next if ! exists $species_list{$s_name};
+    
+    print STDERR $project->{id}, "\n";
+
+    # determine type of data the file has
+    my @types = get_vcf_content_types($project);
+
+    # Check if the file have population and genotype data and being showed
+    $species_list{$s_name}{Sample} = 1 if ( grep(/^genotype$/, @types) && genotype_samples_exists($s_name, $project, @hostnames) );
+    $species_list{$s_name}{Population} = 1 if ( grep(/^populations$/, @types) || is_freq_from_gts($s_name, $project, @hostnames) );
+  }
+
   return \%species_list;
 }
 
@@ -529,6 +576,9 @@ sub usage {
     -user           MySQL user name (Required)
     -site           The URL of the website (optional)
     -etype          The type of Ensembl, e.g. Plant (optional)
+    -config         The location of the vcf_config.json file. By default it uses the existing one in the same repository.
+    -d_dir          The directory location of where the local vcf files are stored (optional). By default it looks in - 
+                    /nfs/production/flicek/ensembl/production/ensemblftp/data_files/vertebrates
   } . "\n";
   exit(0);
 }

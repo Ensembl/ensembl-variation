@@ -118,7 +118,7 @@ if ( $sections eq "all" || grep(/^${section}$/, @sections) ){
   `cp $input_dir/$subdir/$file_name $tmp_file`;
   $content_before = get_content($section,'start');
   $content_after  = get_content($section,'end');
-  `perl $dirname/species_list.pl -v $version -o $tmp_section -hlist $hlist -user $user -phost $phost`;
+  `perl $dirname/species_list.pl -v $version -o $tmp_section -config $vcf_config_file -d_dir $data_dir -hlist $hlist -user $user -phost $phost`;
   $new_content = `cat $tmp_section`;
   `rm -f $tmp_section`;
   print_into_tmp_file($tmp_file,$content_before,$new_content,$content_after);
@@ -344,7 +344,7 @@ if ( $sections eq "all" || grep(/^${section}$/, @sections) ){
   $tmp_file  = $file_name;
 
   print localtime() . "\t# Start sources list ...\n";
-  `perl $dirname/sources2html.pl -v $version -o $tmp_file -hlist $hlist -phost $phost -config $vcf_config_file -d_dir $data_dir`;
+  `perl $dirname/sources2html.pl -v $version -o $tmp_file -hlist $hlist -phost $phost -config $vcf_config_file -d_dir $data_dir -p_data $p_data`;
 
   $copy2subdir = ($no_subdir) ? '' : $subdirs{$file_name};
   copy_updated_file($copy2subdir,$file_name,$tmp_file);

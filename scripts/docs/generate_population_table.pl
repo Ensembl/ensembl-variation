@@ -23,6 +23,9 @@ use Getopt::Long;
 use JSON;
 use File::Basename;
 
+my $dirname = dirname(__FILE__);
+require "$dirname/utils.pl";
+
 ###############################################################
 ##########             CONFIGURE                        #######
 ###############################################################
@@ -59,9 +62,6 @@ if (!$user) {
   usage();
 }
 usage() if ($help);
-
-# Get the dir this script is residing in
-my $dirname = dirname(__FILE__);
 
 # Get the local dir where the vcf files are located
 my $data_dir = "/nfs/production/flicek/ensembl/production/ensemblftp/data_files/vertebrates";
@@ -340,54 +340,6 @@ sub get_random_file {
   return $file;
 }
 
-# Determine what type data contains in the vcf file
-sub get_vcf_content_types {
-  my ($project) = @_;
-  my @types;
-  
-  # this ignores the false positive sigpipe error from tabix command 
-  $SIG{PIPE} = 'DEFAULT';
-  
-  # add if the vcf collection mentions annotation type
-  push @types, $project->{annotation_type} if $project->{annotation_type};
-
-  # if use_as_source is set then it is the main source for tracks
-  push @types, "source" if $project->{use_as_source};
-
-  # check FORMAT field of the vcf file to see if it has genotype
-  my $file = get_random_file($project);
-  
-  my $file_full_path = $file;
-  if ($project->{type} eq "local"){
-    $file_full_path = $data_dir . $file_full_path;
-  }
-
-  my $genotypes = `tabix -D $file_full_path -H | grep '##FORMAT' | grep 'ID=GT'`;
-  push @types, "genotype" if $genotypes;
-  
-  # check in a actual line for FORMAT field if not exist in header
-  unless ($genotypes){
-    my $chr = `tabix -D $file_full_path -l | head -n 1`;
-    chop $chr;
-  
-    my $line = `tabix -D $file_full_path $chr | head -n 1`;
-  
-    my $format_field = (split /\t/, $line)[8];
-    push @types, "genotype" if $format_field;
-
-    my $info_field = (split /\t/, $line)[7];
-    if ( ($info_field =~ /AF=/) || ($info_field =~ /AC=/ && $info_field =~ /AN=/) ) {
-      push @types, "frequency";
-    }
-    # a hard-coded check for NCBI-ALPHA and TOPMED as they have very special field for frequency
-    if ( ($info_field =~ /AN_SAMN/) || ($info_field =~ /TOPMED=/) ) {
-      push @types, "frequency";
-    }
-  }
-  
-  return @types;
-}
-
 # Build the project populations structure if it exists
 sub get_population_structure {
   my $pops     = shift;
@@ -505,7 +457,7 @@ sub get_project_populations {
   foreach my $project (@{$vcf_config->{'collections'}}) {
     # Check if the file have genotype data and being showed
     my @types = get_vcf_content_types($project);
-    next unless ( grep(/^genotype$/, @types) || grep(/^frequency$/, @types) );
+    next unless ( grep(/^genotype$/, @types) || grep(/^populations$/, @types) );
     
     my $project_id = $project->{'id'};
     next if ($project->{'assembly'} =~ /GRCh37/i || $project->{'annotation_type'} eq 'cadd' || $project->{'annotation_type'} eq 'gerp');
