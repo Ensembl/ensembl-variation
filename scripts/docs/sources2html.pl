@@ -35,11 +35,14 @@ use Getopt::Long;
 use JSON;
 use File::Basename;
 
+my $dirname = dirname(__FILE__);
+require "$dirname/utils.pl";
+
 ###############################################################
 ##########             CONFIGURE                        #######
 ###############################################################
 
-my ($e_version,$html_file,$source_id,$source,$s_version,$s_description,$s_url,$s_type,$s_status,$s_data_types,$s_order,$hlist,$phost,$skip_name,$config,$d_dir,$help);
+my ($e_version,$html_file,$source_id,$source,$s_version,$s_description,$s_url,$s_type,$s_status,$s_data_types,$s_order,$hlist,$phost,$skip_name,$config,$d_dir,$p_data,$help);
 my ($set_id,$set_name,$set_description);
 
 ## EG options
@@ -57,6 +60,7 @@ GetOptions(
      'skip_name!' => \$skip_name, 
      'config=s'   => \$config,
      'd_dir=s'    => \$d_dir,
+     'p_data=s' => \$p_data,
      'etype=s'    => \$etype
 );
 
@@ -238,7 +242,6 @@ if ($d_dir){
 }
 
 # Get the vcf config file location
-my $dirname = dirname(__FILE__);
 my $vcf_config_file = $dirname . '/../../modules/Bio/EnsEMBL/Variation/DBSQL/vcf_config.json';
 
 if ($config){
@@ -252,6 +255,17 @@ my $json_string = <IN>;
 close IN;
 
 my $vcf_config = JSON->new->decode($json_string) or throw("ERROR: Failed to parse config file $vcf_config_file\n");
+
+# read previous release data
+my $prev_data;
+if ($p_data) {
+  open IN, $p_data or throw("ERROR: Could not read from config file $p_data");
+  local $/ = undef;
+  $json_string = <IN>;
+  close IN;
+
+  $prev_data = JSON->new->decode($json_string) or throw("ERROR: Failed to parse config file $p_data");
+}
 
 ###############################################################
 ##########             MAIN PART                       ########
@@ -269,7 +283,7 @@ foreach my $hostname (@hostnames) {
   while (my ($dbname) = $sth->fetchrow_array) {
     next if ($dbname !~ /^[a-z][a-z_]*_[a-z0-9]+_variation_\d+_\d+$/i);
     next if ($dbname =~ /^(master_schema|drosophila|saccharomyces|ciona)/ || $dbname =~ /^homo_sapiens_variation_\d+_37$/ || $dbname =~ /private/);
-    
+
     $db_found ++;
     print STDERR "${dbname}\n";
     $dbname =~ /^(.+)_variation/;
@@ -472,12 +486,20 @@ sub source_table {
   
   # For variation dbs where data is based on VCF
   if ($is_vcf) {
+    # Add previous EVA version to p_list
+    if ($prev_data) {
+      my $p_version = $prev_data->{$name}->{EVA} || undef;
+      if (defined $p_version) {
+        push @p_sources, 'EVA';
+        $p_list->{EVA} = $p_version;
+      }
+    }
 
     foreach my $project (@{ $vcf_config->{'collections'} }) {
       next if $project->{annotation_type} eq 'cadd' || $project->{annotation_type} eq 'gerp';
 
       if (lc( $project->{species} ) eq $name) {
-        my ($source, $source_url, $version, $description, $info, $count, $example_url);
+        my ($source, $source_url, $description, $info, $count, $example_url);
 
         # determine type of data the file has
         my @types = get_vcf_content_types($project);
@@ -493,23 +515,23 @@ sub source_table {
           my @eva_release = grep {/release_/} (split /\//, $filename_template);
 
           if(@eva_release){
-              $version = $eva_release[0];
-              $version =~ s/release_//;
+              $s_version = $eva_release[0];
+              $s_version =~ s/release_//;
           }
           else{
-              $version = "-";
+              $s_version = "-";
           }
 
           $description = "Variants imported from EVA";
         }
 
         # Assuming the EVA release VCF file will not have genotypes
-        if ( (grep(/^genotype$/, @types) || grep(/^frequency$/, @types)) && $source_name =~ /^(PRJ)/ ){
+        if ( (grep(/^genotype$/, @types) || grep(/^populations$/, @types)) && $source_name =~ /^(PRJ)/ ){
           # Set source url using study id
           $source_url = $eva_study_url;
           $source_url =~ s/###ID###/$source_name/g;
 
-          $version = "-";
+          $s_version = "-";
 
           $description = "Variants with genotypes imported from EVA";
         }
@@ -536,16 +558,36 @@ sub source_table {
         $data_type_string .= qq{\n$spaces  <div class="$eg_class">$example</div>};
         $data_type_string .= qq{\n$spaces  <div style="clear:both"></div>\n$spaces</div>};
 
-        # Set a row for this vcf file
         my $s_header   = '<td style="width:4px;padding:0px;margin:0px';
+        # New version?
+        my $s_new_type;
+        if ($p_list->{$source} ne $s_version && $source_name eq "EVA"){
+          $s_new_type = 'version';
+          $has_new_version = 1;
+
+          $species_news{$species}{$s_new_type} += 1;
+          my $borders = ";border-top:1px solid #FFF;border-bottom:1px solid #FFF";
+          
+          $s_header .= $borders if ($bg == 1);
+          # $s_new = '<span style="color:'.$colours{$s_new_type}.'">New '.$s_new_type.'</span>' if ($s_new_type);
+          $s_header .= ';background-color:'.$colours{$s_new_type};
+        }
         $s_header .= '"></td>';
 
-        my $row = set_row($s_header, $source, $version, $description, $data_type_string, '', '');
+        # Set a row for this vcf file
+        my $row = set_row($s_header, $source, $s_version, $description, $data_type_string, '', '');
 
-        $source_table .= qq{
-          <tr class="bg$bg">
-            $row
-          </tr>};
+        if (defined $row) {
+          $source_table .= qq{
+            <tr class="bg$bg">
+              $row
+            </tr>};
+          if ($bg == 1) { $bg = 2; }
+          else { $bg = 1; }
+        }
+        else {
+          $species_news{$species}{$s_new_type} -= 1 if $s_new_type;
+        }
       }
     }
   }
@@ -679,31 +721,36 @@ sub source_table {
     
     my $row = set_row($s_header,$source,$s_version,$s_description,$data_type_string,$s_phenotype,$s_somatic_status) if $counts;
     
-    # Is chip ?
-    if ($s_type eq 'chip') {
-      $chip_table .= qq{
-      <tr class="bg$cbg">
+    if (defined $row) {
+      # Is chip ?
+      if ($s_type eq 'chip') {
+        $chip_table .= qq{
+        <tr class="bg$cbg">
+          $row
+        </tr>};
+        if ($cbg == 1) { $cbg = 2; }
+        else { $cbg = 1; }
+      }
+      # Is lsdb ?
+      elsif ($s_type eq 'lsdb') {
+        $lsdb_table .= qq{
+        <tr class="bg$lbg">
         $row
-      </tr>};
-      if ($cbg == 1) { $cbg = 2; }
-      else { $cbg = 1; }
-    }
-    # Is lsdb ?
-    elsif ($s_type eq 'lsdb') {
-      $lsdb_table .= qq{
-      <tr class="bg$lbg">
-       $row
-      </tr>};
-      if ($lbg == 1) { $lbg = 2; }
-      else { $lbg = 1; }
+        </tr>};
+        if ($lbg == 1) { $lbg = 2; }
+        else { $lbg = 1; }
+      }
+      else {
+        $source_table .= qq{
+        <tr class="bg$bg">
+          $row
+        </tr>};
+        if ($bg == 1) { $bg = 2; }
+        else { $bg = 1; }
+      }
     }
     else {
-      $source_table .= qq{
-      <tr class="bg$bg">
-        $row
-      </tr>};
-      if ($bg == 1) { $bg = 2; }
-      else { $bg = 1; }
+      $species_news{$species}{$s_new_type} -= 1 if $s_new_type;
     }
   }
   
@@ -761,12 +808,17 @@ sub source_table {
     
     my $row = set_row($s_header,$source,$s_version,$set_description,$data_type_string,'','') if $count;
 
-    $chip_table .= qq{
-    <tr class="bg$cbg">
-      $row
-    </tr>};
-    if ($cbg == 1) { $cbg = 2; }
-    else { $cbg = 1; }
+    if (defined $row) {
+      $chip_table .= qq{
+      <tr class="bg$cbg">
+        $row
+      </tr>};
+      if ($cbg == 1) { $cbg = 2; }
+      else { $cbg = 1; }
+    }
+    else {
+      $species_news{$species}{$s_new_type} -= 1 if $s_new_type;
+    }
 
   }
  
@@ -1303,157 +1355,6 @@ sub get_example {
   return '';
 }
 
-# Determine what type data contains in the vcf file
-sub get_vcf_content_types {
-  my ($project) = @_;
-  my @types;
-  
-  # this ignores the false positive sigpipe error from tabix command 
-  $SIG{PIPE} = 'DEFAULT';
-
-  # add if the vcf collection mentions annotation type
-  push @types, $project->{annotation_type} if $project->{annotation_type};
-
-  # if use_as_source is set then it is the main source for tracks
-  push @types, "source" if $project->{use_as_source};
-
-  # check FORMAT field of the vcf file to see if it has genotype
-  my $file = get_random_file($project);
-
-  my $file_full_path = $file;
-  if ($project->{type} eq "local"){
-    $file_full_path = $data_dir . $file_full_path;
-  }
-
-  my $genotypes = `tabix $file_full_path -H | grep '##FORMAT' | grep 'ID=GT'`;
-  push @types, "genotype" if $genotypes;
-  
-  my $chr = `tabix $file_full_path -l | head -n 1`;
-  $chr = s/\R//g;
-  my $line = `tabix $file_full_path $chr | head -n 1`;
-
-  # check in a actual line for FORMAT field if not exist in header
-  unless ($genotypes){
-    my $format_field = (split /\t/, $line)[8];
-    push @types, "genotype" if $format_field;
-  }
-
-  my $info_field = (split /\t/, $line)[7];
-  if ( ($info_field =~ /AF=/) || ($info_field =~ /AC=/ && $info_field =~ /AN=/) ) {
-    push @types, "frequency";
-  }
-  
-  return @types;
-}
-
-# Get number of variant from a vcf file
-sub get_variant_count {
-  my ($project) = @_;
-  my $count;
-
-  foreach my $file (get_all_files($project)){
-    $count += `bcftools stats $file | grep -ve '^#' | grep -e 'number of records' | cut -d\$'\t' -f 4`;
-
-    unless($count) {
-      # If file is remote try downloading it and count the line number
-      if ($file =~ /^http/ || $file =~ /^ftp/) {
-        `wget -O vcf.gz $file`;
-        $count = `bgzip -d -c vcf.gz | grep -v '^#' | wc -l`;
-        `rm vcf.gz`;
-      }
-      # If file is local no need for downloadin; just count line number 
-      else{
-        $count = `bgzip -d -c $file | grep -v '^#' | wc -l`;
-      }
-    }
-  }
-
-  return $count;
-}
-
-# Check if samples from a vcf files exist in either vcf config or database
-sub genotype_samples_exists {
-  my ($species, $project) = @_;
-  
-  # Get samples from vcf file
-  my @samples;
-  foreach my $file (get_all_files($project)){
-    push @samples, (split / /, `bcftools query -l $file | xargs | tr -d '\n'`);
-  }
-
-  # Get samples from vcf config 
-  my @samples_in_vcf = keys %{ $project->{sample_populations} };
-
-  # Check if any of the sample matches
-  foreach ( @samples_in_vcf ){
-    if (grep /^$_$/, @samples){
-      return 1;
-    }
-  }
-
-  my $samples_str = join ",", (map { "'$_'" } @samples);
-  foreach my $hostname (@hostnames) {
-    my $sql = qq{SHOW DATABASES LIKE '%$species\%variation\_$e_version%'};
-    my $sth = get_connection_and_query("", $hostname, $sql);
-
-    while (my ($var_dbname) = $sth->fetchrow_array) {
-      my $sql2 = qq{SELECT name FROM sample WHERE name IN ($samples_str) LIMIT 1};
-      my $sth2 = get_connection_and_query($var_dbname, $hostname, $sql2);
-      
-      return 1 if $sth2->fetchrow_array;
-    }
-  }
-
-  return 0;
-}
-
-# Get a random file from filename template in vcf collection
-sub get_random_file {
-  my ($project) = @_;
-  my $file;
-
-  my $filename_template = $project->{filename_template};
-
-  if ($filename_template =~ /###CHR###/){
-    my $chromosomes = $project->{chromosomes};
-
-    return undef unless $chromosomes;
-
-    my $chr = @{ $chromosomes }[0];
-    
-    $file = $filename_template =~ s/###CHR###/$chr/gr;
-  }
-  else{
-    $file = $filename_template
-  }
-
-  return $file;
-}
-
-# Get all files from filename template in vcf collection
-sub get_all_files {
-  my ($project) = @_;
-  my @files;
-
-  my $filename_template = $project->{filename_template};
-
-  if ($filename_template =~ /###CHR###/){
-    my $chromosomes = $project->{chromosomes};
-
-    return undef unless $chromosomes;
-
-    foreach my $chr (@{ $chromosomes }){
-      my $file = $filename_template =~ s/###CHR###/$chr/gr;
-      push @files, $file;
-    }
-  }
-  else{
-    push @files, $filename_template;
-  }
-
-  return @files;
-}
-
 sub usage {
   
   print qq{
@@ -1475,6 +1376,7 @@ sub usage {
     -config         The location of the vcf_config.json file. By default it uses the existing one in the same repository.   
     -d_dir          The directory location of where the local vcf files are stored. By default it looks in - 
                     /nfs/production/flicek/ensembl/production/ensemblftp/data_files/vertebrates    
+    -p_data         Location of the json file that contain result of the previous release for comparison. (Required)
     -site           The URL of the website (optional)
     -etype          The type of Ensembl, e.g. Plant (optional)
   } . "\n";
