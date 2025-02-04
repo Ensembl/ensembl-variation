@@ -2,3 +2,4 @@
 6	483	YES1
 1	13	YES1
 6	13	NOS1
+8	577	Tier I - Strong:diagnostic:supports diagnosis

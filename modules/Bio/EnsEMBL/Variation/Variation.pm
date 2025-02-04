@@ -1276,6 +1276,17 @@ sub get_all_PhenotypeFeatures {
 
 }
 
+sub get_all_PhenotypeFeatures_Somatic {
+    my $self = shift;
+
+    #Assert the adaptor reference
+    assert_ref($self->adaptor(),'Bio::EnsEMBL::Variation::DBSQL::BaseAdaptor');
+    
+    # Get the annotations from the database
+    return $self->adaptor->db->get_PhenotypeFeatureAdaptor()->fetch_all_somatic_by_Variation($self);
+
+}
+
 =head2 display_consequence
 
   Arg [1]    : (optional) String $term_type

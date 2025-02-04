@@ -117,6 +117,41 @@ sub _is_significant_constraint {
 }
 
 
+=head2 _filter_dna_type
+
+  Arg [1]    : string $constraint
+  Arg [1]    : string $dna_type
+  Example    : $self->_filter_dna_type($constraint, $dna_type)
+  Description: Internal method to add a constraint on the column "DNA_type".
+               Phenotype features from ClinVar have DNA_type 'Germline' or 'Somatic'.
+               For non-human or other human sources DNA_type is NULL.
+               This method add a constraint to return a specific type of DNA and/or null.
+  Returntype : string
+  Exceptions : none
+  Caller     : internal
+  Status     : stable
+
+=cut
+
+sub _filter_dna_type {
+  my $self = shift;
+  my $constraint = shift;
+  my $dna_type = shift;
+
+  my $dna_constraint;
+
+  if($dna_type eq "Germline") {
+    $dna_constraint = qq{ (pf.DNA_type='$dna_type' OR pf.DNA_type is NULL) };
+  }
+  else {
+    $dna_constraint = qq{ pf.DNA_type='$dna_type' };
+  }
+
+  $constraint .= (defined($constraint)) ? " AND$dna_constraint" : $dna_constraint;
+
+  return $constraint;
+}
+
 =head2 _is_class_constraint
 
   Arg [1]    : string $constraint
@@ -153,7 +188,8 @@ sub _fetch_all_by_object {
   my $self   = shift;
   my $object = shift;
   my $type   = shift;
-  
+  my $dna_type = shift; # dna_type to include
+
   $type ||= (split '::', ref($object))[-1];
   throw("$type is not a valid object type, valid types are: ".(join ", ", sort keys %TYPES)) unless defined $type and defined($TYPES{$type});
   
@@ -163,7 +199,12 @@ sub _fetch_all_by_object {
   $constraint = $self->_is_significant_constraint($constraint);
   # Add the constraint for phenotype class
   $constraint = $self->_is_class_constraint($constraint);
-     
+
+  # Filter phenotype features by their DNA_type (when searching for germline also includes null DNA_type)
+  if(defined $dna_type) {
+    $constraint = $self->_filter_dna_type($constraint, $dna_type);
+  }
+
   return $self->generic_fetch($constraint);
 }
 
@@ -400,7 +441,7 @@ sub fetch_all_by_Slice_with_ontology_accession {
 
   Arg [1]    : Bio::EnsEMBL::Variation::Variation $var
   Example    : my @pfs = @{$pfa->fetch_all_by_Variation($var)};
-  Description: Retrieves all PhenotypeFeatures for a given variation.
+  Description: Retrieves all PhenotypeFeatures with 'Germline' DNA type for a given variation.
   Returntype : reference to list Bio::EnsEMBL::Variation::PhenotypeFeature
   Exceptions : throw on bad argument
   Caller     : general
@@ -416,7 +457,32 @@ sub fetch_all_by_Variation {
     throw('Bio::EnsEMBL::Variation::Variation arg expected');
   }
   
-  return $self->_fetch_all_by_object($var, 'Variation');
+  # Only include phenotype features with DNA_type 'Germline' or null
+  return $self->_fetch_all_by_object($var, 'Variation', 'Germline');
+}
+
+=head2 fetch_all_somatic_by_Variation
+
+  Arg [1]    : Bio::EnsEMBL::Variation::Variation $var
+  Example    : my @pfs = @{$pfa->fetch_all_somatic_by_Variation($var)};
+  Description: Retrieves all PhenotypeFeatures with 'Somatic' DNA type for a given variation.
+  Returntype : reference to list Bio::EnsEMBL::Variation::PhenotypeFeature
+  Exceptions : throw on bad argument
+  Caller     : general
+  Status     : stable
+
+=cut
+
+sub fetch_all_somatic_by_Variation {
+  my $self = shift;
+  my $var  = shift;
+
+  if(!ref($var) || !$var->isa('Bio::EnsEMBL::Variation::Variation')) {
+    throw('Bio::EnsEMBL::Variation::Variation arg expected');
+  }
+
+  # Only include phenotype features with DNA_type 'Somatic'
+  return $self->_fetch_all_by_object($var, 'Variation', 'Somatic');
 }
 
 
@@ -1183,7 +1249,8 @@ sub get_clinsig_alleles_by_location {
       AND pf.seq_region_id = ?
       AND pf.seq_region_start >= ?
       AND pf.seq_region_end <= ?
-      AND pf.source_id = ? 
+      AND pf.source_id = ?
+      AND (DNA_type = 'Germline' OR DNA_type is NULL)
       AND EXISTS(select value from phenotype_feature_attrib where phenotype_feature_id = pf.phenotype_feature_id && attrib_type_id = 483)
 
       GROUP BY pf.phenotype_feature_id
@@ -1215,6 +1282,76 @@ sub get_clinsig_alleles_by_location {
   return $hash;
 }
 
+sub get_somatic_clin_impact_by_location {
+  my $self = shift;
+  my $seq_region_id = shift;
+  my $seq_region_start = shift;
+  my $seq_region_end = shift;
+  my $source_id = shift;
+  throw("Cannot fetch attributes without seq region information") unless defined($seq_region_id) && defined($seq_region_start) && defined($seq_region_end);
+
+  my $extra_sql = $self->_is_significant_constraint();
+  # Add the constraint for phenotype class
+  $extra_sql = $self->_is_class_constraint($extra_sql);
+
+  my $sth = $self->dbc->prepare(qq{
+    SELECT
+      CONCAT(pf.seq_region_id, ':', pf.seq_region_start, '-', pf.seq_region_end),
+      CONCAT_WS('; ',
+        CONCAT('id=', pf.object_id), CONCAT('pf_id=', pf.phenotype_feature_id),
+        GROUP_CONCAT(IF(at.code in ('somatic_clin_sig', 'oncogenic_clin_sig'), at.code, NULL), "=", concat('', pfa.value, '') SEPARATOR '; '),
+        CONCAT('phenotype=', p.description)
+      ) AS attribute
+
+      FROM
+        phenotype p,
+        phenotype_feature pf
+
+      LEFT JOIN phenotype_feature_attrib pfa
+        ON pf.phenotype_feature_id = pfa.phenotype_feature_id
+      LEFT JOIN attrib_type `at`
+          ON pfa.attrib_type_id = at.attrib_type_id
+
+      WHERE pf.phenotype_id = p.phenotype_id
+      AND pf.seq_region_id = ?
+      AND pf.seq_region_start >= ?
+      AND pf.seq_region_end <= ?
+      AND pf.source_id = ?
+      AND pf.DNA_type = 'Somatic'
+
+      GROUP BY pf.phenotype_feature_id
+      ORDER BY pf.seq_region_id, pf.seq_region_start, pf.seq_region_end
+  });
+
+  $sth->bind_param(1, $seq_region_id, SQL_VARCHAR);
+  $sth->bind_param(2, $seq_region_start, SQL_VARCHAR);
+  $sth->bind_param(3, $seq_region_end, SQL_VARCHAR);
+  $sth->bind_param(4, $source_id, SQL_VARCHAR);
+  $sth->execute();
+
+  my $pf_id;
+  my $output_string;
+  my $hash;
+  $sth->bind_columns(\$pf_id, \$output_string);
+
+  while ($sth->fetch){
+    $hash->{$pf_id} = [] if !defined($hash->{$pf_id});
+    my $internal_hash;
+
+    # Example: $output_string => "id=rs1555760738; pf_id=266451087; somatic_clin_sig=Tier III - Unknown"
+    foreach my $id (split/\;/,$output_string){
+      my ($key, $value) = split /\=/, $id;
+      $key =~ s/^\s+|\s+$//g;
+
+      $internal_hash->{$key} = $value;
+    }
+    push(@{$hash->{$pf_id}}, $internal_hash);
+  }
+
+  $sth->finish();
+
+  return $hash;
+}
 
 
 # stub method used by web
@@ -1530,6 +1667,7 @@ sub _obj_from_row {
         '_source_id'     => $row->{source_id},
         '_source_name'   => $row->{name}, 
         'is_significant' => $row->{is_significant},
+        'dna_type'       => $row->{dna_type},
       }
     );
 
@@ -1591,8 +1729,9 @@ sub store{
             seq_region_id,
             seq_region_start,
             seq_region_end,
-            seq_region_strand            
-        ) VALUES (?,?,?,?,?,?,?,?,?,?)
+            seq_region_strand,
+            dna_type
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?)
     });
 
     $sth->execute(
@@ -1605,7 +1744,8 @@ sub store{
         defined($pf->{slice}) ? $pf->slice()->get_seq_region_id() : undef,
         defined($pf->{start}) ? $pf->{start} :undef,
         defined($pf->{end})   ? $pf->{end} : undef,
-        defined($pf->{strand})? $pf->{strand} : undef         
+        defined($pf->{strand})? $pf->{strand} : undef,
+        defined($pf->{dna_type})? $pf->{dna_type} : undef
     );
   
    $sth->finish;

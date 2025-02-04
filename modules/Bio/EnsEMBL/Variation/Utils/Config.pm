@@ -88,6 +88,19 @@ our @clinvar_clinical_significance_types = (
     'established risk allele'
 );
 
+our @clinvar_clinical_significance_somatic = (
+    'Tier I - Strong',
+    'Tier II - Potential',
+    'Tier III - Uncertain significance',
+    'Tier III - Unknown',
+    'Tier IV - Benign/likely benign',
+    'Oncogenic',
+    'Likely oncogenic',
+    'Uncertain significance',
+    'Likely benign ',
+    'Benign'
+);
+
 our @dgva_clinical_significance_types = (
     'Not tested',
     'Benign',
@@ -1245,6 +1258,16 @@ our @ATTRIB_TYPES = (
          description => 'The clinical significance of a variant as reported by ClinVar',
     },
     {
+         code => 'somatic_clin_sig',
+         name => 'ClinVar somatic significance',
+         description => 'The somatic classification of a variant as reported by ClinVar',
+    },
+    {
+         code => 'oncogenic_clin_sig',
+         name => 'ClinVar somatic classification of oncogenicity',
+         description => 'The somatic classification of oncogenicity of a variant as reported by ClinVar',
+    },
+    {
         code => 'prot_func_analysis',
         name => 'Protein function analysis ',
         description => 'The program used to make protein function predictions',
@@ -1364,6 +1387,7 @@ our %ATTRIBS = (
    'dbsnp_clin_sig'      => \@dbsnp_clinical_significance_types,
    'dgva_clin_sig'       => \@dgva_clinical_significance_types,
    'clinvar_clin_sig'    => \@clinvar_clinical_significance_types,
+   'clinvar_somatic'     => \@clinvar_clinical_significance_somatic,
    'polyphen_prediction' => ['probably damaging', 'possibly damaging', 'benign', 'unknown'],
    'sift_prediction'     => ['tolerated', 'deleterious', 'tolerated - low confidence', 'deleterious - low confidence'],
    'prot_func_analysis'  => [qw(sift polyphen_humvar polyphen_humdiv)],
