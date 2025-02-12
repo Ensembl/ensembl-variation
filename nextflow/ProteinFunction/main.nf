@@ -58,12 +58,19 @@ if (params.help) {
     --species VAL        Latin species name (default: homo_sapiens);
                          PolyPhen-2 only works for human
 
-  Database options (mandatory):
+  Database options:
+    Ensembl variation database params -
     --host VAL           Server host
     --port VAL           Server port
     --user VAL           Server user
     --pass VAL           Server password
     --database VAL       Name of database
+    --offline            No database connection to variation database
+
+    SQLite database params -
+    --sqlite             0 or 1, tells whether to create SQLite database (default: params.offline)
+    --sqlite_dir         Directory where SQLite db would be created (default: params.outdir)
+    --sqlite_db          Full path to SQLite db (--sqlite_dir would be ignored)
 
   SIFT options:
     --sift_run_type VAL  SIFT run type:
