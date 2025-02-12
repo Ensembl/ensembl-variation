@@ -5,7 +5,8 @@ use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Variation::ProteinFunctionPredictionMatrix;
 use Digest::MD5 qw(md5_hex);
 
-my ($species, $port, $host, $user, $pass, $dbname,
+my ($species, $offline, $sqlite,
+    $port, $host, $user, $pass, $dbname,
     $peptide, $output_file, $model) = @ARGV;
 
 # Extract model name
@@ -63,25 +64,34 @@ while (<RESULT>) {
 
 # save the predictions to the database unless they are null matrices
 if ( $any_results ){
-  my $var_dba = Bio::EnsEMBL::Variation::DBSQL::DBAdaptor->new(
-      '-species' => $species,
-      '-port'    => $port,
-      '-host'    => $host,
-      '-user'    => $user,
-      '-pass'    => $pass,
-      '-dbname'  => $dbname
-    );
-  my $pfpma = $var_dba->get_ProteinFunctionPredictionMatrixAdaptor
-      or die "Failed to get matrix adaptor";
-
-  # check if identical predictions are already stored                           
-  my $data = $pfpma->fetch_polyphen_predictions_by_translation_md5($md5, $model_name);
-  if (defined $data && defined $data->{matrix} && $data->{matrix} eq $pred_matrix->serialize) {
-    warn "Skipping: identical PolyPhen-2 predictions already stored in database\n"
-  } else {
-    $pfpma->store($pred_matrix);
+  if (!$offline){
+    my $var_dba = Bio::EnsEMBL::Variation::DBSQL::DBAdaptor->new(
+        '-species' => $species,
+        '-port'    => $port,
+        '-host'    => $host,
+        '-user'    => $user,
+        '-pass'    => $pass,
+        '-dbname'  => $dbname
+      );
+    my $pfpma = $var_dba->get_ProteinFunctionPredictionMatrixAdaptor
+        or die "Failed to get matrix adaptor";
+    # check if identical predictions are already stored                           
+    my $data = $pfpma->fetch_polyphen_predictions_by_translation_md5($md5, $model_name);
+    if (defined $data && defined $data->{matrix} && $data->{matrix} eq $pred_matrix->serialize) {
+      warn "Skipping: identical PolyPhen-2 predictions already stored in database\n"
+    } else {
+      $pfpma->store($pred_matrix);
+    }
+    $var_dba->dbc and $var_dba->dbc->disconnect_if_idle();
   }
-  $var_dba->dbc and $var_dba->dbc->disconnect_if_idle();
+
+  if ($sqlite){
+    my $dbh = DBI->connect("dbi:SQLite:dbname=$sqlite","","");
+    my $sth = $dbh->prepare("INSERT INTO predictions VALUES(?, ?, ?)");
+
+    my $attrib_id = $model_name eq "humdiv" ? 269 : 268;
+    $sth->execute($pred_matrix->translation_md5, $attrib_id, $pred_matrix->serialize)
+  }
 } else {
   warn "Skipping: no PolyPhen-2 predictions to store\n";
 }
