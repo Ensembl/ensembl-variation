@@ -16,6 +16,13 @@ params.registry = null
 params.licences = "CC0" // Open-access only
 params.round    = 4
 
+// Parameters for loading MaveDB from files:
+params.from_files    = true          // default: use local files
+// params.metadata_path = null          // only used if from_files is true
+params.mappings_path = null          // only used if from_files is true
+params.scores_path   = null          // only used if from_files is true
+
+// add to usage:     --metadata_path Path to MaveDB metadata files (main.json, one collated file)
 // Print usage
 if (params.help) {
   log.info """
@@ -27,15 +34,19 @@ if (params.help) {
               --mappings [MaveDB_mappings_folder]
 
   Mandatory arguments:
-    --urn       File with MaveDB URNs, such as 'urn:mavedb:00000001-a-1'
+    --urn           File with MaveDB URNs, such as 'urn:mavedb:00000001-a-1'
+    --from_files    Use local files instead of downloading from MaveDB
 
   Optional arguments:
-    --ensembl   Path to Ensembl root directory (default: ${ENSEMBL_ROOT_DIR})
-    --output    Path to output file (default: output/MaveDB_variants.tsv.gz)
-    --registry  Path to Ensembl registry
+    --ensembl       Path to Ensembl root directory (default: ${ENSEMBL_ROOT_DIR})
+    --output        Path to output file (default: output/MaveDB_variants.tsv.gz)
+    --registry      Path to Ensembl registry
+    --mappings_path Path to MaveDB mappings files (per URN)
+    --scores_path   Path to MaveDB scores files (per URN)
 
-    --licences  Comma-separated list of accepted licences (default: 'CC0')
-    --round     Decimal places to round floats in MaveDB data (default: 4)
+    --licences    Comma-separated list of accepted licences (default: 'CC0')
+    --round       Decimal places to round floats in MaveDB data (default: 4)
+    
   """
   exit 1
 }
@@ -43,6 +54,7 @@ if (params.help) {
 // Module imports
 include { filter_by_licence } from './subworkflows/filter.nf'
 include { download_MaveDB_data } from './nf_modules/fetch.nf'
+include { import_from_files } from './nf_modules/import_from_files.nf' // not implemented - allow import from files
 include { split_by_mapping_type } from './subworkflows/split.nf'
 include { run_variant_recoder } from './nf_modules/variant_recoder.nf'
 include { get_hgvsp } from './nf_modules/utils.nf'
@@ -52,8 +64,28 @@ include { download_chain_files;
           liftover_to_hg38 } from './nf_modules/liftover.nf'
 include { concatenate_files;
           tabix } from './nf_modules/output.nf'
-
 include { check_JVM_mem; print_params; print_summary } from '../utils/utils.nf'
+
+// // --- Publish raw outputs after download_MaveDB_data ---
+// process publishIntermediate {
+//   publishDir "/nfs/production/flicek/ensembl/variation/jma/maveDB-test/test_output/raw", mode: 'copy', overwrite: true
+
+//   // This process accepts a 4-element tuple from download_MaveDB_data:
+//   input:
+//     tuple val(urn), path(mappings), path(scores), path(metadata)
+//   output:
+//     tuple val(urn), path("${urn}_mappings_copy.json"), path("${urn}_scores_copy.csv"), path("${urn}_metadata_copy.json")
+  
+//   script:
+//   """
+//   cp ${mappings} ${urn}_mappings_copy.json
+//   cp ${scores} ${urn}_scores_copy.csv
+//   cp ${metadata} ${urn}_metadata_copy.json
+//   """
+// }
+
+// Main workflow
+
 print_params('Create MaveDB plugin data for VEP', nullable=['registry'])
 check_JVM_mem(min=50.4)
 print_summary()
@@ -64,31 +96,39 @@ workflow {
           .fromPath( params.urn, checkIfExists: true )
           .splitText()
           .map { it.trim() }
+          .take(5)  // TEST: take the first n lines from the file
+          
   licences = params.licences.tokenize(",")
   urn = filter_by_licence(urn, licences)
 
-  // download mappings and scores from MaveDB
-  download_MaveDB_data(urn)
-  files = download_MaveDB_data.out
-            .map { [urn: it[0], mappings: it[1], scores: it[2], metadata: it[3]] }
-  files = split_by_mapping_type( files )
+  // Choose which module to use based on params.from_files
+  if ( params.from_files ) {
+      // Use the file-based module.
+      files = import_from_files(urn)
+      // files = import_from_files.out.map { [urn: it[0], mappings: it[1], scores: it[2], metadata: it[3]] }
+      // Note: import_from_files should output a tuple: (urn, mappings, scores, metadata) - haven't done the metadata part yet
+  } else {
+      // Use the API-based download module.
+      download_MaveDB_data(urn)
+      files = download_MaveDB_data.out.map { [urn: it[0], mappings: it[1], scores: it[2], metadata: it[3]] }
+  }
 
-  // use MaveDB-prepared HGVSg mappings
-  map_scores_to_HGVSg_variants( files.hgvs_nt )
-  download_chain_files()
-  liftover_to_hg38( map_scores_to_HGVSg_variants.out,
-                    download_chain_files.out )
+  // // use MaveDB-prepared HGVSg mappings
+  // map_scores_to_HGVSg_variants( files.hgvs_nt )
+  // download_chain_files()
+  // liftover_to_hg38( map_scores_to_HGVSg_variants.out,
+  //                   download_chain_files.out )
 
-  // prepare HGVSp mappings
-  get_hgvsp( files.hgvs_pro )
-  hgvsp = get_hgvsp.out.filter { it.last().size() > 0 }
-  run_variant_recoder( hgvsp )
-  map_scores_to_HGVSp_variants( run_variant_recoder.out )
+  // // prepare HGVSp mappings
+  // get_hgvsp( files.hgvs_pro )
+  // hgvsp = get_hgvsp.out.filter { it.last().size() > 0 }
+  // run_variant_recoder( hgvsp )
+  // map_scores_to_HGVSp_variants( run_variant_recoder.out )
 
-  // concatenate output files into a single file
-  output_files = liftover_to_hg38.out.
-                   mix(map_scores_to_HGVSp_variants.out).
-                   collect { it.last() }
-  concatenate_files( output_files )
-  tabix( concatenate_files.out )
+  // // concatenate output files into a single file
+  // output_files = liftover_to_hg38.out.
+  //                  mix(map_scores_to_HGVSp_variants.out).
+  //                  collect { it.last() }
+  // concatenate_files( output_files )
+  // tabix( concatenate_files.out )
 }
