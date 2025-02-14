@@ -236,27 +236,7 @@ sub pipeline_analyses {
           -analysis_capacity  => $self->o('pipeline_wide_analysis_capacity'),
           -hive_capacity => $self->o('pipeline_wide_analysis_capacity'),
           -max_retry_count => 1,
-          -rc_name => 'default',
-          -flow_into      => {
-            -1 => ['submit_job_gvf_dumps_mediummem'],
-          }
-      },
-      {   -logic_name => 'submit_job_gvf_dumps_mediummem',
-          -module => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-          -analysis_capacity  => $self->o('pipeline_wide_analysis_capacity'),
-          -hive_capacity => $self->o('pipeline_wide_analysis_capacity'),
-          -max_retry_count => 1,
-          -rc_name => 'medium',
-          -flow_into      => {
-            -1 => ['submit_job_gvf_dumps_highmem'],
-          }
-      },
-      {   -logic_name => 'submit_job_gvf_dumps_highmem',
-          -module => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-          -analysis_capacity  => $self->o('pipeline_wide_analysis_capacity'),
-          -hive_capacity => $self->o('pipeline_wide_analysis_capacity'),
-          -max_retry_count => 0,
-          -rc_name => 'high',
+          -rc_name => 'high'
       },
 # join split slice
       { -logic_name => 'init_join_split_slice',
