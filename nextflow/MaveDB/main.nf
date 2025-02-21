@@ -77,7 +77,7 @@ workflow {
       .fromPath(params.urn, checkIfExists: true)
       .splitText()
       .map { it.trim() }
-      .take(2)  // TEST: take the first n lines from the file
+      .take(10)  // TEST: take the first n lines from the file
 
   // Choose which module to use based on --from_files (true/false)
   if (params.from_files) {
@@ -103,49 +103,23 @@ workflow {
     files = download_MaveDB_data.out.map { [urn: it[0], mappings: it[1], scores: it[2], metadata: it[3]] }
   }
 
-  // // Split mapping files based on HGVS type (HGVSp or HGVSg files) - make 2 channels 
-  // files_split = files.map { entry -> 
-  //         def hgvs = "unknown"
-  //         def mappings_file = file(entry.mappings)
-
-  //         mappings_file.withReader { reader ->
-  //             reader.eachLine { line ->
-  //                 if (line.contains("hgvs.")) {
-  //                     hgvs = line.contains("hgvs.p") ? "hgvs.p" : "hgvs.g"
-  //                     return
-  //                 }
-  //             }
-  //         }
-          
-  //         return entry + [hgvs: hgvs]
-  //     }
-  //     .branch {
-  //         hgvs_pro: it.hgvs == "hgvs.p",
-  //         hgvs_nt:  it.hgvs == "hgvs.g"
-  //     }
-
   files = split_by_mapping_type(files)
 
-  println("_pro")
-  files.hgvs_pro.view()
-  println("_nt")
-  files.hgvs_nt.view()
-
-  // // use MaveDB-prepared HGVSg mappings
+  // use MaveDB-prepared HGVSg mappings
   map_scores_to_HGVSg_variants(files.hgvs_nt)
   download_chain_files()
   liftover_to_hg38(map_scores_to_HGVSg_variants.out, download_chain_files.out)
 
-  // // prepare HGVSp mappings
+  // prepare HGVSp mappings
   get_hgvsp(files.hgvs_pro)
   hgvsp = get_hgvsp.out.filter { it.last().size() > 0 }
   run_variant_recoder(hgvsp)
   map_scores_to_HGVSp_variants(run_variant_recoder.out)
 
-  // // concatenate output files into a single file
-  // output_files = liftover_to_hg38.out
-  //                 .mix(map_scores_to_HGVSp_variants.out)
-  //                 .collect { it.last() }
-  // concatenate_files(output_files)
-  // tabix(concatenate_files.out)
+  // concatenate output files into a single file
+  output_files = liftover_to_hg38.out
+                  .mix(map_scores_to_HGVSp_variants.out)
+                  .collect { it.last() }
+  concatenate_files(output_files)
+  tabix(concatenate_files.out)
 }
