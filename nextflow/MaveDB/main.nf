@@ -17,10 +17,10 @@ params.licences = "CC0" // Open-access only
 params.round    = 4
 
 // Parameters for loading MaveDB from files:
-params.from_files    = true          // default: use local files
-params.metadata_file = null          // only used if from_files is true
-params.mappings_path = null          // only used if from_files is true
-params.scores_path   = null          // only used if from_files is true
+params.from_files    = false                                                // default: use local files
+params.metadata_file = ""          // only used if from_files is true
+params.mappings_path = ""          // only used if from_files is true
+params.scores_path   = ""          // only used if from_files is true
 
 // Print usage
 if (params.help) {
@@ -53,7 +53,6 @@ if (params.help) {
 // Module imports
 include { filter_by_licence } from './subworkflows/filter.nf'
 include { download_MaveDB_data } from './nf_modules/fetch.nf'
-include { import_from_files } from './nf_modules/import_from_files.nf' // not implemented - allow import from files
 include { split_by_mapping_type } from './subworkflows/split.nf'
 include { run_variant_recoder } from './nf_modules/variant_recoder.nf'
 include { get_hgvsp } from './nf_modules/utils.nf'
@@ -64,6 +63,8 @@ include { download_chain_files;
 include { concatenate_files;
       tabix } from './nf_modules/output.nf'
 include { check_JVM_mem; print_params; print_summary } from '../utils/utils.nf'
+
+include { import_from_files } from './nf_modules/import_from_files.nf'
 include { extract_metadata } from './nf_modules/extract_metadata.nf'
 
 // Main workflow
@@ -76,7 +77,7 @@ workflow {
       .fromPath(params.urn, checkIfExists: true)
       .splitText()
       .map { it.trim() }
-      .take(1)  // TEST: take the first n lines from the file
+      .take(2)  // TEST: take the first n lines from the file
 
   // Choose which module to use based on --from_files (true/false)
   if (params.from_files) {
@@ -96,11 +97,11 @@ workflow {
 
   } else {
     // Download_MaveDB_data using the API
+    licences = params.licences.tokenize(",")
+    urn = filter_by_licence(urn, licences)
     download_MaveDB_data(urn)
     files = download_MaveDB_data.out.map { [urn: it[0], mappings: it[1], scores: it[2], metadata: it[3]] }
   }
-
-  files.view()
 
   // // Split mapping files based on HGVS type (HGVSp or HGVSg files) - make 2 channels 
   // files_split = files.map { entry -> 
@@ -125,7 +126,9 @@ workflow {
 
   files = split_by_mapping_type(files)
 
+  println("_pro")
   files.hgvs_pro.view()
+  println("_nt")
   files.hgvs_nt.view()
 
   // // use MaveDB-prepared HGVSg mappings
@@ -139,10 +142,10 @@ workflow {
   run_variant_recoder(hgvsp)
   map_scores_to_HGVSp_variants(run_variant_recoder.out)
 
-  // concatenate output files into a single file
-  output_files = liftover_to_hg38.out
-                  .mix(map_scores_to_HGVSp_variants.out)
-                  .collect { it.last() }
-  concatenate_files(output_files)
-  tabix(concatenate_files.out)
+  // // concatenate output files into a single file
+  // output_files = liftover_to_hg38.out
+  //                 .mix(map_scores_to_HGVSp_variants.out)
+  //                 .collect { it.last() }
+  // concatenate_files(output_files)
+  // tabix(concatenate_files.out)
 }
