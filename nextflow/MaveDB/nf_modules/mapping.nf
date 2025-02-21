@@ -9,14 +9,16 @@ process map_scores_to_HGVSp_variants {
 
   script:
   def round = params.round ? "--round ${params.round}" : ""
+  def script_name = params.from_files ? "map_scores_to_variants_fromfile.py" : "map_scores_to_variants.py"
+
   """
-  map_scores_to_variants.py --urn ${urn} \\
-                            --scores ${scores} \\
-                            --mappings ${mappings} \\
-                            --metadata ${metadata} \\
-                            --vr $vr \\
-                            ${round} \\
-                            --output map_${urn}.tsv
+  ${script_name} --urn ${urn} \\
+                 --scores ${scores} \\
+                 --mappings ${mappings} \\
+                 --metadata ${metadata} \\
+                 --vr $vr \\
+                 ${round} \\
+                 --output map_${urn}.tsv
   """
 }
 
@@ -31,12 +33,14 @@ process map_scores_to_HGVSg_variants {
 
   script:
   def round = params.round ? "--round ${params.round}" : ""
+  def script_name = params.from_files ? "map_scores_to_variants_fromfile.py" : "map_scores_to_variants.py"
+
   """
-  map_scores_to_variants.py --urn ${urn} \\
-                            --scores ${scores} \\
-                            --mappings ${mappings} \\
-                            --metadata ${metadata} \\
-                            ${round} \\
-                            --output map_${urn}.tsv
+  ${script_name} --urn ${urn} \\
+                 --scores ${scores} \\
+                 --mappings ${mappings} \\
+                 --metadata ${metadata} \\
+                 ${round} \\
+                 --output map_${urn}.tsv
   """
 }
