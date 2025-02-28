@@ -1,6 +1,7 @@
 // extractMetadata parses and grabs the URN ID's entry from the pre-downloaded maveDB main.json file,
 // which contains metadata for all URN ID's.
-// It uses extract_meta.py to do this. 
+// It then reformats it to match the JSON format expected by the rest of the pipeline which 
+// was originally written to handle a different JSON structure. It uses extract_metadata.py to do this. 
 process extract_metadata {
   // publishDir "${params.output}", mode: 'copy', overwrite: true
 
@@ -9,7 +10,7 @@ process extract_metadata {
     path metadata_file
 
   output:
-    tuple val(urn), file("metadata.json")
+    tuple val(urn), file("metadata.json"), file("LICENCE.txt")
 
   script:
   """

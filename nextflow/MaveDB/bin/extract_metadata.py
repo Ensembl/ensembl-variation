@@ -22,10 +22,10 @@ def main(metadata_file, urn):
                     selected_entry = score_set
                     break
 
-    # Reformat the extracted data 
-    # This is to cope with the fact that the pipeline was written for API-yielded json structures, 
+    # Reformat the extracted data to match the json format expected later in the pipeline
+    # This was a pragmatic approach so that the whole pipeline wasn't re-written
+    # This is to cope with the fact that the pipeline was written for API -yielded json structures, 
     # which differ from data-dump download -yielded json structures
-    # This is a better solution that refactoring/ re-writing all of the downstream code to cope with this
     if selected_entry:
         formatted_data = {
             "abstractText": selected_entry.get("abstractText", ""),
@@ -109,8 +109,14 @@ def main(metadata_file, urn):
     # Save the formatted data
     with open("metadata.json", "w") as outfile:
         json.dump(formatted_data, outfile, indent=4)
-
+        
     print(f"Metadata for URN '{urn}' saved to metadata.json")
+    
+    # Output a file containing the licence to allow downstream filtering based on this
+    with open("LICENCE.txt", "w") as f:
+        f.write(formatted_data['license']['shortName'])
+    
+    print(f"Licence for URN '{urn}' saved to LICENCE.txt")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -123,5 +129,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
     main(args.metadata_file, args.urn)
 
-# TEST
+## TEST
 # python extract_metadata.py --metadata_file /nfs/production/flicek/ensembl/variation/jma/maveDB-test/downloaded_data/main.json --urn "urn:mavedb:00000001-a-1"

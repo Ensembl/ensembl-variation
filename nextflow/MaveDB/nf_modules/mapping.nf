@@ -9,7 +9,7 @@ process map_scores_to_HGVSp_variants {
 
   script:
   def round = params.round ? "--round ${params.round}" : ""
-  def script_name = params.from_files ? "map_scores_to_variants_fromfile.py" : "map_scores_to_variants.py"
+  def script_name = params.from_files ? "map_scores_to_variants_fromfiles.py" : "map_scores_to_variants.py"
 
   """
   ${script_name} --urn ${urn} \\
@@ -33,7 +33,7 @@ process map_scores_to_HGVSg_variants {
 
   script:
   def round = params.round ? "--round ${params.round}" : ""
-  def script_name = params.from_files ? "map_scores_to_variants_fromfile.py" : "map_scores_to_variants.py"
+  def script_name = params.from_files ? "map_scores_to_variants_fromfiles.py" : "map_scores_to_variants.py"
 
   """
   ${script_name} --urn ${urn} \\

@@ -17,7 +17,7 @@ params.licences = "CC0" // Open-access only
 params.round    = 4
 
 // Parameters for loading MaveDB from files:
-params.from_files    = false                                                // default: use local files
+params.from_files    = false        // default: use local files
 params.metadata_file = ""          // only used if from_files is true
 params.mappings_path = ""          // only used if from_files is true
 params.scores_path   = ""          // only used if from_files is true
@@ -77,18 +77,32 @@ workflow {
       .fromPath(params.urn, checkIfExists: true)
       .splitText()
       .map { it.trim() }
-      .take(10)  // TEST: take the first n lines from the file
+      .take(15)  // TEST: take the first n lines from the file
 
   // Choose which module to use based on --from_files (true/false)
   if (params.from_files) {
-    // metaChannel outputs tuples of [urn, metadata.json]
-    metaChannel = extract_metadata(urn, params.metadata_file)
     
-    // mainChannel outputs tuples of [urn, mappings.json, scores.csv]
-    mainChannel = import_from_files(urn)
+    // metaChannel extracts the metadata from the large metadata file 
+    // metaChannel outputs tuples of [urn, metadata.json, LICENSE.txt]
+    metaChannel = extract_metadata(urn, params.metadata_file)
+
+    // Log removed URNs (those that do NOT have a "CC0" license)
+    metaChannel
+        .filter { it[2].text != 'CC0' }
+        .subscribe { println "NOTE: Discarded ${it[0]} based on license (${it[2].text})" }
+
+    // Filter URNs based on license (only keep "CC0")
+    filteredMetaChannel = metaChannel.filter { params.licences.contains(it[2].text) }
+
+    // Remove LICENSE.txt, leaving output of filteredMetaChannel to be [urn, metadata.json]
+    filteredMetaChannel = filteredMetaChannel.map { [it[0], it[1]] }
+
+    // mainChannel finds and pulls in the mappings and scores files for each urn
+    // mainChannel outputs tuples of [urn, mappings.json, scores.csv] - only with "CC0" license URNs
+    mainChannel = import_from_files(filteredMetaChannel.map { it[0] })
 
     // Joins by URN ID and outputs tuples of [urn, mappings.json, scores.csv, metadata.json]
-    files = mainChannel.join(metaChannel, by: 0).map { a, b, c, d -> return [
+    files = mainChannel.join(filteredMetaChannel, by: 0).map { a, b, c, d -> return [
           urn      : a,  // URN ID
           mappings : b,  // Mappings file path
           scores   : c,  // Scores file path
