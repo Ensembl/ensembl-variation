@@ -12,13 +12,13 @@ import re                                 # (Imported but not used explicitly)
 import argparse                           # For parsing command-line arguments
 import sys                                # For writing to stderr
 
-# Customize warning messages to simply print the warning message.
+# Customize warning messages to simply print the warning message
 def customshowwarning(message, category, filename, lineno, file=None, line=None):
     print("WARNING:", message)
 warnings.showwarning = customshowwarning
 
 def main():
-  # Set up argument parsing for input files and parameters.
+  # Set up argument parsing for input files and parameters
   parser = argparse.ArgumentParser(
     description='Output file with MaveDB scores mapped to variants')
   parser.add_argument('--vr', type=str,
@@ -53,20 +53,20 @@ def main():
   with open(args.metadata) as f:
     metadata = json.load(f)
   
-  # Extract MaveDB IDs from each mapping entry.
+  # Extract MaveDB IDs from each mapping entry
   mavedb_ids = [i["mavedb_id"] for i in mappings["mapped_scores"]]
   
-  # Pre-build a dictionary mapping accession IDs to mapping records.
-  # This makes lookups robust and order-independent.
+  # Pre-build a dictionary mapping accession IDs to mapping records
+  # This makes lookups robust and order-independent
   mapping_dict = {mapping["mavedb_id"]: mapping for mapping in mappings["mapped_scores"]}
   
-  # If a Variant Recoder output file is provided, load it; otherwise, set matches to None.
+  # If a Variant Recoder output file is provided, load it; otherwise, set matches to None
   if args.vr is not None:
     hgvsp2vars = load_vr_output(args.vr)
   else:
     hgvsp2vars = None
 
-  # Create the mapping between variant coordinates and MaveDB scores.
+  # Create the mapping between variant coordinates and MaveDB scores
   print("Preparing mappings between variants and MaveDB scores...", flush=True)
   mapped_data = map_scores_to_variants(scores, mappings, metadata, mavedb_ids, hgvsp2vars, args.round, mapping_dict)
   write_variant_mapping(args.output, mapped_data)
@@ -125,13 +125,12 @@ def load_scores (f):
       scores.append(row)
   return scores
 
-# Global variable for caching chromosome name.
+# Global variable for caching chromosome name
 chrom = None
 def get_chromosome (hgvs):
   """
   Lookup chromosome name in the Ensembl REST API (caches result globally).
   
-  Now called with the full HGVS string instead of just its first character.
   Splits the HGVS string to extract the chromosome, retrieves synonyms from Ensembl,
   and selects the UCSC name (removing 'chr' if present).
   """
@@ -150,14 +149,11 @@ def join_information(hgvs, mapped_info, row, extra):
   """
   Join variant and MaveDB score information for a given HGVS.
   
-  This function assumes that the variant details (location, extensions, state, expressions)
-  are directly within the mapped_info object (i.e. it no longer checks for nested 'members').
-  
   It extracts:
-    - Start and end coordinates from 'location'
-    - The reference allele from the first element of 'extensions'
-    - The alternate allele from 'state'
-    - The HGVS expression from the first element of 'expressions'
+    - Start and end coordinates from 'location'. 
+    - The reference allele from the first element of 'extensions'.
+    - The alternate allele from 'state'.
+    - The HGVS expression from the first element of 'expressions'.
   
   Then, it builds and returns an ordered dictionary containing these values merged with extra metadata and the score row.
   """
@@ -223,17 +219,15 @@ def map_variant_to_MaveDB_scores(matches, mapped_info, row, extra):
 def round_float_columns(row, round):
   """
   Round all float values in a row to a specified number of decimal places.
-  
-  NOTE: The parameter 'round' shadows Python’s built-in round() function.
   """
   if round is not None:
     for i in row.keys():
       try:
-        # Use the built-in round() function to round the value.
+        # Use the built-in round() function to round the value
         rounded = round(float(row[i]), round)
         row[i] = '{0:g}'.format(rounded)
       except:
-        # If the conversion fails, leave the value unchanged.
+        # If the conversion fails, leave the value unchanged
         pass
   return row
 
@@ -243,16 +237,15 @@ def map_scores_to_variants(scores, mappings, metadata, map_ids, matches=None, ro
   
   For each score row:
     - Skip rows with special HGVS values (e.g. synonymous or wild-type) or missing scores.
-    - Retrieve the corresponding mapping entry using the accession.
-      (Now using mapping_dict for a robust O(1) lookup rather than list.index.)
-    - Check for a URN mismatch between the score and mapping.
+    - Retrieve the corresponding mapping entry using the accession using mapping_dict.
+    - Check for an URN mismatch between the score and mapping.
     - Round numeric values if requested.
-    - Use the 'post_mapped' field for final coordinates.
     - If the mapping contains multiple members (phased variant), process each member;
       otherwise, process the mapping directly.
   
   Additional metadata (URN, publish_date, RefSeq, PubMed) is merged into every output record.
   """
+  
   refseq = None
   if len(metadata['targetGenes']) > 1:
     raise Exception("Multiple targets are not currently supported")
@@ -279,30 +272,29 @@ def map_scores_to_variants(scores, mappings, metadata, map_ids, matches=None, ro
   
   out = []
   for row in scores:
-    # Skip rows with special HGVS values (e.g. synonymous, wild-type).
+    # Skip rows with special HGVS values (e.g. synonymous, wild-type)
     if row['hgvs_pro'] in ('_sy', '_wt', 'p.=') or row['hgvs_nt'] in ('_sy', '_wt'):
       continue
 
-    # Skip rows with missing score values.
+    # Skip rows with missing score values
     if row['score'] == "NA" or row['score'] is None:
       continue
 
-    # Retrieve the corresponding mapping entry using the pre-built mapping dictionary.
+    # Retrieve the corresponding mapping entry using the pre-built mapping dictionary
     mapping = mapping_dict.get(row['accession'])
     if mapping is None:
         warnings.warn(row['accession'] + " not in mappings file")
         continue
 
-    # Check for URN mismatch between the score row and the mapping entry.
+    # Check for URN mismatch between the score row and the mapping entry
     if 'mavedb_id' in mapping.keys() and row['accession'] != mapping['mavedb_id']:
        warnings.warn("URN mismatch: trying to match " + row['accession'] + " from scores file with " + mapping['mavedb_id'] + " from mappings file")
        continue
 
     row = round_float_columns(row, round)
-    # Use the 'post_mapped' field from the mapping entry for final variant coordinates.
     mapped_info = mapping['post_mapped']
     
-    # Process phased variants if multiple members exist; otherwise, process the mapping directly.
+    # Process phased variants if multiple members exist; otherwise, process the mapping directly
     if mapped_info.get("members", []):
       for member in mapped_info['members']:
         out += map_variant_to_MaveDB_scores(matches, member, row, extra)
