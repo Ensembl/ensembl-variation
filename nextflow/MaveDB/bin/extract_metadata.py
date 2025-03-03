@@ -21,6 +21,10 @@ def main(metadata_file, urn):
                 if score_set.get("urn") == urn:
                     selected_entry = score_set
                     break
+                
+    if not selected_entry:
+        print(f"ERROR: extract_metadata.py - no matching entry found for '{urn}'. Exiting.")
+        sys.exit(1)
 
     # Reformat the extracted data to match the json format expected later in the pipeline
     # This was a pragmatic approach so that the whole pipeline wasn't re-written
@@ -31,9 +35,9 @@ def main(metadata_file, urn):
             "abstractText": selected_entry.get("abstractText", ""),
             "contributors": [],
             "createdBy": {
-                "firstName": "Jochen",
-                "lastName": "Weile",
-                "orcidId": "0000-0003-1628-9390",
+                "firstName": selected_entry["createdBy"].get("firstName", ""),
+                "lastName": selected_entry["createdBy"].get("lastName", ""),
+                "orcidId": selected_entry["createdBy"].get("orcidId", ""),
                 "recordType": "User"
             },
             "creationDate": selected_entry.get("creationDate", ""),
@@ -43,9 +47,9 @@ def main(metadata_file, urn):
                 "abstractText": selected_entry.get("abstractText", ""),
                 "contributors": [],
                 "createdBy": {
-                    "firstName": "Jochen",
-                    "lastName": "Weile",
-                    "orcidId": "0000-0003-1628-9390",
+                    "firstName": selected_entry["createdBy"].get("firstName", ""),
+                    "lastName": selected_entry["createdBy"].get("lastName", ""),
+                    "orcidId": selected_entry["createdBy"].get("orcidId", ""),
                     "recordType": "User"
                 },
                 "creationDate": selected_entry.get("creationDate", ""),
@@ -56,9 +60,9 @@ def main(metadata_file, urn):
                 "methodText": selected_entry.get("methodText", ""),
                 "modificationDate": selected_entry.get("modificationDate", ""),
                 "modifiedBy": {
-                    "firstName": "Jochen",
-                    "lastName": "Weile",
-                    "orcidId": "0000-0003-1628-9390",
+                    "firstName": selected_entry["modifiedBy"].get("firstName", ""),
+                    "lastName": selected_entry["modifiedBy"].get("lastName", ""),
+                    "orcidId": selected_entry["modifiedBy"].get("orcidId", ""),
                     "recordType": "User"
                 },
                 "primaryPublicationIdentifiers": selected_entry.get("primaryPublicationIdentifiers", []),
@@ -88,15 +92,15 @@ def main(metadata_file, urn):
             "methodText": selected_entry.get("methodText", ""),
             "modificationDate": selected_entry.get("modificationDate", ""),
             "modifiedBy": {
-                "firstName": "Jochen",
-                "lastName": "Weile",
-                "orcidId": "0000-0003-1628-9390",
+                "firstName": selected_entry["modifiedBy"].get("firstName", ""),
+                "lastName": selected_entry["modifiedBy"].get("lastName", ""),
+                "orcidId": selected_entry["modifiedBy"].get("orcidId", ""),
                 "recordType": "User"
             },
             "numVariants": selected_entry.get("numVariants", ""),
             "primaryPublicationIdentifiers": selected_entry.get("primaryPublicationIdentifiers", []),
-            "private": False,
-            "processingState": "success",
+            "private": selected_entry.get("private", ""),
+            "processingState": selected_entry.get("processingState", ""),
             "publishedDate": selected_entry.get("publishedDate", ""),
             "recordType": "ScoreSet",
             "secondaryPublicationIdentifiers": [],
