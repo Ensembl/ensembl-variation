@@ -31,10 +31,18 @@ process import_from_files {
   echo "Found mapping file: \$mapping_file for ${urn}"
   echo "Found scores file: \$score_file for ${urn} (using sanitized urn: \$score_urn)"
   
-  # Create symbolic links or copy files to the working directory.
-  # Here we use cp to create local files named mappings.json and scores.csv.
+  # Copy mappings file to the working dir with standardised name
   cp "\$mapping_file" mappings.json
-  cp "\$score_file" scores.csv
+
+  # Filter the scores file to remove any lines that contain invalid URN IDs like "tmp:..."
+  # Save filtered scores to a working dir with standardised name
+  grep -vE '^tmp:*' "\$score_file" > scores.csv
+  
+  # Check if the filtered file is empty after filtering
+  if [ ! -s scores.csv ]; then
+      echo "ERROR: After filtering, scores file for ${urn} is empty (all lines contained invalid URN IDs)" >&2
+      exit 1
+  fi
   
   echo "Mapping and Score files successfully copied for ${urn}"
   """

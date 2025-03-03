@@ -72,7 +72,7 @@ workflow {
       .fromPath(params.urn, checkIfExists: true)
       .splitText()
       .map { it.trim() }
-      .take(15)  // TEST: take the first n lines from the file
+      // .take(15)  // TEST: take the first n lines from the file
 
   // If --from_files is true, use local files instead of downloading via the MaveDB API
   if (params.from_files) {
