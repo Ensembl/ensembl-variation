@@ -10,6 +10,7 @@ from collections import OrderedDict       # To maintain key order in output dict
 from math import isclose                  # (Imported but not used explicitly)
 import re                                 # (Imported but not used explicitly)
 import argparse                           # For parsing command-line arguments
+import sys                                # For writing to stderr
 
 # Customize warning messages to simply print the warning message.
 def customshowwarning(message, category, filename, lineno, file=None, line=None):
@@ -35,26 +36,25 @@ def main():
                       help="Number of decimal places for rounding values (default: not used)")
   args = parser.parse_args()
 
-  # Load the scores (CSV), mappings (JSON), and metadata (JSON) files.
+  # Load the scores (CSV), mappings (JSON), and metadata (JSON) files
   print("Loading MaveDB data...", flush=True)
+  
   scores = load_scores(args.scores)
+  
+  # Check if the scores file is empty, if so, print an error and exit - don't process this URN
+  # This will occur because the previous step filtered out bad URN IDs i.e. "tmp:"
+  if not scores:
+    print(f"ERROR: The scores file '{args.scores}' for URN '{args.urn}' is empty (probably due to invalid URN IDs). Exiting.")
+    sys.exit(1)
+  
   with open(args.mappings) as f:
     mappings = json.load(f)
+    
   with open(args.metadata) as f:
     metadata = json.load(f)
   
   # Extract MaveDB IDs from each mapping entry.
   mavedb_ids = [i["mavedb_id"] for i in mappings["mapped_scores"]]
-  
-  # The new duplicate and presence checks are commented out. (Optional: You may re-enable them for debugging.)
-  # --- NEW CHECKS TO VALIDATE MAPPINGS ---
-  # if len(set(mavedb_ids)) != len(mavedb_ids):
-  #   warnings.warn("Duplicate accessions found in the mappings file. This may cause incorrect mapping via list.index.")
-  # for row in scores:
-  #   acc = row.get('accession')
-  #   if acc not in mavedb_ids:
-  #     warnings.warn(f"Accession {acc} in scores file not found in mappings file.")
-  # --- END OF NEW CHECKS ---
   
   # Pre-build a dictionary mapping accession IDs to mapping records.
   # This makes lookups robust and order-independent.
@@ -255,7 +255,7 @@ def map_scores_to_variants(scores, mappings, metadata, map_ids, matches=None, ro
   """
   refseq = None
   if len(metadata['targetGenes']) > 1:
-    raise Exception("multiple targets are not currently supported")
+    raise Exception("Multiple targets are not currently supported")
   else:
     for item in metadata['targetGenes'][0]['externalIdentifiers']:
       if item['identifier']['dbName'] == 'RefSeq':
