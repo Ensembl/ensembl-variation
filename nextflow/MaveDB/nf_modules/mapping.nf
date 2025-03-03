@@ -9,6 +9,8 @@ process map_scores_to_HGVSp_variants {
 
   script:
   def round = params.round ? "--round ${params.round}" : ""
+
+  // If --from_files is true, use local files instead of downloading via the MaveDB API
   def script_name = params.from_files ? "map_scores_to_variants_fromfiles.py" : "map_scores_to_variants.py"
 
   """
@@ -33,6 +35,8 @@ process map_scores_to_HGVSg_variants {
 
   script:
   def round = params.round ? "--round ${params.round}" : ""
+
+  // If --from_files is true, use local files instead of downloading via the MaveDB API
   def script_name = params.from_files ? "map_scores_to_variants_fromfiles.py" : "map_scores_to_variants.py"
 
   """
