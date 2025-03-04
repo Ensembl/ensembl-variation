@@ -14,7 +14,6 @@ process extract_metadata {
 
   script:
   """
-  echo "Processing URN: '${urn}'"
   python3 ${workflow.projectDir}/bin/extract_metadata.py --metadata_file ${metadata_file} --urn "${urn}"
   """
 }

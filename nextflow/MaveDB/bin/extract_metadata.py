@@ -22,9 +22,9 @@ def main(metadata_file, urn):
                     selected_entry = score_set
                     break
                 
-    if not selected_entry:
-        print(f"ERROR: extract_metadata.py - no matching entry found for '{urn}'. Exiting.")
-        sys.exit(1)
+    # if not selected_entry:
+    #     print(f"ERROR: extract_metadata.py - no matching entry found for '{urn}'. Exiting.")
+    #     sys.exit(1)
 
     # Reformat the extracted data to match the json format expected later in the pipeline
     # This was a pragmatic approach so that the whole pipeline wasn't re-written
@@ -109,6 +109,9 @@ def main(metadata_file, urn):
             "title": selected_entry.get("title", ""),
             "urn": selected_entry.get("urn"),
     }
+    else:
+        print(f"ERROR: extract_metadata.py - no matching entry found for '{urn}' in metadata file ('${metadata_file}'). Exiting.")
+        sys.exit(1)
 
     # Save the formatted data
     with open("metadata.json", "w") as outfile:
@@ -134,4 +137,4 @@ if __name__ == "__main__":
     main(args.metadata_file, args.urn)
 
 ## TEST
-# python extract_metadata.py --metadata_file /nfs/production/flicek/ensembl/variation/jma/maveDB-test/downloaded_data/main.json --urn "urn:mavedb:00000001-a-1"
+# python /hps/software/users/ensembl/variation/fairbrot/ensembl-variation/nextflow/MaveDB/bin/extract_metadata.py --metadata_file /nfs/production/flicek/ensembl/variation/jma/maveDB-test/mavedb_dbdump_data/main.json --urn "urn:mavedb:00001204-a-4"
