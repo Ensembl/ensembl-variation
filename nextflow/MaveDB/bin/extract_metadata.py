@@ -124,6 +124,8 @@ def main(metadata_file, urn):
         f.write(formatted_data['license']['shortName'])
     
     print(f"Licence for URN '{urn}' saved to LICENCE.txt")
+    
+    
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
