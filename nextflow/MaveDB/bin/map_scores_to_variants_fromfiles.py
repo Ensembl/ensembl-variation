@@ -82,6 +82,16 @@ def load_vr_output (f):
   ordered dictionary with variant details. Returns a dictionary mapping HGVS strings to lists of variants.
   """
   data = json.load(open(f))
+  
+  # Check if file is full of warnings - means that variant recoder couldn't recode
+  if "warnings" in data[0]: 
+    print("WARNING: The Variant Recoder output file contains warnings. This may indicate that the Variant Recoder was unable to recode some variants.")
+    warnings = [value for value in data[0]["warnings"]]
+
+    if all("Unable to parse" in item for item in warnings):
+      print(f"Error: The Variant Recoder output file contain only 'Unable to parse' warnings. It was not able to parse the variants and recode them. Exiting.")
+      sys.exit(1)
+      
   matches = {}
   for result in data:
     for allele in result:
@@ -120,8 +130,12 @@ def load_scores (f):
   scores = []
   with open(f) as csvfile:
     reader = csv.DictReader(csvfile)
+    # Strip whitespace from each header name -- I think only necessary due to the csv viewer adding spacing and then this was cached in a nf run. Consider removing.
+    reader.fieldnames = [field.strip() for field in reader.fieldnames]
     for row in reader:
-      scores.append(row)
+      # Strip whitespace from each value if it is a string
+      clean_row = { key: value.strip() if isinstance(value, str) else value for key, value in row.items() } # Same as above
+      scores.append(clean_row)
   return scores
 
 # Global variable for caching chromosome name
@@ -258,10 +272,10 @@ def map_scores_to_variants(scores, mappings, metadata, map_ids, matches=None, ro
     if pub['dbName'] == 'PubMed':
       pubmed_list.append(pub['identifier'])
     else:
-      raise Exception("PubMed not found in metadata")
-    
+      warnings.warn("No PubMed ID found in metadata")
+  
   pubmed = ",".join(pubmed_list)
-
+  
   extra = {
     'urn'          : metadata['urn'],
     'publish_date' : metadata['experiment']['publishedDate'],
@@ -271,6 +285,7 @@ def map_scores_to_variants(scores, mappings, metadata, map_ids, matches=None, ro
   
   out = []
   for row in scores:
+
     # Skip rows with special HGVS values (e.g. synonymous, wild-type)
     if row['hgvs_pro'] in ('_sy', '_wt', 'p.=') or row['hgvs_nt'] in ('_sy', '_wt'):
       continue
