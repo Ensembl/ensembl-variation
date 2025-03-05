@@ -17,7 +17,7 @@ params.licences = "CC0" // Open-access only
 params.round    = 4
 
 // Parameters for loading MaveDB from files:
-params.from_files    = false       // Use local files instead of downloading via the MaveDB API
+params.from_files    = true        // Use local files instead of downloading via the MaveDB API
 params.metadata_file = ""          // only used if from_files is true
 params.mappings_path = ""          // only used if from_files is true
 params.scores_path   = ""          // only used if from_files is true
@@ -39,7 +39,7 @@ if (params.help) {
     --ensembl       Path to Ensembl root directory (default: ${ENSEMBL_ROOT_DIR})
     --output        Path to output file (default: output/MaveDB_variants.tsv.gz)
     --registry      Path to Ensembl registry
-    --from_files    Use local files instead of downloading via the MaveDB API
+    --from_files    Use local files instead of downloading via the MaveDB API (default: true, this is advised)
     --mappings_path Path to MaveDB mappings files (one JSON file per URN)
     --scores_path   Path to MaveDB scores files (one CSV file per URN)
     --metadata_file Path to MaveDB metadata file (one collated file, i.e. main.json)
@@ -105,31 +105,31 @@ workflow {
         ]}
 
   } else {
-    // If --from_files is false, download MaveDB data via the API
+    // If --from_files is false, download MaveDB data via the API (this option is not advised as it's unreliable)
     licences = params.licences.tokenize(",")
     urn = filter_by_licence(urn, licences)
     download_MaveDB_data(urn)
     files = download_MaveDB_data.out.map { [urn: it[0], mappings: it[1], scores: it[2], metadata: it[3]] }
   }
   
-  // // Split mapping.json files by mapping type - HGVSg or HGVSp
-  // files = split_by_mapping_type(files)
+  // Split mapping.json files by mapping type - HGVSg or HGVSp
+  files = split_by_mapping_type(files)
 
-  // // use MaveDB-prepared HGVSg mappings
-  // map_scores_to_HGVSg_variants(files.hgvs_nt)
-  // download_chain_files()
-  // liftover_to_hg38(map_scores_to_HGVSg_variants.out, download_chain_files.out)
+  // use MaveDB-prepared HGVSg mappings
+  map_scores_to_HGVSg_variants(files.hgvs_nt)
+  download_chain_files()
+  liftover_to_hg38(map_scores_to_HGVSg_variants.out, download_chain_files.out)
 
-  // // prepare HGVSp mappings
-  // get_hgvsp(files.hgvs_pro)
-  // hgvsp = get_hgvsp.out.filter { it.last().size() > 0 }
-  // run_variant_recoder(hgvsp)
-  // map_scores_to_HGVSp_variants(run_variant_recoder.out)
+  // prepare HGVSp mappings
+  get_hgvsp(files.hgvs_pro)
+  hgvsp = get_hgvsp.out.filter { it.last().size() > 0 }
+  run_variant_recoder(hgvsp)
+  map_scores_to_HGVSp_variants(run_variant_recoder.out)
 
-  // // concatenate output files into a single file
-  // output_files = liftover_to_hg38.out
-  //                 .mix(map_scores_to_HGVSp_variants.out)
-  //                 .collect { it.last() }
-  // concatenate_files(output_files)
-  // tabix(concatenate_files.out)
+  // concatenate output files into a single file
+  output_files = liftover_to_hg38.out
+                  .mix(map_scores_to_HGVSp_variants.out)
+                  .collect { it.last() }
+  concatenate_files(output_files)
+  tabix(concatenate_files.out)
 }
