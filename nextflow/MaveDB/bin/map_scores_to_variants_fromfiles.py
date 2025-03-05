@@ -42,13 +42,8 @@ def main():
   scores = load_scores(args.scores)
   
   # Check if the scores file is empty, if so, print an error and exit - don't process this URN
-  # This will occur because the previous step filtered out bad URN IDs i.e. "tmp:"
   if not scores:
-    # write to log file in case of empty scores file
-    with open("urns_with_empty_score_file.log", "a") as errorfile:
-        errorfile.write(args.urn + "\n")
-        
-    print(f"ERROR: The scores file '{args.scores}' for URN '{args.urn}' is empty (probably due to invalid URN IDs). Exiting.")
+    print(f"ERROR: The scores file '{args.scores}' for URN '{args.urn}' is empty. Exiting.")
     sys.exit(1)
   
   with open(args.mappings) as f:

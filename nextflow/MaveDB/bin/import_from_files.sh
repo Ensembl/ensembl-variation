@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# # TEST
+# urn="urn:mavedb:00000043-a-2"
+# mappings_path="/nfs/production/flicek/ensembl/variation/jma/maveDB-test/mavedb_dbdump_data/mappings"
+# scores_path="/nfs/production/flicek/ensembl/variation/jma/maveDB-test/mavedb_dbdump_data/scores"
+
 echo "import_from_files - processing URN: '${urn}'" 2>&1
 
 # Locate the mapping file using the original urn (with colons)
@@ -29,7 +34,7 @@ cp "${mapping_file}" mappings.json
 # Check if the file contains any lines starting with "tmp:"
 if grep -q '^tmp:' ${score_file}; then
 
-  echo "Score file for ${urn} contains temporary IDs (tmp:*). Replacing with file base name" 2>&1
+  echo "Score file for ${urn} contains temporary IDs (tmp:*). Replacing with file base name." 2>&1
 
   # Get the file's base name (e.g., "urn-mavedb-00000001-a-1")
   prefix=$(basename "${score_file}")
@@ -41,7 +46,7 @@ if grep -q '^tmp:' ${score_file}; then
   # 2. Print the columns
   # 3. For each subsequent row, substitute the first field: replace the pattern starting with "tmp:" up to and including the "#" with file prefix (file name) and "#"
   awk -F, -v OFS=, -v prefix="$prefix" '
-    BEGIN { 
+    BEGIN {
       gsub(/^urn-mavedb-/, "urn:mavedb:", prefix)
     }
     NR==1 { print }
@@ -50,8 +55,8 @@ if grep -q '^tmp:' ${score_file}; then
 
 else
   # If the file does not contain any lines starting with "tmp:", copy the file as is
-  cp ${score_file} >"scores.csv"
-
+  echo "IDs as expected. Copying file as is." 2>&1
+  cp "$score_file" ./scores.csv
 fi
 
 # If contents of pwd is mappings.json and scores.csv, then the files are copied successfully - check
