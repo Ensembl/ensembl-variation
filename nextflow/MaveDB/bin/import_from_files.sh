@@ -55,7 +55,7 @@ else
 fi
 
 # If contents of pwd is mappings.json and scores.csv, then the files are copied successfully - check
-if [ -f mappings.json ] && [ -f "${prefix}.scores.csv" ]; then
+if [ -f mappings.json ] && [ -f scores.csv ]; then
   echo "Files copied successfully" 2>&1
   echo "Contents of pwd: $(ls -l)" 2>&1
 else
