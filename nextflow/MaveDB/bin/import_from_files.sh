@@ -9,7 +9,7 @@ mapping_file=$(find ${mappings_path} -type f -iname "*${urn}*.json" | head -n 1)
 score_urn=$(echo "${urn}" | sed 's/:/-/g')
 score_file=$(find ${scores_path} -type f -iname "*${score_urn}.scores.csv" | head -n 1)
 
-# Check if the mapping and scores files exist
+# Check if the mapping and scores files exist in the user-provided directories
 if [ -z "${mapping_file}" ]; then
   echo "ERROR: No mapping file found for ${urn}" 2>&1
   exit 1
@@ -23,7 +23,7 @@ fi
 echo "Found mapping file: ${mapping_file} for ${urn}" 2>&1
 echo "Found scores file: ${score_file} for ${urn} (using sanitized urn: ${score_urn})" 2>&1
 
-# Copy mappings file to the working dir with standardised name
+# Copy mappings file to the working dir
 cp "${mapping_file}" mappings.json
 
 # Check if the file contains any lines starting with "tmp:"
@@ -34,7 +34,6 @@ if grep -q '^tmp:' ${score_file}; then
   # Get the file's base name (e.g., "urn-mavedb-00000001-a-1")
   prefix=$(basename "${score_file}")
   prefix=${prefix%.scores.csv}
-
   echo "Using prefix: ${prefix}" 2>&1
 
   # Process the file with awk:
@@ -47,15 +46,20 @@ if grep -q '^tmp:' ${score_file}; then
     }
     NR==1 { print }
     NR>1 { sub(/^tmp:[^#]+#/, prefix "#" , $1); print }
-  ' "${score_file}" >"${prefix}.scores.csv"
+  ' "${score_file}" >"scores.csv"
+
+else
+  # If the file does not contain any lines starting with "tmp:", copy the file as is
+  cp ${score_file} >"scores.csv"
 
 fi
 
-# if contents of pwd is mappings.json and scores.csv, then the files are copied successfully
+# If contents of pwd is mappings.json and scores.csv, then the files are copied successfully - check
 if [ -f mappings.json ] && [ -f "${prefix}.scores.csv" ]; then
   echo "Files copied successfully" 2>&1
   echo "Contents of pwd: $(ls -l)" 2>&1
 else
   echo "ERROR: Files not copied successfully" 2>&1
+  echo "Contents of pwd: $(ls -l)" 2>&1
   exit 1
 fi
