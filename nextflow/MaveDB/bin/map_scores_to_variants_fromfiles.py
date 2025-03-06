@@ -46,6 +46,10 @@ def main():
     print(f"ERROR: The scores file '{args.scores}' for URN '{args.urn}' is empty. Exiting.")
     sys.exit(1)
   
+  # Throw warning if scores file has very few entries 
+  if len(scores) < 10: 
+    print(f"WARNING: The scores file '{args.scores}' for URN '{args.urn}' contains {len(scores)} row(s).")
+  
   with open(args.mappings) as f:
     mappings = json.load(f)
     
@@ -89,14 +93,14 @@ def load_vr_output (f):
     warnings = [value for value in data[0]["warnings"]]
 
     if all("Unable to parse" in item for item in warnings):
-      print(f"Error: The Variant Recoder output file contain only 'Unable to parse' warnings. It was not able to parse the variants and recode them. Exiting.")
+      print(f"Error: The Variant Recoder output file contains only 'Unable to parse' warnings. It was not able to parse the variants and recode them. Exiting.")
       sys.exit(1)
-      
+  
   matches = {}
   for result in data:
     for allele in result:
       info = result[allele]
-      if type(info) is list and "Unable to parse" in info[0]:
+      if isinstance(info, list) and ("Unable to parse" in info[0] or "skipped" in info[0]):
         continue
       hgvs = info["input"]
       for string in info["vcf_string"]:
@@ -324,16 +328,21 @@ def write_variant_mapping (f, map):
   Constructs a header from the keys of the first output record (excluding unwanted fields),
   writes the header (with any 'hgvs_' prefixes removed), and then writes each record.
   """
-  with open(f, 'w') as csvfile:
-    header = list(map[0].keys())
-    header = [h for h in header if h not in ['HGVSp', 'index']]
-    writer = csv.DictWriter(csvfile, delimiter="\t", fieldnames=header,
-                            extrasaction='ignore')
-    new_header = [h.replace('hgvs_', '') for h in header]
-    header = OrderedDict(zip(header, new_header))
-    writer.writerow(header)
-    writer.writerows(map)
-  return True
+  
+  if map: 
+    with open(f, 'w') as csvfile:
+      header = list(map[0].keys())
+      header = [h for h in header if h not in ['HGVSp', 'index']]
+      writer = csv.DictWriter(csvfile, delimiter="\t", fieldnames=header,
+                              extrasaction='ignore')
+      new_header = [h.replace('hgvs_', '') for h in header]
+      header = OrderedDict(zip(header, new_header))
+      writer.writerow(header)
+      writer.writerows(map)
+    return True
+  else:
+    print(f"Error: no mappings were found for the scores. Exiting.")
+    sys.exit(1)
 
 if __name__ == "__main__":
   main()
