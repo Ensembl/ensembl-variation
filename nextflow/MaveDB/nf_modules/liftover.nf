@@ -30,5 +30,11 @@ process liftover_to_hg38 {
   liftover.py --metadata ${metadata} \
               --mapped_variants ${mapped_variants} \
               --reference hg38
+
+  # Check if the output file exists and is non-empty or create an empty file
+  if [ ! -s liftover_${urn}.tsv ]; then
+      echo "WARNING: liftover_${urn}.tsv is empty. Creating fallback empty file." >&2
+      echo "" > liftover_${urn}.tsv
+  fi
   """
 }

@@ -8,14 +8,25 @@ process concatenate_files {
 
   """
   #!/usr/bin/env python3
-  import glob, pandas
+  import glob, pandas, os
   from os.path import exists
   import subprocess
 
   output        = "combined.tsv"
   output_sorted = "combined_sorted.tsv"
   output_bgzip  = "combined.tsv.gz"
-  files         = "*.tsv"
+  files         = glob.glob("map_*.tsv", recursive=True)
+
+  print(f"Found {len(files)} files matching the pattern")
+
+  # Filter out empty files
+  non_empty_files = [f for f in files if os.stat(f).st_size > 0]
+  empty_files = [f for f in files if os.stat(f).st_size == 0]
+
+  print(f"Found {len(empty_files)} empty files out of {len(files)} total files")
+  print(f"Processing {len(non_empty_files)} non-empty files")
+
+  files = non_empty_files
 
   def standardise_columns(df):
     df = df.rename(columns={'p-value':'pvalue'})
@@ -25,7 +36,7 @@ process concatenate_files {
   # concatenate header of all files
   print("Creating header...")
   header = None
-  for f in glob.glob(files):
+  for f in files:
     content = pandas.read_csv(f, delimiter="\t", nrows=0)
     content = standardise_columns(content)
 
@@ -33,12 +44,12 @@ process concatenate_files {
       header = pandas.concat([header, content], axis=0, ignore_index=True)
     else:
       header = content
-  print(header.columns.values)
+  print("Header columns:", header.columns.values)
 
   # merge data and append to file (one file at a time)
   print("\\nMerging and writing content...")
-  for f in glob.glob(files):
-    print(f)
+  for f in files:
+    print("Processing file:", f)
     content = pandas.read_csv(f, delimiter="\t")
     content = standardise_columns(content)
     out = pandas.concat([header, content], axis=0, ignore_index=True)
@@ -56,15 +67,22 @@ process tabix {
   def name = file(params.output).baseName
   def gzip = file(params.output).name
   """
-  # add hash to first line of header
+  # Add hash to first line of header
   sed -i '1 s/^/#/' ${out}
 
-  # remove LRG and chromosome patches
+  # Extract header from the combined file, removing any leading '#' if present
+  header=$(head -n1 "${out}" | sed 's/^#//')
+
+  # Remove header, LRG and chromosome patches - save in tmp.tsv
   grep -v "^#" ${out} | grep -v "^LRG" | grep -v "^CHR_" > tmp.tsv
 
-  # sort file by position
-  (head -n1 ${out}; sort -k1,1 -k2,2n -k3,3n tmp.tsv | uniq) > ${name}
+  # Sort file by position and add header to top of file
+  (
+      echo "${header}"
+      sort -k1,1 -k2,2n -k3,3n tmp.tsv | uniq
+  ) > ${name}
 
+  # Compress and index the file
   bgzip ${name}
   tabix -s1 -b2 -e3 ${gzip}
   rm tmp.tsv

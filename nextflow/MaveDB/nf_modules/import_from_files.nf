@@ -14,7 +14,21 @@ process import_from_files {
   export mappings_path=${params.mappings_path}
   export scores_path=${params.scores_path}
   
-  # Call bash script
+  # Call bash import script
   bash ${workflow.projectDir}/bin/import_from_files.sh
+
+  # Check if the mappings.json file exists and is non-empty, if not, create an empty file
+  if [ ! -s mappings.json ]; then
+      echo "{}" > mappings.json
+      echo "WARNING: mappings.json is empty for ${urn}; using fallback empty JSON." >&2
+  fi
+  
+  # Check if the scores.csv file exists and is non-empty, if not, create an empty file
+  if [ ! -s scores.csv ]; then
+      echo "" > scores.csv
+      echo "WARNING: scores.csv is empty for ${urn}; using fallback empty file." >&2
+  fi
+
+  echo "Import from files completed for ${urn}"
   """
 }
