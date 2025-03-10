@@ -15,5 +15,12 @@ process extract_metadata {
   script:
   """
   python3 ${workflow.projectDir}/bin/extract_metadata.py --metadata_file ${metadata_file} --urn "${urn}"
+  
+  # If metadata.json is missing or empty, create fallback files.
+  if [ ! -s metadata.json ]; then
+      echo "{}" > metadata.json
+      echo "" > LICENCE.txt
+      echo "WARNING: No metadata extracted for ${urn}, using fallback empty file." >&2
+  fi
   """
 }

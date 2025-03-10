@@ -21,6 +21,12 @@ process map_scores_to_HGVSp_variants {
                  --vr $vr \\
                  ${round} \\
                  --output map_${urn}.tsv
+
+  # Check if the output file exists and is non-empty, if not, create an empty file
+  if [ ! -s map_${urn}.tsv ]; then
+      echo "WARNING: map_${urn}.tsv is empty or doesn't exist. Creating fallback empty file." >&2
+      echo "" > map_${urn}.tsv
+  fi
   """
 }
 
@@ -46,5 +52,11 @@ process map_scores_to_HGVSg_variants {
                  --metadata ${metadata} \\
                  ${round} \\
                  --output map_${urn}.tsv
+
+  # Check if the output file exists and is non-empty, if not, create an empty file
+  if [ ! -s map_${urn}.tsv ]; then
+      echo "WARNING: map_${urn}.tsv is empty or doesn't exist. Creating fallback empty file." >&2
+      echo "" > map_${urn}.tsv
+  fi
   """
 }
