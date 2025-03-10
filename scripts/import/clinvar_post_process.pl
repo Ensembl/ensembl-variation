@@ -235,6 +235,8 @@ sub update_variation{
     #replace 'conflicting interpretations of pathogenicity' with 'uncertain significance'
     #for the purpose of variation, variation_feature clin_sig entry
     $l->[1]  =~ s/conflicting interpretations of pathogenicity/uncertain significance/g;
+    #replace 'conflicting classifications of pathogenicity' with 'uncertain significance'
+    $l->[1]  =~ s/conflicting classifications of pathogenicity/uncertain significance/g;
     #similar replace of 'association not found' to 'other'
     $l->[1]  =~ s/association not found/other/g;
 
