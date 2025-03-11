@@ -70,8 +70,8 @@ process tabix {
   # Add hash to first line of header
   sed -i '1 s/^/#/' ${out}
 
-  # Extract header from the combined file, removing any leading '#' if present
-  header=$(head -n1 "${out}" | sed 's/^#//')
+  # Extract header from the combined file
+  header=$(head -n1 "$OUTPUT")
 
   # Remove header, LRG and chromosome patches - save in tmp.tsv
   grep -v "^#" ${out} | grep -v "^LRG" | grep -v "^CHR_" > tmp.tsv
