@@ -158,8 +158,8 @@ process init_sqlite_db {
 
 process postprocess_sqlite_db {
   input:
-    val sift_run
-    val polyphen_run
+    val sift_errors
+    val pph_errors
 
   output: stdout
 
