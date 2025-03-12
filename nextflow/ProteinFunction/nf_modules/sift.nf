@@ -126,9 +126,12 @@ process store_sift_scores {
     val species
     tuple val(peptide), path(sift_scores)
 
+  output:
+    stdout
+
   """
-  store_sift_scores.pl ${species} ${params.port} ${params.host} \
-                       ${params.user} ${params.pass} ${params.database} \
+  store_sift_scores.pl ${species} ${params.offline} ${params.sqlite_db} \
+                       ${params.port} ${params.host} ${params.user} ${params.pass} ${params.database} \
                        ${peptide.seqString} ${sift_scores}
   """
 }
@@ -150,16 +153,20 @@ workflow update_sift_db_version {
 }
 
 workflow run_sift_pipeline {
-  take: translated
+  take: 
+    translated
+    sqlite_db_prep
   main:
-    if ( params.sift_run_type == "UPDATE" ) {
+    if ( params.sift_run_type == "UPDATE" && !params.offline ) {
       translated = filter_existing_translations( "sift", translated )
       wait = "ready"
-    } else if ( params.sift_run_type == "FULL" ) {
+    } else if ( params.sift_run_type == "FULL" && !params.offline ) {
       delete_prediction_data("sift")
       wait = delete_prediction_data.out
       update_sift_version()
       update_sift_db_version( file(params.blastdb) )
+    } else {
+      wait = "ready"
     }
     // Align translated sequences against BLAST database to run SIFT
     blast = align_peptides(translated,
