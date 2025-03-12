@@ -204,7 +204,7 @@ workflow {
                               md5: it.seqString.replaceAll(/\*/, "").md5() ]}
 
   // Write translation mapping with transcript ID and MD5 hashes to database
-  if ( params.sift_run_type == "FULL" && params.pph_run_type == "FULL" ) {
+  if ( !params.offline && params.sift_run_type == "FULL" && params.pph_run_type == "FULL" ) {
     drop_translation_mapping()
     translation_mapping_wait = drop_translation_mapping.out
     clear_assemblies()
