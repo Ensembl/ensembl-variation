@@ -27,6 +27,8 @@ process liftover_to_hg38 {
     tuple val(urn), path("liftover_*.tsv")
 
   """
+  set +e
+  
   liftover.py --metadata ${metadata} \
               --mapped_variants ${mapped_variants} \
               --reference hg38

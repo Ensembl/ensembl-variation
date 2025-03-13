@@ -14,6 +14,8 @@ process extract_metadata {
 
   script:
   """
+  set +e
+  
   python3 ${workflow.projectDir}/bin/extract_metadata.py --metadata_file ${metadata_file} --urn "${urn}"
   
   # If metadata.json is missing or empty, create fallback files.

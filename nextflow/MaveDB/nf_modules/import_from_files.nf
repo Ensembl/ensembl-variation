@@ -9,6 +9,8 @@ process import_from_files {
     
   script:
   """
+  set +e
+  
   # Export environment variables so bash script can access them
   export urn=${urn}
   export mappings_path=${params.mappings_path}
