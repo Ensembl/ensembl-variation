@@ -9,6 +9,8 @@ process import_from_files {
     
   script:
   """
+  #!/usr/bin/env bash
+  
   set +e
   
   # Export environment variables so bash script can access them
