@@ -14,6 +14,8 @@ process extract_metadata {
 
   script:
   """
+  #!/usr/bin/env bash
+  
   set +e
   
   python3 ${workflow.projectDir}/bin/extract_metadata.py --metadata_file ${metadata_file} --urn "${urn}"

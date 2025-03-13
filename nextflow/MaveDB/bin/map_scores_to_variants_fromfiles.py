@@ -279,11 +279,31 @@ def map_scores_to_variants(scores, mappings, metadata, map_ids, matches=None, ro
   
   pubmed = ",".join(pubmed_list)
   
+  doi_list = []
+  for pub in metadata['primaryPublicationIdentifiers']:
+    if pub['doi']:
+      doi_list.append(pub['doi'])
+    else:
+      warnings.warn("No doi found in metadata")
+
+  doi = ",".join(doi_list)
+  
+  url_list = []
+  for pub in metadata['primaryPublicationIdentifiers']:
+    if pub['url']:
+      url_list.append(pub['url'])
+    else:
+      warnings.warn("No URL found in metadata")
+
+  url = ",".join(url_list)
+  
   extra = {
     'urn'          : metadata['urn'],
     'publish_date' : metadata['experiment']['publishedDate'],
     'refseq'       : refseq,
     'pubmed'       : pubmed,
+    'doi'          : doi,
+    'url'          : url
   }
   
   out = []
