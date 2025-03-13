@@ -46,7 +46,7 @@ def main():
     print(f"ERROR: The scores file '{args.scores}' for URN '{args.urn}' is empty. Exiting.")
     sys.exit(1)
   
-  # Throw warning if scores file has very few entries 
+  # Throw warning if scores file has very few entries, as this will explain lack of mappings 
   if len(scores) < 10: 
     print(f"WARNING: The scores file '{args.scores}' for URN '{args.urn}' contains {len(scores)} row(s).")
   
@@ -88,11 +88,10 @@ def load_vr_output (f):
   data = json.load(open(f))
   
   # Check if file is full of warnings - means that variant recoder couldn't recode
-  if "warnings" in data[0]: 
+  if any("warnings" in item for item in data):
     print("WARNING: The Variant Recoder output file contains warnings. This may indicate that the Variant Recoder was unable to recode some variants.")
-    warnings = [value for value in data[0]["warnings"]]
-
-    if all("Unable to parse" in item for item in warnings):
+    
+    if all("warnings" in item for item in data):
       print(f"Error: The Variant Recoder output file contains only 'Unable to parse' warnings. It was not able to parse the variants and recode them. Exiting.")
       sys.exit(1)
   

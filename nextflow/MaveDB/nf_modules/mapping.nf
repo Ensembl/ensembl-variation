@@ -14,6 +14,8 @@ process map_scores_to_HGVSp_variants {
   def script_name = params.from_files ? "map_scores_to_variants_fromfiles.py" : "map_scores_to_variants.py"
 
   """
+  set +e
+  
   ${script_name} --urn ${urn} \\
                  --scores ${scores} \\
                  --mappings ${mappings} \\
@@ -46,6 +48,8 @@ process map_scores_to_HGVSg_variants {
   def script_name = params.from_files ? "map_scores_to_variants_fromfiles.py" : "map_scores_to_variants.py"
 
   """
+  set +e
+
   ${script_name} --urn ${urn} \\
                  --scores ${scores} \\
                  --mappings ${mappings} \\
