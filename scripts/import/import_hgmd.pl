@@ -240,7 +240,7 @@ sub add_variation_feature {
          -allele_string    => $data->[3],
          -variation        => $var,
          -source           => $source,
-         -is_somatic       => 1,
+         -is_somatic       => 0,
          -adaptor          => $var_feat_adaptor
         );
 
