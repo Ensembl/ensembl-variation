@@ -158,8 +158,7 @@ process init_sqlite_db {
 
 process postprocess_sqlite_db {
   input:
-    val sift_errors
-    val pph_errors
+    val errors
 
   output: stdout
 

@@ -230,20 +230,15 @@ workflow {
   errors = Channel.of("# failure reasons")
 
   if ( params.sift_run_type != "NONE" ) {
-    sift_errors = run_sift_pipeline( translated, sqlite_db_prep ).errors
-    errors = errors.concat(sift_errors)
-  } else {
-    sift_errors = "none"
+    errors = errors.concat(run_sift_pipeline( translated, sqlite_db_prep ).errors)
   }
+
   if ( params.pph_run_type  != "NONE" ) {
-    pph_errors = run_pph2_pipeline( translated, sqlite_db_prep ).errors
-    errors = errors.concat(pph_errors)
-  } else {
-    pph_errors = "none"
+    errors = errors.concat(run_pph2_pipeline( translated, sqlite_db_prep ).errors)
   }
 
   if ( params.sqlite ) {
-    postprocess_sqlite_db(sift_errors.collect(), pph_errors.collect())
+    postprocess_sqlite_db(errors.collect())
   }
 
   errors
