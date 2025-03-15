@@ -18,7 +18,12 @@ params.port     = null
 params.user     = null
 params.pass     = null
 params.database = null
+params.offline  = false
 
+// SQLite database params
+params.sqlite   = params.offline
+params.sqlite_dir = params.outdir.startsWith("/") ? params.outdir : "${workflow.launchDir}/${params.outdir}" // supports Unix-like only
+params.sqlite_db  = "${params.sqlite_dir}/${params.species}_PolyPhen_SIFT.db"
 // SIFT params
 params.sift_run_type = "NONE"
 params.median_cutoff = 2.75 // as indicated in SIFT's README
@@ -53,12 +58,19 @@ if (params.help) {
     --species VAL        Latin species name (default: homo_sapiens);
                          PolyPhen-2 only works for human
 
-  Database options (mandatory):
+  Database options:
+    Ensembl variation database params -
     --host VAL           Server host
     --port VAL           Server port
     --user VAL           Server user
     --pass VAL           Server password
     --database VAL       Name of database
+    --offline            No database connection to variation database
+
+    SQLite database params -
+    --sqlite             0 or 1, tells whether to create SQLite database (default: params.offline)
+    --sqlite_dir         Directory where SQLite db would be created (default: params.outdir)
+    --sqlite_db          Full path to SQLite db (--sqlite_dir would be ignored)
 
   SIFT options:
     --sift_run_type VAL  SIFT run type:
@@ -87,7 +99,9 @@ include { translate_fasta }           from './nf_modules/translations.nf'
 include { clear_assemblies;
           store_assemblies;
           drop_translation_mapping; 
-          store_translation_mapping } from './nf_modules/database.nf'
+          store_translation_mapping;
+          init_sqlite_db;
+          postprocess_sqlite_db } from './nf_modules/database.nf'
 include { run_sift_pipeline }         from './nf_modules/sift.nf'
 include { run_pph2_pipeline }         from './nf_modules/polyphen2.nf'
 
@@ -104,8 +118,12 @@ if (!params.translated) {
   }
 }
 
-if (!params.host || !params.port || !params.user || !params.pass || !params.database) {
-  exit 1, "Error: --host, --port, --user, --pass and --database need to be defined"
+if (!params.offline && (!params.host || !params.port || !params.user || !params.pass || !params.database)) {
+  exit 1, "ERROR: --host, --port, --user, --pass and --database need to be defined"
+}
+
+if (params.offline) {
+  log.info "INFO: --offline mode selected, --sqlite will be turned on by default. If you do not wish to generate SQLite db please use --sqlite 0."
 }
 
 // Check run type for each protein function predictor
@@ -159,6 +177,12 @@ def getFiles (files) {
 }
 
 workflow {
+  if (params.sqlite) { 
+    sqlite_db_prep = init_sqlite_db()
+  } else {
+    sqlite_db_prep = "ready"
+  }
+
   // Translate transcripts from GTF and FASTA if no translation FASTA is given
   if (!params.translated) {
     translate_fasta(getFiles(params.gtf), getFiles(params.fasta))
@@ -180,7 +204,7 @@ workflow {
                               md5: it.seqString.replaceAll(/\*/, "").md5() ]}
 
   // Write translation mapping with transcript ID and MD5 hashes to database
-  if ( params.sift_run_type == "FULL" && params.pph_run_type == "FULL" ) {
+  if ( !params.offline && params.sift_run_type == "FULL" && params.pph_run_type == "FULL" ) {
     drop_translation_mapping()
     translation_mapping_wait = drop_translation_mapping.out
     clear_assemblies()
@@ -193,16 +217,29 @@ workflow {
                           name: "translation_mapping.tsv",
                           storeDir: params.outdir,
                           newLine: true) { it.id + "\t" + it.md5 }
-  store_translation_mapping(translation_mapping, translation_mapping_wait)
-  store_assemblies(files.collect(), assemblies_wait)
+
+  if (!params.offline) {
+    store_translation_mapping(translation_mapping)
+    store_assemblies(files.collect(), assemblies_wait)
+  }
 
   // Get unique translations based on MD5 hashes of their sequences
   translated = translated.unique { it.md5 }
 
   // Run protein function prediction
   errors = Channel.of("# failure reasons")
-  if ( params.sift_run_type != "NONE" ) errors = errors.concat(run_sift_pipeline( translated ))
-  if ( params.pph_run_type  != "NONE" ) errors = errors.concat(run_pph2_pipeline( translated ))
+
+  if ( params.sift_run_type != "NONE" ) {
+    errors = errors.concat(run_sift_pipeline( translated, sqlite_db_prep ).errors)
+  }
+
+  if ( params.pph_run_type  != "NONE" ) {
+    errors = errors.concat(run_pph2_pipeline( translated, sqlite_db_prep ).errors)
+  }
+
+  if ( params.sqlite ) {
+    postprocess_sqlite_db(errors.collect())
+  }
 
   errors
     .collectFile(name: 'failure_reason.tsv', newLine: true, storeDir: params.outdir)
