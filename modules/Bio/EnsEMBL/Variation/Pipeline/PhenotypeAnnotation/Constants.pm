@@ -116,11 +116,11 @@ use constant SOURCES_IN_RUN_TYPES => ( OMIA      => 'ANIMALSET',
 use constant SPECIES => ( 'RGD'       => ['rattus_norvegicus'],
                           'ZFIN'      => ['danio_rerio'],
 
-                          'ANIMALQTL' => ['bos_taurus', 'gallus_gallus', 'equus_caballus',
-                                          'sus_scrofa', 'ovis_aries', 'ovis_aries_rambouillet', 'capra_hircus'],
-                          'OMIA'      => ['felis_catus','gallus_gallus','capra_hircus',
-                                          'bos_taurus','canis_lupus_familiaris','equus_caballus','canis_lupus_familiarisboxer',
-                                          'sus_scrofa','ovis_aries', 'ovis_aries_rambouillet'],
+                          'ANIMALQTL' => ['bos_taurus', 'gallus_gallus', 'gallus_gallus_gca000002315v5', 'equus_caballus',
+                                          'sus_scrofa', 'ovis_aries', 'ovis_aries_texel', 'capra_hircus'],
+                          'OMIA'      => ['felis_catus','felis_catus_abyssinian','gallus_gallus','gallus_gallus_gca000002315v5',
+                                          'capra_hircus','bos_taurus','canis_lupus_familiaris','equus_caballus','canis_lupus_familiarisboxer',
+                                          'sus_scrofa','ovis_aries', 'ovis_aries_texel'],
 
                           'GWAS'      => ['homo_sapiens'],
                           'EGA'       => ['homo_sapiens'],
@@ -138,9 +138,9 @@ use constant SPECIES => ( 'RGD'       => ['rattus_norvegicus'],
 
 			  'WORMBASE'  => [ 'caenorhabditis_elegans_prjna13758', 'schistosoma_mansoni_prjea36577' ],
 
-                          'ontology'  => ['homo_sapiens', 'gallus_gallus',
+                          'ontology'  => ['homo_sapiens', 'gallus_gallus', 'gallus_gallus_gca000002315v5',
                                           'sus_scrofa', 'bos_taurus',
-                                          'equus_caballus', 'ovis_aries', 'ovis_aries_rambouillet',
+                                          'equus_caballus', 'ovis_aries', 'ovis_aries_texel',
                                           'capra_hircus', 'canis_lupus_familiaris','canis_lupus_familiarisboxer']
     );
 
