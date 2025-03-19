@@ -51,11 +51,13 @@ use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotype
 my %source_info;
 
 my %input_files_url = (
-  DDG2P => 'https://www.ebi.ac.uk/gene2phenotype/downloads/DDG2P.csv.gz',
-  SkinG2P => 'https://www.ebi.ac.uk/gene2phenotype/downloads/SkinG2P.csv.gz',
-  CancerG2P => 'https://www.ebi.ac.uk/gene2phenotype/downloads/CancerG2P.csv.gz',
-  CardiacG2P => 'https://www.ebi.ac.uk/gene2phenotype/downloads/CardiacG2P.csv.gz',
-  EyeG2P => 'https://www.ebi.ac.uk/gene2phenotype/downloads/EyeG2P.csv.gz',
+  DDG2P => 'https://www.ebi.ac.uk/gene2phenotype/api/panel/DD/download',
+  SkinG2P => 'https://www.ebi.ac.uk/gene2phenotype/api/panel/Skin/download',
+  CancerG2P => 'https://www.ebi.ac.uk/gene2phenotype/api/panel/Cancer/download',
+  CardiacG2P => 'https://www.ebi.ac.uk/gene2phenotype/api/panel/Cardiac/download',
+  EyeG2P => 'https://www.ebi.ac.uk/gene2phenotype/api/panel/Eye/download',
+  SkeletalG2P => 'https://www.ebi.ac.uk/gene2phenotype/api/panel/Skeletal/download',
+  HearingLossG2P => 'https://www.ebi.ac.uk/gene2phenotype/api/panel/Hearing%20loss/download'
 );
 
 sub fetch_input {
