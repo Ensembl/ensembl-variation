@@ -260,7 +260,6 @@ sub parse_input_file {
           'seq_region_start' => $gene->seq_region_start,
           'seq_region_end' => $gene->seq_region_end,
           'seq_region_strand' => $gene->seq_region_strand,
-          'mutation_consequence' => $mode,
           'inheritance_type' => $allelic,
           'pubmed_id'  => $pubmeds,
           'accessions' => \@accns,
