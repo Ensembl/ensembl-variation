@@ -222,13 +222,12 @@ sub parse_input_file {
     # get data from the line
     my $symbol  = $content->{"gene symbol"};
     my $allelic = $content->{"allelic requirement"};
-    my $mode    = $content->{"mutation consequence"};
     my $phen    = $content->{"disease name"};
     my $id      = $content->{"disease mim"} if $content->{'disease mim'} =~ /[0-9]/;
     my @accns   = split/\;/,$content->{"phenotypes"};
     my $pubmeds = $content->{"pmids"};
-    my $confidence_category = $content->{"confidence category"};
-    my $mutation_consequence = $content->{"mutation consequence"};
+    my $confidence_category = $content->{"confidence"};
+    my $mutation_consequence = $content->{"molecular mechanism"};
     $mutation_consequence =~ s/;/,/g;
     $pubmeds =~ s/;/,/g;
 
