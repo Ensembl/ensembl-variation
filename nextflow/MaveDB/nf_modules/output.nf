@@ -15,7 +15,7 @@ process concatenate_files {
   output        = "combined.tsv"
   output_sorted = "combined_sorted.tsv"
   output_bgzip  = "combined.tsv.gz"
-  files         = glob.glob("map_*.tsv", recursive=True)
+  files         = glob.glob("*map_*.tsv", recursive=True)
 
   print(f"Found {len(files)} files matching the pattern")
 

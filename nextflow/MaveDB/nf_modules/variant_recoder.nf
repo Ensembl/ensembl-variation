@@ -8,7 +8,7 @@ process run_variant_recoder {
   tag "${urn}"
   // determines how much RAM is requested for this specific process’s SLURM job
   // and it is independent of the global --mem= supplied to SLURM
-  memory { file(hgvs.target).countLines() * 250.MB + 5.GB } // 100, 4
+  memory { file(hgvs.target).countLines() * 100.MB + 4.GB } // 100, 4
 
   errorStrategy 'ignore'
   maxRetries 1

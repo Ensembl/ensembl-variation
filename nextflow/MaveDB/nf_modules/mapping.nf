@@ -39,7 +39,7 @@ process map_scores_to_HGVSg_variants {
 
   tag "${urn}"
   input:  tuple val(urn), path(mappings), path(scores), path(metadata), val(hgvs)
-  output: tuple val(urn), path(metadata), path('map_*.tsv')
+  output: tuple val(urn), path(metadata), path('*map_*.tsv')
 
   memory { mappings.size() * 2.B + 1.GB }
 
