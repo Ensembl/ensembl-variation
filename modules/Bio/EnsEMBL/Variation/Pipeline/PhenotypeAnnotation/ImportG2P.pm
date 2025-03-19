@@ -225,7 +225,7 @@ sub parse_input_file {
     my $phen    = $content->{"disease name"};
     my $id      = $content->{"disease mim"} if $content->{'disease mim'} =~ /[0-9]/;
     my @accns   = split/\;/,$content->{"phenotypes"};
-    my $pubmeds = $content->{"pmids"};
+    my $pubmeds = $content->{"publications"};
     my $confidence_category = $content->{"confidence"};
     my $mutation_consequence = $content->{"molecular mechanism"};
     $mutation_consequence =~ s/;/,/g;
