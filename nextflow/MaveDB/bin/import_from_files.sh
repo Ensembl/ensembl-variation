@@ -1,10 +1,5 @@
 #!/bin/bash
 
-# # TEST
-# urn="urn:mavedb:00000043-a-2"
-# mappings_path="/nfs/production/flicek/ensembl/variation/jma/maveDB-test/mavedb_dbdump_data/mappings"
-# scores_path="/nfs/production/flicek/ensembl/variation/jma/maveDB-test/mavedb_dbdump_data/scores"
-
 echo "import_from_files - processing URN: '${urn}'" 2>&1
 
 # Locate the mapping file using the original urn (with colons)
