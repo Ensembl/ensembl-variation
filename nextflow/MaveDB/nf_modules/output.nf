@@ -19,15 +19,6 @@ process concatenate_files {
 
   print(f"Found {len(files)} files matching the pattern")
 
-  # Filter out empty files
-  non_empty_files = [f for f in files if os.stat(f).st_size > 0]
-  empty_files = [f for f in files if os.stat(f).st_size == 0]
-
-  print(f"Found {len(empty_files)} empty files out of {len(files)} total files")
-  print(f"Processing {len(non_empty_files)} non-empty files")
-
-  files = non_empty_files
-
   def standardise_columns(df):
     df = df.rename(columns={'p-value':'pvalue'})
     df.columns = df.columns.str.lower()
@@ -37,23 +28,35 @@ process concatenate_files {
   print("Creating header...")
   header = None
   for f in files:
-    content = pandas.read_csv(f, delimiter="\t", nrows=0)
-    content = standardise_columns(content)
 
-    if header is not None:
-      header = pandas.concat([header, content], axis=0, ignore_index=True)
-    else:
-      header = content
+    content = pandas.read_csv(f, delimiter="\t", nrows=0)
+    if content.empty:
+      continue
+
+    else:  
+      content = standardise_columns(content)
+
+      if header is not None:
+        header = pandas.concat([header, content], axis=0, ignore_index=True)
+      else:
+        header = content
+
   print("Header columns:", header.columns.values)
 
   # merge data and append to file (one file at a time)
   print("\\nMerging and writing content...")
   for f in files:
+
     print("Processing file:", f)
     content = pandas.read_csv(f, delimiter="\t")
-    content = standardise_columns(content)
-    out = pandas.concat([header, content], axis=0, ignore_index=True)
-    out.to_csv(output, sep="\t", mode="a", index=False, header=not exists(output))
+
+    if content.empty:
+      continue
+
+    else:  
+      content = standardise_columns(content)
+      out = pandas.concat([header, content], axis=0, ignore_index=True)
+      out.to_csv(output, sep="\t", mode="a", index=False, header=not exists(output))
   """
 }
 
