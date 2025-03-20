@@ -227,8 +227,6 @@ sub parse_input_file {
     my @accns   = split/\;/,$content->{"phenotypes"};
     my $pubmeds = $content->{"publications"};
     my $confidence_category = $content->{"confidence"};
-    my $mutation_consequence = $content->{"molecular mechanism"};
-    $mutation_consequence =~ s/;/,/g;
     $pubmeds =~ s/;/,/g;
 
     if ($symbol && $phen) {
