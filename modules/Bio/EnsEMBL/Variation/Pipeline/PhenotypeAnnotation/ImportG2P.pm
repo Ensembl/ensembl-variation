@@ -51,11 +51,13 @@ use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotype
 my %source_info;
 
 my %input_files_url = (
-  DDG2P => 'https://www.ebi.ac.uk/gene2phenotype/downloads/DDG2P.csv.gz',
-  SkinG2P => 'https://www.ebi.ac.uk/gene2phenotype/downloads/SkinG2P.csv.gz',
-  CancerG2P => 'https://www.ebi.ac.uk/gene2phenotype/downloads/CancerG2P.csv.gz',
-  CardiacG2P => 'https://www.ebi.ac.uk/gene2phenotype/downloads/CardiacG2P.csv.gz',
-  EyeG2P => 'https://www.ebi.ac.uk/gene2phenotype/downloads/EyeG2P.csv.gz',
+  DDG2P => 'https://www.ebi.ac.uk/gene2phenotype/api/panel/DD/download',
+  SkinG2P => 'https://www.ebi.ac.uk/gene2phenotype/api/panel/Skin/download',
+  CancerG2P => 'https://www.ebi.ac.uk/gene2phenotype/api/panel/Cancer/download',
+  CardiacG2P => 'https://www.ebi.ac.uk/gene2phenotype/api/panel/Cardiac/download',
+  EyeG2P => 'https://www.ebi.ac.uk/gene2phenotype/api/panel/Eye/download',
+  SkeletalG2P => 'https://www.ebi.ac.uk/gene2phenotype/api/panel/Skeletal/download',
+  HearingLossG2P => 'https://www.ebi.ac.uk/gene2phenotype/api/panel/Hearing%20loss/download'
 );
 
 sub fetch_input {
@@ -220,14 +222,11 @@ sub parse_input_file {
     # get data from the line
     my $symbol  = $content->{"gene symbol"};
     my $allelic = $content->{"allelic requirement"};
-    my $mode    = $content->{"mutation consequence"};
     my $phen    = $content->{"disease name"};
     my $id      = $content->{"disease mim"} if $content->{'disease mim'} =~ /[0-9]/;
     my @accns   = split/\;/,$content->{"phenotypes"};
-    my $pubmeds = $content->{"pmids"};
-    my $confidence_category = $content->{"confidence category"};
-    my $mutation_consequence = $content->{"mutation consequence"};
-    $mutation_consequence =~ s/;/,/g;
+    my $pubmeds = $content->{"publications"};
+    my $confidence_category = $content->{"confidence"};
     $pubmeds =~ s/;/,/g;
 
     if ($symbol && $phen) {
@@ -259,12 +258,10 @@ sub parse_input_file {
           'seq_region_start' => $gene->seq_region_start,
           'seq_region_end' => $gene->seq_region_end,
           'seq_region_strand' => $gene->seq_region_strand,
-          'mutation_consequence' => $mode,
           'inheritance_type' => $allelic,
           'pubmed_id'  => $pubmeds,
           'accessions' => \@accns,
           'g2p_confidence' => $confidence_category,
-          'mutation_consequence' => $mutation_consequence,
           ontology_mapping_type =>'involves' 
         };
       }
