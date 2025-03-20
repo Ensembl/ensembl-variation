@@ -261,7 +261,7 @@ sub parse_input_file {
           'inheritance_type' => $allelic,
           'pubmed_id'  => $pubmeds,
           'accessions' => \@accns,
-          'g2p_confidence' => $confidence_category,nce,
+          'g2p_confidence' => $confidence_category,
           ontology_mapping_type =>'involves' 
         };
       }
