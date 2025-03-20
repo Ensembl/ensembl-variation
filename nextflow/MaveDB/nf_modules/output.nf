@@ -4,7 +4,7 @@ process concatenate_files {
   input:  path(mapped_variants)
   output: path("combined.tsv")
 
-  memory '4GB'
+  memory '20GB'
 
   """
   #!/usr/bin/env python3
@@ -28,35 +28,36 @@ process concatenate_files {
   print("Creating header...")
   header = None
   for f in files:
+    print(f)
 
-    content = pandas.read_csv(f, delimiter="\t", nrows=0)
-    if content.empty:
+    try:
+      content = pandas.read_csv(f, delimiter="\t", nrows=0)
+    except: 
+      print("File empty")
       continue
 
-    else:  
-      content = standardise_columns(content)
+    content = standardise_columns(content)
 
-      if header is not None:
-        header = pandas.concat([header, content], axis=0, ignore_index=True)
-      else:
-        header = content
+    if header is not None:
+      header = pandas.concat([header, content], axis=0, ignore_index=True)
+    else:
+      header = content
 
   print("Header columns:", header.columns.values)
 
   # merge data and append to file (one file at a time)
   print("\\nMerging and writing content...")
   for f in files:
-
     print("Processing file:", f)
-    content = pandas.read_csv(f, delimiter="\t")
-
-    if content.empty:
+    try:
+      content = pandas.read_csv(f, delimiter="\t")
+    except: 
+      print("File empty")
       continue
 
-    else:  
-      content = standardise_columns(content)
-      out = pandas.concat([header, content], axis=0, ignore_index=True)
-      out.to_csv(output, sep="\t", mode="a", index=False, header=not exists(output))
+    content = standardise_columns(content)
+    out = pandas.concat([header, content], axis=0, ignore_index=True)
+    out.to_csv(output, sep="\t", mode="a", index=False, header=not exists(output))
   """
 }
 
