@@ -263,8 +263,7 @@ sub parse_input_file {
           'inheritance_type' => $allelic,
           'pubmed_id'  => $pubmeds,
           'accessions' => \@accns,
-          'g2p_confidence' => $confidence_category,
-          'mutation_consequence' => $mutation_consequence,
+          'g2p_confidence' => $confidence_category,nce,
           ontology_mapping_type =>'involves' 
         };
       }
