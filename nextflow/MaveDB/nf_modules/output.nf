@@ -71,22 +71,15 @@ process tabix {
   def name = file(params.output).baseName
   def gzip = file(params.output).name
   """
-  #!/usr/bin/env bash
-
-  # Add hash to first line of header
+  # add hash to first line of header
   sed -i '1 s/^/#/' ${out}
 
-  # Extract header from the combined file
-  header=\$(head -n1 "${out}")
-
-  # Remove header, LRG and chromosome patches - save in tmp.tsv
+  # remove LRG and chromosome patches
   grep -v "^#" ${out} | grep -v "^LRG" | grep -v "^CHR_" > tmp.tsv
 
-  # Sort file by position and add header to top of file
-  echo "${header}" > ${name}
-  sort -k1,1 -k2,2n -k3,3n tmp.tsv | uniq >> ${name}
+  # sort file by position
+  (head -n1 ${out}; sort -k1,1 -k2,2n -k3,3n tmp.tsv | uniq) > ${name}
 
-  # Compress and index the file
   bgzip ${name}
   tabix -s1 -b2 -e3 ${gzip}
   rm tmp.tsv
