@@ -45,7 +45,8 @@ def main():
 
   overhead = mappings[0]['id'] - 1
   mavedb_ids = [args.urn + "#" + str(i['id'] - overhead) for i in mappings ]
-  
+  print(mavedb_ids)
+
   if args.vr is not None:
     hgvsp2vars = load_vr_output(args.vr)
   else:
@@ -124,7 +125,6 @@ def get_chromosome (hgvs):
 
 def join_information (hgvs, mapped_info, row, extra):
   """Join variant and MaveDB score information for a given HGVS"""
-    
   var = mapped_info['variation']
   ref = mapped_info['vrs_ref_allele_seq']
 
@@ -155,9 +155,7 @@ def match_information (hgvs, matches, row, extra):
   return out
 
 def map_variant_to_MaveDB_scores (matches, mapped_info, row, extra):
-  
   hgvs = mapped_info['expressions'][0]['value']
-  
   if matches is None:
     # HGVS genomic coordinates
     return join_information(hgvs, mapped_info, row, extra)
