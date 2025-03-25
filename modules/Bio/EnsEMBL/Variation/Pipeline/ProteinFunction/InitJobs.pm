@@ -61,7 +61,9 @@ sub fetch_input {
     $self->update_meta;
 
     my $core_dba = $self->get_species_adaptor('core');
+    $core_dba->dbc->reconnect_when_lost(1);
     my $var_dba  = $self->get_species_adaptor('variation');
+    $var_dba->dbc->reconnect_when_lost(1);
 
     # fetch all the transcripts from the core DB
 
@@ -249,6 +251,7 @@ sub fetch_input {
 sub update_meta{
   my $self = shift;
   my $var_dba  = $self->get_species_adaptor('variation');
+  $var_dba->dbc->reconnect_when_lost(1);
 
   my $var_dbh = $var_dba->dbc->db_handle;
 
@@ -320,6 +323,7 @@ sub get_refseq_transcripts {
     my $self = shift;
 
     my $of_dba = $self->get_species_adaptor('otherfeatures');
+    $of_dba->dbc->reconnect_when_lost(1);
     my $sa = $of_dba->get_SliceAdaptor or die "Failed to get slice adaptor";
     my $slices = $sa->fetch_all('toplevel', undef, 1, undef, undef);
 
