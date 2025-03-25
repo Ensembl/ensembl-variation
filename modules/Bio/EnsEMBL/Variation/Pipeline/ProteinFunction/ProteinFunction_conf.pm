@@ -144,9 +144,9 @@ sub default_options {
         default_long_slurm_options => '--partition=production --time=6:00:00 --mem=2G',
         medmem_slurm_options       => '--partition=production --time=6:00:00 --mem=8G',
         medmem_long_slurm_options  => '--partition=production --time=24:00:00 --mem=8G',
-        highmem_slurm_options      => '--partition=production --time=2:30:00 --mem=24G',
-        highmem_med_slurm_options  => '--partition=production --time=24:00:00 --mem=24G',
-        highmem_long_slurm_options => '--partition=production --time=120:00:00 --mem=24G',
+        highmem_slurm_options      => '--partition=production --time=4:00:00 --mem=48G',
+        highmem_med_slurm_options  => '--partition=production --time=24:00:00 --mem=48G',
+        highmem_long_slurm_options => '--partition=production --time=120:00:00 --mem=48G',
 
         # Polyphen specific parameters
 
