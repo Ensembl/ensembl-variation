@@ -92,7 +92,7 @@ workflow {
     filteredMetaChannel = filteredMetaChannel.map { [it[0], it[1]] }
 
     // mainChannel finds and pulls in the mappings and scores files for each urn
-    // mainChannel outputs tuples of [urn, mappings.json, scores.csv] - only with "CC0" license URNs
+    // mainChannel outputs tuples of [urn, mappings.json, scores.csv]
     mainChannel = import_from_files(filteredMetaChannel.map { it[0] })
 
     // Joins by URN ID and outputs tuple: [urn, mappings.json, scores.csv, metadata.json]
