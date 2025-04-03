@@ -82,11 +82,13 @@ workflow {
 
     // Log removed URNs (those that do NOT have a "CC0" license)
     metaChannel
-        .filter { it[2].text != 'CC0' }
+    // Log removed URNs (e.g. - those that do NOT have a "CC0" license)
+    metaChannel
+        .filter { !params.licences.tokenize(",").contains(it[2].text) }
         .subscribe { println "NOTE: Discarded ${it[0]} based on license (${it[2].text})" }
 
-    // Filter URNs based on license (only keep "CC0")
-    filteredMetaChannel = metaChannel.filter { params.licences.contains(it[2].text) }
+    // Filter URNs based on license
+    filteredMetaChannel = metaChannel.filter { params.licences.tokenize(",").contains(it[2].text) }
 
     // Remove LICENSE.txt, leaving output of filteredMetaChannel to be tuple: [urn, metadata.json]
     filteredMetaChannel = filteredMetaChannel.map { [it[0], it[1]] }
