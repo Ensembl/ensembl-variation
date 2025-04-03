@@ -23,10 +23,6 @@ def main(metadata_file, urn):
                     selected_entry = score_set
                     break
                 
-    # if not selected_entry:
-    #     print(f"ERROR: extract_metadata.py - no matching entry found for '{urn}'. Exiting.")
-    #     sys.exit(1)
-
     # Reformat the extracted data to match the json format expected later in the pipeline
     # This was a pragmatic approach so that the whole pipeline wasn't re-written
     # This is to cope with the fact that the pipeline was written for API -yielded json structures, 
