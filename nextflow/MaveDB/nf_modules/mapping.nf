@@ -18,7 +18,7 @@ process map_scores_to_HGVSp_variants {
   
   set +e
   
-  ${workflow.projectDir}/bin/${script_name} --urn ${urn} \\
+  ${script_name} --urn ${urn} \\
                  --scores ${scores} \\
                  --mappings ${mappings} \\
                  --metadata ${metadata} \\
