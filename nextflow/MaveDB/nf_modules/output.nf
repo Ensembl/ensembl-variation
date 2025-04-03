@@ -28,7 +28,7 @@ process concatenate_files {
   print("Creating header...")
   header = None
   for f in files:
-    print(f)
+    print("Processing file:", f)
 
     try:
       content = pandas.read_csv(f, delimiter="\t", nrows=0)
