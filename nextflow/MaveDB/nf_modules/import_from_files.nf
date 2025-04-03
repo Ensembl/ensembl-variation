@@ -13,13 +13,7 @@ process import_from_files {
   
   set +e
   
-  # Export environment variables so bash script can access them
-  export urn=${urn}
-  export mappings_path=${params.mappings_path}
-  export scores_path=${params.scores_path}
-  
-  # Call bash import script
-  bash ${workflow.projectDir}/bin/import_from_files.sh
+  import_from_files.sh ${urn} ${params.mappings_path} ${params.scores_path}
 
   # Check if the mappings.json file exists and is non-empty, if not, create an empty file
   if [ ! -s mappings.json ]; then
