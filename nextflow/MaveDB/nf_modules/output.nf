@@ -4,18 +4,20 @@ process concatenate_files {
   input:  path(mapped_variants)
   output: path("combined.tsv")
 
-  memory '4GB'
+  memory '20GB'
 
   """
   #!/usr/bin/env python3
-  import glob, pandas
+  import glob, pandas, os
   from os.path import exists
   import subprocess
 
   output        = "combined.tsv"
   output_sorted = "combined_sorted.tsv"
   output_bgzip  = "combined.tsv.gz"
-  files         = "*.tsv"
+  files         = glob.glob("*map_*.tsv", recursive=True)
+
+  print(f"Found {len(files)} files matching the pattern")
 
   def standardise_columns(df):
     df = df.rename(columns={'p-value':'pvalue'})
@@ -25,21 +27,34 @@ process concatenate_files {
   # concatenate header of all files
   print("Creating header...")
   header = None
-  for f in glob.glob(files):
-    content = pandas.read_csv(f, delimiter="\t", nrows=0)
+  for f in files:
+    print("Processing file:", f)
+
+    try:
+      content = pandas.read_csv(f, delimiter="\t", nrows=0)
+    except: 
+      print("File empty")
+      continue
+
     content = standardise_columns(content)
 
     if header is not None:
       header = pandas.concat([header, content], axis=0, ignore_index=True)
     else:
       header = content
-  print(header.columns.values)
+
+  print("Header columns:", header.columns.values)
 
   # merge data and append to file (one file at a time)
   print("\\nMerging and writing content...")
-  for f in glob.glob(files):
-    print(f)
-    content = pandas.read_csv(f, delimiter="\t")
+  for f in files:
+    print("Processing file:", f)
+    try:
+      content = pandas.read_csv(f, delimiter="\t")
+    except: 
+      print("File empty")
+      continue
+
     content = standardise_columns(content)
     out = pandas.concat([header, content], axis=0, ignore_index=True)
     out.to_csv(output, sep="\t", mode="a", index=False, header=not exists(output))
