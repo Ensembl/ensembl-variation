@@ -10,11 +10,11 @@ score_urn=$(echo "${urn}" | sed 's/:/-/g')
 score_file=$(find ${scores_path} -type f -iname "*${score_urn}.scores.csv" | head -n 1)
 
 # Check if the mapping and scores files exist in the user-provided directories
-if [ -z "${mapping_file}" ]; then
+if [ ! -f "${mapping_file}" ]; then
   echo "ERROR: No mapping file found for ${urn}" 2>&1
   exit 1
 fi
-if [ -z "${score_file}" ]; then
+if [ ! -f "${score_file}" ]; then
   echo "ERROR: No scores file found for ${urn}" 2>&1
   exit 1
 fi
