@@ -4,10 +4,10 @@ os:
   - linux
 
 dist:
-  - trusty
+  - focal
 
 perl:
-  - '5.14'
+  - '5.22'
   - '5.26'
 env:
   matrix:
@@ -22,9 +22,6 @@ addons:
   apt:
     packages:
     - unzip
-
-services:
-  - mysql
 
 before_install:
 - export ENSEMBL_BRANCH=release/115
@@ -48,6 +45,7 @@ before_install:
 - cd $DEPS
 - $CWD/travisci/get_dependencies.sh
 - cd $CWD
+- $CWD/travisci/install_mysql.sh
 install:
 - export CWD=$PWD
 - export PERL5LIB=$PWD/bioperl-live:$PERL5LIB
@@ -65,7 +63,7 @@ install:
 
 matrix:
   exclude:
-  - perl: '5.14'
+  - perl: '5.22'
     env: COVERALLS=false DB=mysql
   - perl: '5.26'
     env: COVERALLS=true  DB=mysql
