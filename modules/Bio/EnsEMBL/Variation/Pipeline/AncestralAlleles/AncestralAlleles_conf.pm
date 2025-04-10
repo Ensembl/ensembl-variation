@@ -32,7 +32,7 @@ package Bio::EnsEMBL::Variation::Pipeline::AncestralAlleles::AncestralAlleles_co
 
 use strict;
 use warnings;
-use Bio::EnsEMBL::Hive::Version 2.6;
+use Bio::EnsEMBL::Hive::Version;
 use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
 use base ('Bio::EnsEMBL::Hive::PipeConfig::EnsemblGeneric_conf');
 
