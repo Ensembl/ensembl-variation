@@ -66,7 +66,7 @@ nextflow run [path_to]/ensembl-variation/nextflow/MaveDB/main.nf \
 | ----------------- | ------------------------------------------------------------------------------------------ |
 | `--urn`           | Path to file listing MaveDB URNs (mandatory)                                               |
 | `--ensembl`       | Path to Ensembl root directory (default: `${ENSEMBL_ROOT_DIR}`)                            |
-| `--output`        | Path to output file (default: `output/MaveDB_variants.tsv.gz`)                             |
+| `--output`        | Path to output file with a `.gz` extension (default: `output/MaveDB_variants.tsv.gz`)                             |
 | `--registry`      | Path to Ensembl registry file used for [Variant Recoder][] (default: none)                 |
 | `--licences`      | Comma-separated list of accepted licences (default: `CC0`)                                 |
 | `--round`         | Decimal places to round floats in MaveDB data (default: `4`)                               |
