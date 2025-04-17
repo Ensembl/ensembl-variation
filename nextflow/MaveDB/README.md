@@ -24,6 +24,7 @@ need to install extra software.
 
 - [Nextflow 22.04.3](https://nextflow.io/)
 - [Singularity](https://docs.sylabs.io/guides/3.5/user-guide/introduction.html)
+- [pandas](https://pandas.pydata.org/)
 
 Any Docker images used are automatically downloaded if using Docker or Singularity. Check [nextflow.config](nextflow.config) for available pre-configured profiles.
 
