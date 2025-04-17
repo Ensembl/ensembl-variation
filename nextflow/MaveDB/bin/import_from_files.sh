@@ -1,6 +1,14 @@
 #!/bin/bash
 
 echo "import_from_files - processing URN: '${urn}'" 2>&1
+if [[ $# < 3 ]]
+then 
+      echo "ERROR: At least 3 arguments expected, $# provided" 2>&1
+      exit 1
+fi
+urn=$1
+mappings_path=$2
+scores_path=$3
 
 # Locate the mapping file using the original urn (with colons)
 mapping_file=$(find ${mappings_path} -type f -iname "*${urn}*.json" | head -n 1)
