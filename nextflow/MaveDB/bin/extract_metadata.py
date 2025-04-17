@@ -107,7 +107,7 @@ def main(metadata_file, urn):
             "urn": selected_entry.get("urn"),
     }
     else:
-        print(f"ERROR: extract_metadata.py - no matching entry found for '{urn}' in metadata file ('${metadata_file}'). Exiting.")
+        print(f"ERROR: extract_metadata.py - no matching entry found for '{urn}' in metadata file '{metadata_file}'. Exiting.")
         sys.exit(1)
 
     # Save the formatted data
