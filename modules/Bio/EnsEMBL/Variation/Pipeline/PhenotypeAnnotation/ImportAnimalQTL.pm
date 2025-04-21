@@ -142,7 +142,8 @@ sub fetch_input {
   print $logFH "AnimalQTL import expects input folder with gff3 files: example format QTL_gallus_gallus.*.gff3  \n" if ($self->debug);
   print $logFH "using input folder: $animalqtl_inputDir for species: $species \n" if ($self->debug);
 
-  my $inputFile = $animalqtl_inputDir."/".$animalQTL_species_fileNames{$species};
+  my $inputFile = $animalQTL_species_fileNames{$species};
+  my $inputFilePath = $animalqtl_inputDir."/".$animalQTL_species_fileNames{$species};
   my $url=$animalQTL_species_url{$species};
 
   # if the folder does not exist, try to fetch from ulr
@@ -151,10 +152,9 @@ sub fetch_input {
     make_path($animalqtl_inputDir, {error => \$err});
     die "make_path failed: ".Dumper($err) if $err && @$err;
 
-    my $fetch_cmd = "wget --content-disposition --no-check-certificate -O $inputFile \"$url\"";
-    my $return_value = $self->run_cmd($fetch_cmd)
+    my $fetch_cmd = "wget --content-disposition --no-check-certificate -O $inputFilePath \"$url\"";
+    $self->run_cmd($fetch_cmd)
       unless -e $animalqtl_inputDir."/".$animalQTL_species_fileNames{$species};
-    die ("File fetch failed code: $return_value!\n") unless defined($return_value) && $return_value == 0;
   } else {
     opendir(INDIR, $animalqtl_inputDir);
     my @files = readdir(INDIR);
@@ -162,17 +162,16 @@ sub fetch_input {
     my $ok = 0;
     foreach my $file (@files){
       if ($file =~/^QTL_$species.*gff3$/ || $file =~/^QTL_$species.*gff3.gz$/){
-        $inputFile = $file;
+        $inputFilePath = $animalqtl_inputDir."/".$file;
         $ok = 1;
         last;
       }
     }
     # if directory exists and file not found try to fetch the file
     if (!$ok) {
-      my $fetch_cmd = "wget --content-disposition --no-check-certificate -O $inputFile \"$url\"";
-      my $return_value = $self->run_cmd($fetch_cmd)
+      my $fetch_cmd = "wget --content-disposition --no-check-certificate -O $inputFilePath \"$url\"";
+      $self->run_cmd($fetch_cmd)
         unless -e $animalqtl_inputDir."/".$animalQTL_species_fileNames{$species};
-      die ("File fetch failed code: $return_value!\n") unless defined($return_value) && $return_value == 0;
       $ok = 1;
     }
     print $errFH "ERROR: Animal_QTLdb file not found for $species in inputDir ($animalqtl_inputDir)!\n" unless $ok;
@@ -187,12 +186,12 @@ sub fetch_input {
   $self->param('species_assembly', $gc->get_version);  #'GRCg6a' for gallus_gallus
   print $logFH 'INFO: Found core species_assembly:'. $self->param('species_assembly'). "\n" if ($self->debug);
 
-  $source_info{source_version} = strftime("%Y%m%d", localtime(stat($animalqtl_inputDir."/".$inputFile)->mtime));
+  $source_info{source_version} = strftime("%Y%m%d", localtime(stat($inputFilePath)->mtime));
   print $logFH "Found inputDir file: $inputFile \n";
   if ( -e $workdir."/".$inputFile) {
     print $logFH "Found file (".$workdir."/".$inputFile."), will skip new copy of inputData\n";
   } else {
-    my $cp_cmd = "cp -p $animalqtl_inputDir/$inputFile $workdir/$inputFile";
+    my $cp_cmd = "cp -p $inputFilePath $workdir/$inputFile";
     my $return_value = $self->run_cmd($cp_cmd);
     die ("File copy failed code: $return_value!\n") unless defined($return_value) && $return_value == 0;
   }
