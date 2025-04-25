@@ -63,32 +63,35 @@ my $animalqtl_baseURL='https://www.animalgenome.org/QTLdb/export/ENS83H19HZS/';
 
 my %animalQTL_species_url = (
   gallus_gallus => $animalqtl_baseURL.'QTLdb_chicken_GRCg7b.gff.gz', #Gallus gallus, chicken
+  gallus_gallus_gca000002315v5 => $animalqtl_baseURL.'QTLdb_chicken_GRCg6a.gff.gz', #Gallus gallus, chicken
   sus_scrofa => $animalqtl_baseURL.'QTLdb_pig_SS11.1.gff.gz', #Sus scrofa, pig
-  ovis_aries => $animalqtl_baseURL.'QTLdb_sheep_OAR3.1.gff.gz',  # Ovis aries, sheep
+  ovis_aries => $animalqtl_baseURL.'QTLdb_sheep_OAR_rambo2.gff.gz',  # Ovis aries, sheep
   bos_taurus => $animalqtl_baseURL.'QTLdb_cattle_ARS_UCD2.gff.gz', #Bos taurus, cow
   equus_caballus => $animalqtl_baseURL.'QTLdb_horse_EC3.gff.gz', #Equus caballus, horse 
-  ovis_aries_rambouillet => $animalqtl_baseURL."QTLdb_sheep_OAR_rambo2.gff.gz", #Ovis aries rambo
+  ovis_aries_texel => $animalqtl_baseURL.'QTLdb_sheep_OAR3.1.gff.gz', #Ovis aries rambo
   capra_hircus => $animalqtl_baseURL.'QTLdb_goatCHIR_ARS1.gff.gz', #capra hircus, goat
 );
 
 my %animalQTL_species_fileNames = (
   gallus_gallus => 'QTL_gallus_gallus_GRCg7b.gff3.gz',
+  gallus_gallus_gca000002315v5 => 'QTL_gallus_gallus_GRCg6a.gff3.gz',
   sus_scrofa => 'QTL_sus_scrofa_gbp_11.1.gff3.gz',
-  ovis_aries => 'QTL_ovis_aries_OAR3.1.gff3.gz',
+  ovis_aries => 'QTL_ovis_aries_rambouillet_OAR_rambo2.gff3.gz',
   bos_taurus => 'QTL_bos_taurus_ARS_UCD2.gff3.gz',
   equus_caballus => 'QTL_equus_caballus_EC3.gff3.gz',
-  ovis_aries_rambouillet => 'QTL_ovis_aries_rambouillet_OAR_rambo2.gff3.gz',
+  ovis_aries_texel => 'QTL_ovis_aries_OAR3.1.gff3.gz',
   capra_hircus => 'QTL_capra_hircus_CHIR_ARS1.gff3.gz',
 );
 
 # use '0' if the data is not the same assembly and import should be skipped
 my %animalQTL_species_ok = (
   gallus_gallus => 1,
+  gallus_gallus_gca000002315v5 => 1,
   sus_scrofa => 1,
   ovis_aries => 1,
   bos_taurus => 1,
   equus_caballus => 1,
-  ovis_aries_rambouillet => 1,
+  ovis_aries_texel => 1,
   capra_hircus => 1
 );
 
@@ -139,7 +142,8 @@ sub fetch_input {
   print $logFH "AnimalQTL import expects input folder with gff3 files: example format QTL_gallus_gallus.*.gff3  \n" if ($self->debug);
   print $logFH "using input folder: $animalqtl_inputDir for species: $species \n" if ($self->debug);
 
-  my $inputFile = $animalqtl_inputDir."/".$animalQTL_species_fileNames{$species};
+  my $inputFile = $animalQTL_species_fileNames{$species};
+  my $inputFilePath = $animalqtl_inputDir."/".$animalQTL_species_fileNames{$species};
   my $url=$animalQTL_species_url{$species};
 
   # if the folder does not exist, try to fetch from ulr
@@ -148,28 +152,25 @@ sub fetch_input {
     make_path($animalqtl_inputDir, {error => \$err});
     die "make_path failed: ".Dumper($err) if $err && @$err;
 
-    my $fetch_cmd = "wget --content-disposition --no-check-certificate -O $inputFile \"$url\"";
-    my $return_value = $self->run_cmd($fetch_cmd)
+    my $fetch_cmd = "wget --content-disposition --no-check-certificate -O $inputFilePath \"$url\"";
+    $self->run_cmd($fetch_cmd)
       unless -e $animalqtl_inputDir."/".$animalQTL_species_fileNames{$species};
-    die ("File fetch failed code: $return_value!\n") unless defined($return_value) && $return_value == 0;
   } else {
     opendir(INDIR, $animalqtl_inputDir);
     my @files = readdir(INDIR);
     closedir(INDIR);
     my $ok = 0;
     foreach my $file (@files){
-      if ($file =~/^QTL_$species.*gff3$/ || $file =~/^QTL_$species.*gff3.gz$/){
-        $inputFile = $file;
+      if ($file eq $inputFile){
         $ok = 1;
         last;
       }
     }
     # if directory exists and file not found try to fetch the file
     if (!$ok) {
-      my $fetch_cmd = "wget --content-disposition --no-check-certificate -O $inputFile \"$url\"";
-      my $return_value = $self->run_cmd($fetch_cmd)
+      my $fetch_cmd = "wget --content-disposition --no-check-certificate -O $inputFilePath \"$url\"";
+      $self->run_cmd($fetch_cmd)
         unless -e $animalqtl_inputDir."/".$animalQTL_species_fileNames{$species};
-      die ("File fetch failed code: $return_value!\n") unless defined($return_value) && $return_value == 0;
       $ok = 1;
     }
     print $errFH "ERROR: Animal_QTLdb file not found for $species in inputDir ($animalqtl_inputDir)!\n" unless $ok;
@@ -184,12 +185,12 @@ sub fetch_input {
   $self->param('species_assembly', $gc->get_version);  #'GRCg6a' for gallus_gallus
   print $logFH 'INFO: Found core species_assembly:'. $self->param('species_assembly'). "\n" if ($self->debug);
 
-  $source_info{source_version} = strftime("%Y%m%d", localtime(stat($animalqtl_inputDir."/".$inputFile)->mtime));
-  print $logFH "Found inputDir file: $inputFile \n";
+  $source_info{source_version} = strftime("%Y%m%d", localtime(stat($inputFilePath)->mtime));
+  print $logFH "Found inputDir file: $inputFilePath \n";
   if ( -e $workdir."/".$inputFile) {
     print $logFH "Found file (".$workdir."/".$inputFile."), will skip new copy of inputData\n";
   } else {
-    my $cp_cmd = "cp -p $animalqtl_inputDir/$inputFile $workdir/$inputFile";
+    my $cp_cmd = "cp -p $inputFilePath $workdir/$inputFile";
     my $return_value = $self->run_cmd($cp_cmd);
     die ("File copy failed code: $return_value!\n") unless defined($return_value) && $return_value == 0;
   }
