@@ -36,6 +36,7 @@ my $script_opts = [{args => ['host', 'dbhost', 'h'], type => '=s'},
         {args => ['user', 'dbuser', 'u'], type => '=s'},
         {args => ['pass', 'dbpass', 'p'], type => ':s'},
         {args => ['dbname',  'D'],         type => ':s'},
+        {args => ['type', 't'],    type => ':s'},
         {args => ['version'],    type => ':i'},];
 
 if ( scalar(@ARGV) == 0 ) {
@@ -48,9 +49,11 @@ my $optsd = get_opts();
 my $opts = $cli_helper->process_args( $optsd, \&usage );
 
 my ($variation_dbas, $core_dbas);
+use Data::Dumper;
+print Dumper($opts);
 if (defined $opts->{dbname}) {
   $variation_dbas = get_dbas($opts);
-  die "Variation database required" unless ($opts->{dbname} =~ m/variation/);
+  die "Variation database required" unless ($opts->{dbname} =~ m/variation/ || $opts->{type} eq "private");
   $opts->{dbname} =~ s/variation/core/;
   $core_dbas = get_dbas($opts);
 } else {
