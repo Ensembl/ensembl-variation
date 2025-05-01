@@ -51,7 +51,7 @@ my $opts = $cli_helper->process_args( $optsd, \&usage );
 my ($variation_dbas, $core_dbas);
 if (defined $opts->{dbname}) {
   $variation_dbas = get_dbas($opts);
-  die "Variation database required" unless ($opts->{dbname} =~ m/variation/ || $opts->{type} eq "privates");
+  die "Variation database required" unless ($opts->{dbname} =~ m/variation/ || $opts->{type} eq "private");
   $opts->{dbname} =~ s/variation/core/;
   $core_dbas = get_dbas($opts);
 } else {
