@@ -57,7 +57,7 @@ my %input_files_url = (
   CardiacG2P => 'https://www.ebi.ac.uk/gene2phenotype/api/panel/Cardiac/download',
   EyeG2P => 'https://www.ebi.ac.uk/gene2phenotype/api/panel/Eye/download',
   SkeletalG2P => 'https://www.ebi.ac.uk/gene2phenotype/api/panel/Skeletal/download',
-  HearingLossG2P => 'https://www.ebi.ac.uk/gene2phenotype/api/panel/Hearing%20loss/download'
+  EarG2P => 'https://www.ebi.ac.uk/gene2phenotype/api/panel/Ear/download'
 );
 
 sub fetch_input {
