@@ -2078,7 +2078,7 @@ sub _hgvs_from_components {
   }
   elsif ($description =~ m/ins/i && $description =~ m/del/i) {
     ## check for malformed indels
-    ($ref_allele, $alt_allele,  $start, $end) = @{trim_sequences($ref_allele, $alt_allele,  $start, $end, 1)};
+    ($ref_allele, $alt_allele,  $start, $end) = @{trim_sequences($ref_allele, $alt_allele,  $start, $end, 1, 0, $strand)};
   }
   elsif ($description =~ m/ins/i && $description !~ m/del/i) {
      # insertion: the start & end positions are inverted by convention

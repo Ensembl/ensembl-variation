@@ -932,6 +932,7 @@ sub align_seqs {
   Arg[4]      : (optional) int $end
   Arg[5]      : (optional) bool $empty_to_dash
   Arg[6]      : (optional) bool $end_first
+  Arg[7]      : (optional) int $strand
   Example     : my ($new_ref, $new_alt, $new_start) = @{trim_sequences($ref, $alt, $start)}
   Description : Takes a pair of reference and alternate sequences and trims common sequence
                 from the start and then the end to give the minimal pair of alleles,
@@ -962,12 +963,13 @@ sub align_seqs {
 =cut
 
 sub trim_sequences {
-  my ($ref, $alt, $start, $end, $empty_to_dash, $end_first) = @_;
+  my ($ref, $alt, $start, $end, $empty_to_dash, $end_first, $strand) = @_;
 
   throw("Missing reference or alternate sequence") unless defined $ref && defined $alt;
 
   $start ||= 0;
   $end ||= $start + (length($ref) - 1);
+  $strand ||= 1;
 
   my $changed = 0;
 
@@ -976,7 +978,12 @@ sub trim_sequences {
     while($ref && $alt && substr($ref, -1, 1) eq substr($alt, -1, 1)) {
       $ref = substr($ref, 0, length($ref) - 1);
       $alt = substr($alt, 0, length($alt) - 1);
-      $end--;
+      if($strand == -1) {
+        $start++;
+      }
+      else {
+        $end--;
+      }
       $changed = 1;
     }
 
@@ -984,7 +991,12 @@ sub trim_sequences {
     while($ref && $alt && substr($ref, 0, 1) eq substr($alt, 0, 1)) {
       $ref = substr($ref, 1);
       $alt = substr($alt, 1);
-      $start++;
+      if($strand == -1) {
+        $end--;
+      }
+      else {
+        $start++;
+      }
       $changed = 1;
     }
   }
@@ -994,7 +1006,12 @@ sub trim_sequences {
     while($ref && $alt && substr($ref, 0, 1) eq substr($alt, 0, 1)) {
       $ref = substr($ref, 1);
       $alt = substr($alt, 1);
-      $start++;
+      if($strand == -1) {
+        $end--;
+      }
+      else {
+        $start++;
+      }
       $changed = 1;
     }
 
@@ -1002,7 +1019,12 @@ sub trim_sequences {
     while($ref && $alt && substr($ref, -1, 1) eq substr($alt, -1, 1)) {
       $ref = substr($ref, 0, length($ref) - 1);
       $alt = substr($alt, 0, length($alt) - 1);
-      $end--;
+      if($strand == -1) {
+        $start++;
+      }
+      else {
+        $end--;
+      }
       $changed = 1;
     }
   }

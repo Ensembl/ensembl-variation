@@ -115,6 +115,20 @@ is_deeply(
   'trim_sequences Accept 0 as alt allele'
 );
 
+# test trimming on foward strand (default)
+is_deeply(
+  trim_sequences(qw(TCT TAG 183 185 1)),
+  ['CT', 'AG', 184, 185, 1],
+  'trim_sequences - foward strand (default)'
+);
+
+# test trimming on reverse strand
+is_deeply(
+  trim_sequences(qw(TCT TAG 183 185 1 0 -1)),
+  ['CT', 'AG', 183, 184, 1],
+  'trim_sequences - reverse strand'
+);
+
 throws_ok {trim_sequences(undef, 'A')} qr/Missing reference or alternate sequence/, 'trim_sequences - no ref';
 throws_ok {trim_sequences('A')} qr/Missing reference or alternate sequence/, 'trim_sequences - no alt';
 throws_ok {trim_sequences()} qr/Missing reference or alternate sequence/, 'trim_sequences - no both';
