@@ -926,13 +926,20 @@ sub _inv_start_altered {
         return 0 unless $utr;
         my $utr_and_translateable = ($utr ? $utr->seq : '').$translateable;
         my $shifting_offset = defined($bvfoa->{shift_hash}) ? $bvfoa->{shift_hash}->{shift_length} : 0;
-        $cdna_start += $shifting_offset;
-        $cdna_end += $shifting_offset;
+
+	# Test if shifting can be applied
+	my $tmp_cdna_start = $cdna_start + $shifting_offset;
+	my $tmp_cdna_end = $cdna_end + $shifting_offset;
+
+	if($tmp_cdna_end <= length($utr_and_translateable)) {
+	  $cdna_start = $tmp_cdna_start;
+	  $cdna_end = $tmp_cdna_end;
+	}
         
         my $vf_feature_seq = $bvfoa->feature_seq;
         $vf_feature_seq = '' if $vf_feature_seq eq '-';
         my $atg_start = length($utr->seq);
-        
+
         substr($utr_and_translateable, $cdna_start - 1, ($cdna_end - $cdna_start) + 1) = $vf_feature_seq;
         my $new_sc = substr($utr_and_translateable, $atg_start, 3);
 
