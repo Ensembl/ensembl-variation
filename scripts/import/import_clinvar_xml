@@ -42,6 +42,7 @@ limitations under the License.
   - external_id      = Acc
   - clinvar_clin_sig = Desc
   - risk_allele      = HGVS allele (dbSNP variants only)
+  - clinvar_ref_allele = HGVS reference allele (dbSNP variants only)
 
 =cut
 
@@ -161,7 +162,7 @@ my %phenotype_cache = %{get_phenotype_cache()};
 my $def_clinsig = $ATTRIBS{clinvar_clin_sig};
 my %known_clinsig = map { $_ => 1  } @{$def_clinsig};
 
-## accepted clinsig values (somatic + somatic oncogenicity)
+# ## accepted clinsig values (somatic + somatic oncogenicity)
 my $def_clinsig_somatic = $ATTRIBS{clinvar_somatic};
 my %known_clinsig_somatic = map { $_ => 1  } @{$def_clinsig_somatic};
 
@@ -180,10 +181,10 @@ if (defined $done_file){
 ## parse input file
 my $data_file_fh;
 if ($data_file =~/.gz/) {
-  open ($data_file_fh, '<:gzip', $data_file )
+  open ($data_file_fh, '<:gzip', $data_file)
     or die "Cannot read file $data_file: $!\n"; #.xml.gz
 } else {
-  open ( $data_file_fh, '<', $data_file )
+  open ( $data_file_fh, '<', $data_file)
     or die "Cannot read file $data_file: $!\n"; #.xml
 }
 
@@ -915,6 +916,7 @@ sub import{
 
   my $feature_object;
   my $alt_allele; ## disease associated allele from HGVS
+  my $ref_allele; ## disease associated ref allele from HGVS
   my $feat;       ## use stored *variation_features where possible
 
   if(defined $record->{feature_info}->{dbSNP}){
@@ -926,22 +928,22 @@ sub import{
       }
 
       # Get variant - insert if not found
-      ($feature_object, $feat, $alt_allele) = get_variant($record, $rs);
+      ($feature_object, $feat, $alt_allele, $ref_allele) = get_variant($record, $rs);
 
       next unless defined $feature_object;
 
-      add_clinvar_data($feature_object, $feat, $alt_allele, $record);
+      add_clinvar_data($feature_object, $feat, $alt_allele, $record, $ref_allele);
 
     }
   }
   elsif($try_match ){
     print "try to match ", $record->{Acc}, "\n" if $DEBUG == 1;
-    ($feature_object, $feat, $alt_allele) = get_variant($record, undef);
+    ($feature_object, $feat, $alt_allele, $ref_allele) = get_variant($record, undef);
     if (! defined $feature_object){
       print "no variation found for $record->{Acc}, $record->{clinvar_variant_id}\n" if $DEBUG == 1;
       return undef;
     }
-    add_clinvar_data($feature_object, $feat, $alt_allele, $record);
+    add_clinvar_data($feature_object, $feat, $alt_allele, $record, $ref_allele);
   }
   elsif ($DEBUG == 1){
     print "Can't import ". $record->{Acc} ." as no dbSNP or location\n" if $DEBUG == 1;
@@ -953,6 +955,7 @@ sub add_clinvar_data{
   my $feat             = shift;
   my $alt_allele       = shift;
   my $record           = shift;
+  my $ref_allele       = shift;
 
   return undef if ! defined $variation_object;
 
@@ -967,7 +970,7 @@ sub add_clinvar_data{
 
   ## add phenotype_feature & attrib (there may not be an alt_allele)
 
-  import_phenotype_feature($record, $variation_object, 'Variation', $feat, $alt_allele);
+  import_phenotype_feature($record, $variation_object, 'Variation', $feat, $alt_allele, $ref_allele);
 
 }
 
@@ -978,6 +981,7 @@ sub import_phenotype_feature{
   my $type           = shift;
   my $feat           = shift;
   my $alt_allele     = shift;
+  my $ref_allele     = shift;
 
   # deal with risk alleles longer than varchar 255
   if ( defined $alt_allele && length($alt_allele) > 255 ) {
@@ -1061,6 +1065,7 @@ sub import_phenotype_feature{
 
     $attribs{external_id}      = $record->{Acc};
     $attribs{risk_allele}      = $alt_allele if defined $alt_allele && $alt_allele ne "-" && $alt_allele ne '';
+    $attribs{clinvar_ref_allele} = $ref_allele if defined $ref_allele && $ref_allele ne "-" && $ref_allele ne '';
     $attribs{associated_gene}  = $record->{feature_info}->{gene} if defined $record->{feature_info}->{gene};
     $attribs{MIM}              = $record->{feature_info}->{MIM} if defined $record->{feature_info}->{MIM};
 
@@ -1076,6 +1081,11 @@ sub import_phenotype_feature{
 
     $attribs{inheritance_type} = $record->{inheritance_type} if defined $record->{inheritance_type};
     $attribs{variation_names}  = join(",", @{$record->{feature_info}->{haplo}->{$feature_object->name}}) if defined $record->{feature_info}->{haplo} && defined $record->{feature_info}->{haplo}->{$feature_object->name};
+
+    if (defined $attribs{variation_names} && length($attribs{variation_names}) > 255) {
+      $attribs{variation_names} = substr($attribs{variation_names}, 0, 255);
+      $attribs{variation_names} = substr($attribs{variation_names}, 0,rindex($attribs{variation_names}, ","));
+    }
 
     # Submitters
     my $submitters_data = $classification eq "germline" ? $record->{submitters} : $record->{submitters_somatic};
@@ -1278,8 +1288,7 @@ sub add_submitter{
 =head2 get_variant 
 
   - look up or enter variation
-  - returns variation & variation_feature objects & associated allele (from HGVS)
-  - TODO: return $ref_allele
+  - returns variation & variation_feature objects & associated allele & ref allele (from HGVS)
 
 =cut
 sub get_variant{
@@ -1306,7 +1315,7 @@ sub get_variant{
   ## not printing bulky error message
   print "Problem finding allele for hgvs ". $record->{feature_info}->{hgvs_g} ." \n" unless $@ eq '';
 
-  unless (defined $ref_allele && defined $alt_allele && $ref_allele ne $alt_allele){
+  unless (defined $ref_allele && defined $alt_allele && $ref_allele ne $alt_allele && $DEBUG == 1){
     print "Ref + Alt alleles not available for $dbSNP (" . $record->{feature_info}->{hgvs_g} .
           ") RCV:". $record->{Acc} ." VCV:". $record->{clinvar_variant_id} ."\n";
   }
@@ -1317,7 +1326,7 @@ sub get_variant{
 
     if (defined $var_ob){
       my @features = $var_ob->get_all_VariationFeatures();
-      return ($var_ob, @features , $alt_allele);
+      return ($var_ob, @features , $alt_allele, $ref_allele);
     }
     print "No record found for $dbSNP\n" if $DEBUG ==1;
 
@@ -1334,7 +1343,7 @@ sub get_variant{
 
     ## enter new records
     my ($new_var_ob, $var_feat) = enter_var($record,  $ref_allele, $alt_allele, $rs_id, $record->{inheritance_type});
-    return ($new_var_ob,  $var_feat, $alt_allele);
+    return ($new_var_ob,  $var_feat, $alt_allele, $ref_allele);
 
   }
 
@@ -1348,7 +1357,7 @@ sub get_variant{
     my $var_feats = $var_feat_adaptor->fetch_all_by_location_identifier($location_str);
 
     if ( defined $var_feats && scalar @{$var_feats} == 1 ){
-      return ($var_feats->[0]->variation(), $var_feats, $alt_allele);
+      return ($var_feats->[0]->variation(), $var_feats, $alt_allele, $ref_allele);
     } elsif (defined $var_feats && scalar @{$var_feats} > 1 && $DEBUG == 1) {
       # check that variation will always have same name for multiple variation features!
       print "multiple variation_features found for $location_str : \n";
@@ -1365,10 +1374,10 @@ sub get_variant{
   #try to match by SPDI: longest allele format
   #returns undef for ref==alt SPDIs
   my ($var, $var_feats) = get_variant_via_SPDI ($record);
-  return ($var, $var_feats, $alt_allele) unless !defined($var);
+  return ($var, $var_feats, $alt_allele, $ref_allele) unless !defined($var);
 
   ## try to match to multi-allelic variants by location
-  return get_variant_by_slice_allele($record, $ref_allele, $alt_allele);
+  return get_variant_by_slice_allele($record, $ref_allele, $alt_allele, $ref_allele);
 }
 
 
@@ -1425,7 +1434,7 @@ sub get_variant_via_SPDI{
   - look up variants at the same location as a ClinVar assertion
   - only handles single base variants
   - compare ClinVar allele to variation_feature.allele_string
-  - returns variation & variation_feature objects & associated allele (same as caller)
+  - returns variation & variation_feature objects & associated ref and alt alleles (same as caller)
 
 =cut
 sub get_variant_by_slice_allele{
@@ -1433,6 +1442,7 @@ sub get_variant_by_slice_allele{
   my $record    = shift;
   my $cv_ref    = shift;
   my $cv_allele = shift;
+  my $ref_allele = shift;
 
   return undef unless defined $cv_allele;
 
@@ -1467,7 +1477,7 @@ sub get_variant_by_slice_allele{
 
     if( $dballeles{$cv_allele}){
       if ($cv_ref eq $db_ref){
-        return ($vf->variation(), [$vf], $cv_allele);
+        return ($vf->variation(), [$vf], $cv_allele, $ref_allele);
       } else {
         warn "Variation feature with REF missmatch for $location_string, $cv_ref/$cv_allele\n";
       }
@@ -1995,6 +2005,7 @@ sub get_phenotype_cache {
     my $original_desc = $phenotype_desc;
     $phenotype_desc = clean_phenotype_desc($phenotype_desc);
     my @parse_desc = parse_line('\s+', 0, $phenotype_desc);
+
     my @parse_desc_sorted = sort @parse_desc;
     my $parse_desc_sorted_join = join(',', @parse_desc_sorted);
 
@@ -2010,7 +2021,6 @@ sub get_phenotype_cache {
 sub clean_phenotype_desc {
   my ($description) = @_;
 
-  $description =~ s/^\s+|\s+$//g; # Remove spaces at the beginning and the end of the description
   $description =~ s/\n//g; # Remove 'new line' characters
   $description =~ s/[\(\)]//g; # Remove characters ( )
 
@@ -2020,12 +2030,13 @@ sub clean_phenotype_desc {
   $description = lc($description);
   $description =~ s/\“//g;
   $description =~ s/\”//g;
-  $description =~ s/\s+/ /g; # Remove extra space
 
   # remove a few extra characters
   $description =~ s/, / /g; # remove commas
   $description =~ s/-/ /g;
   $description =~ s/\'//g;
+  $description =~ s/\s+/ /g; # Remove extra space
+  $description =~ s/^\s+|\s+$//g; # Remove spaces at the beginning and the end of the description
 
   return $description;
 }
