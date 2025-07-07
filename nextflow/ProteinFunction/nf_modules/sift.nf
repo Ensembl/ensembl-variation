@@ -89,9 +89,12 @@ process run_sift_on_all_aminoacid_substitutions {
   container "ensemblorg/sift:6.2.1"
   publishDir "${params.outdir}/sift"
 
-  memory { peptide.size() * 40.MB + 4.GB }
-  errorStrategy 'ignore'
-  maxRetries 1
+  memory { 
+    mem = (peptide.seqString.size() * task.attempt * 4.MB + 4.GB)
+    mem < 50.GB ? mem : 50.GB 
+  }
+  errorStrategy { (task.exitStatus == 140 && task.attempt <= maxRetries ) ? 'retry' : 'ignore' }
+  maxRetries 2
 
   input:
     tuple val(peptide), path(aln)
