@@ -18,6 +18,12 @@ elif [ "${category}" == "pph2" ]; then
   errors=("Failed to locate sequence position")
 fi
 
+# catch memory error
+mem_error="Some of the step tasks have been OOM Killed."
+if grep -q "${mem_error}" ${stderr_file}; then
+  exit 140
+fi
+
 # Capture expected errors
 for error in "${errors[@]}"; do
   if grep -q "${error}" ${stderr_file}; then
