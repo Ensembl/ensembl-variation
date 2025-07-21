@@ -621,7 +621,7 @@
         },
         {
             "id": "nextgen_sheep_iroa",
-            "species": "ovis_aries",
+            "species": "ovis_aries_texel",
             "assembly": "Oar_v3.1",
             "type": "remote",
             "filename_template": "https://ftp.ensembl.org/pub/data_files/ovis_aries/Oar_v3.1/variation_genotype/IROA.population_sites.OARv3_1.20140307.vcf.gz",
@@ -633,7 +633,7 @@
         },
         {
             "id": "nextgen_sheep_mooa",
-            "species": "ovis_aries",
+            "species": "ovis_aries_texel",
             "assembly": "Oar_v3.1",
             "type": "remote",
             "filename_template": "https://ftp.ensembl.org/pub/data_files/ovis_aries/Oar_v3.1/variation_genotype/MOOA.population_sites.OARv3_1.20140328.vcf.gz",
@@ -645,7 +645,7 @@
         },
         {
             "id": "sheep_genome_consortium",
-            "species": "ovis_aries",
+            "species": "ovis_aries_texel",
             "assembly": "Oar_v3.1",
             "type": "remote",
             "filename_template": "https://ftp.ensembl.org/pub/data_files/ovis_aries/Oar_v3.1/variation_genotype/###CHR###.filtered_intersect.vcf.gz",
@@ -658,7 +658,7 @@
         },
         {
             "id": "nextgen_sheep_rambouillet_iroa",
-            "species": "ovis_aries_rambouillet",
+            "species": "ovis_aries",
             "assembly": "ARS-UI_Ramb_v2.0",
             "type": "remote",
             "filename_template": "https://ftp.ensembl.org/pub/data_files/ovis_aries_rambouillet/ARS-UI_Ramb_v2.0/variation_genotype/IROA.population_sites.ARS_UI_Ramb_v2_0.20140307.vcf.gz",
@@ -670,7 +670,7 @@
         },
         {
             "id": "nextgen_sheep_rambouillet_mooa",
-            "species": "ovis_aries_rambouillet",
+            "species": "ovis_aries",
             "assembly": "ARS-UI_Ramb_v2.0",
             "type": "remote",
             "filename_template": "https://ftp.ensembl.org/pub/data_files/ovis_aries_rambouillet/ARS-UI_Ramb_v2.0/variation_genotype/MOOA.population_sites.ARS-UI_Ramb_v2_0.20140328.vcf.gz",
@@ -682,7 +682,7 @@
         },
         {
             "id": "sheep_rambouillet_genome_consortium",
-            "species": "ovis_aries_rambouillet",
+            "species": "ovis_aries",
             "assembly": "ARS-UI_Ramb_v2.0",
             "type": "remote",
             "filename_template": "https://ftp.ensembl.org/pub/data_files/ovis_aries_rambouillet/ARS-UI_Ramb_v2.0/variation_genotype/###CHR###.filtered_ARS-UI_Ramb_v2.0_intersect.vcf.gz",
@@ -1313,7 +1313,7 @@
         },
         {
             "id": "91_mammals.gerp_conservation_score",
-            "species": "ovis_aries_rambouillet",
+            "species": "ovis_aries",
             "assembly": "ARS-UI_Ramb_v2.0",
             "type": "remote",
             "filename_template": "https://ftp.ensembl.org/pub/release-113/compara/conservation_scores/91_mammals.gerp_conservation_score/gerp_conservation_scores.ovis_aries_rambouillet.ARS-UI_Ramb_v2.0.bw",
