@@ -2,7 +2,7 @@
 
 [![GitHub](https://img.shields.io/github/license/Ensembl/ensembl-variation.svg)](https://github.com/Ensembl/ensembl-variation/blob/release/116/LICENSE)
 [![Build Status](https://travis-ci.org/Ensembl/ensembl-variation.png?branch=release/116)](https://travis-ci.org/Ensembl/ensembl-variation)
-[![Coverage Status](https://coveralls.io/repos/github/Ensembl/ensembl-variation/badge.svg?branch=main)](https://coveralls.io/github/Ensembl/ensembl-variation?branch=release/116)
+[![Coverage Status](https://coveralls.io/repos/github/Ensembl/ensembl-variation/badge.svg?branch=release/116)](https://coveralls.io/github/Ensembl/ensembl-variation?branch=release/116)
 
 [travis]: https://travis-ci.org/Ensembl/ensembl-variation
 [coveralls]: https://coveralls.io/r/Ensembl/ensembl-variation
