@@ -1558,7 +1558,7 @@ sub enter_var{
      -allele_string   => $allele_str,
      -variation       => $var,
      -source          => $source,
-     -is_somatic      => 0,
+     -is_somatic      => $somatic,
      -adaptor         => $var_feat_adaptor,
      -class_so_term    => $so_term,
     );
