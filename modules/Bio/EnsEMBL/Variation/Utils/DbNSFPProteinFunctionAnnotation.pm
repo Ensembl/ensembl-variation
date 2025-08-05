@@ -97,6 +97,16 @@ my $predictions = {
   dbnsfp_esm1b => {
     T => 'tolerated',
     D => 'deleterious',
+  },
+  dbnsfp_meta_lr => {
+    T => 'tolerated',
+    D => 'damaging',
+  },
+  dbnsfp_mutation_assessor => {
+    H => 'high',
+    M => 'medium',
+    L => 'low',
+    N => 'neutral',
   }
 };
 #The rankscore cutoffs between "H" and "M", "M" and "L", and "L" and "N", are 0.9307, 0.52043 and 0.19675,

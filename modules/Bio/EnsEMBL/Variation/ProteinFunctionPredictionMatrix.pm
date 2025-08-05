@@ -126,6 +126,17 @@ my $PREDICTION_TO_VAL = {
         'likely disease causing' => 0,
         'likely benign' => 1,
     },
+    dbnsfp_alphamissense => {
+        'likely benign'  => 0,
+        'benign'   => 1,
+        'ambiguous'  => 2,
+        'likely pathogenic'   => 3,
+        'pathogenic'  => 4,
+    },
+    dbnsfp_esm1b => {
+        'tolerated'  => 0,
+        'deleterious'   => 1,
+    },
     dbnsfp_meta_lr => {
         'tolerated'  => 0,
         'damaging'   => 1,

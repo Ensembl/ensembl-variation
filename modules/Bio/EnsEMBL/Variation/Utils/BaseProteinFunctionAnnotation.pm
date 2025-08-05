@@ -161,7 +161,7 @@ sub amino_acids {
 
 =head2 analysis
   Arg 1      : Arrayref of string analysis (optional)  
-  Example    : $self->analysis([qw/dbnsfp_revel dbnsfp_meta_lr dbnsfp_mutation_assessor/]);
+  Example    : $self->analysis([qw/dbnsfp_revel dbnsfp_alphamissense dbnsfp_esm1b/]);
   Description: Set and get available analysis. 
   Returntype : 
   Exceptions : None
