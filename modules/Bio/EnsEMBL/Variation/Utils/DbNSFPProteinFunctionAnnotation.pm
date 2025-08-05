@@ -31,7 +31,8 @@ limitations under the License.
 
 Module is used in protein function prediction pipeline for
 annotating all possible amino acid substitutions in a translation
-with dbNSFP (revel, meta_lr and mutation_assessor) scores and predictions.
+with dbNSFP (until 4.9a - revel, meta_lr and mutation_assessor and
+after 4.9a - revel, alphamissense and esm1b) scores and predictions.
 
 =cut
 
