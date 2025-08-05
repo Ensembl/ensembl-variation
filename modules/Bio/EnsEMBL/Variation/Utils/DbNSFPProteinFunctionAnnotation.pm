@@ -79,22 +79,23 @@ sub new {
     # include extra scores if using academic licenced file
     @analysis = qw/dbnsfp_revel/;
   }
-  push @analysis, qw/dbnsfp_meta_lr dbnsfp_mutation_assessor/;
+  push @analysis, qw/dbnsfp_alphamissense dbnsfp_esm1b/;
   $self->analysis(\@analysis);
 
   return $self;
 }
 
 my $predictions = {
-  dbnsfp_meta_lr => {
-    T => 'tolerated',
-    D => 'damaging',
+  dbnsfp_alphamissense => {
+    LB => 'likely benign',
+    B => 'benign',
+    A => 'ambiguous',
+    LP => 'likely pathogenic',
+    P => 'pathogenic',
   },
-  dbnsfp_mutation_assessor => {
-    H => 'high',
-    M => 'medium',
-    L => 'low',
-    N => 'neutral',
+  dbnsfp_esm1b => {
+    T => 'tolerated',
+    D => 'deleterious',
   }
 };
 #The rankscore cutoffs between "H" and "M", "M" and "L", and "L" and "N", are 0.9307, 0.52043 and 0.19675,
@@ -380,6 +381,29 @@ my $column_names = {
       },
     },
   },
+  '5.2c' => {
+    assembly_unspecific => {
+      chr => '#chr',
+      ref => 'ref',
+      refcodon => 'refcodon',
+      alt => 'alt',
+      aaalt => 'aaalt',
+      aaref => 'aaref',
+      revel_score => 'REVEL_score',
+      alphamissense_score => 'AlphaMissense_score',
+      alphamissense_pred => 'AlphaMissense_pred',
+      esm1b_score => 'ESM1b_score',
+      esm1b_pred => 'ESM1b_pred',
+    },
+    'assembly_specific' => {
+      'GRCh37' => {
+        pos => 'hg19_pos(1-based)'
+      },
+      'GRCh38' => {
+        pos => 'pos(1-based)'
+      },
+    },
+  },
 };
 
 sub load_predictions_for_triplets {
@@ -425,11 +449,19 @@ sub add_predictions {
     my $prediction = ($data->{revel_score} >= $REVEL_CUTOFF) ? 'likely disease causing' : 'likely benign';
     $self->add_prediction($i, $mutated_aa, 'dbnsfp_revel', $data->{revel_score}, $prediction);
   }
-  if ($data->{meta_lr_score} ne '.') {
+  if ($data->{alphamissense_score} ne '.') {
+    my $prediction = $predictions->{dbnsfp_alphamissense}->{$data->{alphamissense_pred}};
+    $self->add_prediction($i, $mutated_aa, 'dbnsfp_alphamissense', $data->{alphamissense_score}, $prediction);
+  }
+  if ($data->{esm1b_score} ne '.') {
+    my $prediction = $predictions->{dbnsfp_alphamissense}->{$data->{esm1b_pred}};
+    $self->add_prediction($i, $mutated_aa, 'dbnsfp_alphamissense', $data->{esm1b_score}, $prediction);
+  }
+  if ($data->{meta_lr_score} && $data->{meta_lr_score} ne '.') {
     my $prediction = $predictions->{dbnsfp_meta_lr}->{$data->{meta_lr_pred}};
     $self->add_prediction($i, $mutated_aa, 'dbnsfp_meta_lr', $data->{meta_lr_score}, $prediction);
   }
-  if ($data->{mutation_assessor_score} ne '.') {
+  if ($data->{mutation_assessor_score} && $data->{mutation_assessor_score} ne '.') {
     my $prediction;
     if ($self->annotation_file_version eq '3.5a') {
       $prediction = $predictions->{dbnsfp_mutation_assessor}->{$data->{mutation_assessor_pred}};  
