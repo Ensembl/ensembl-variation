@@ -70,7 +70,7 @@ sub new {
 
   my $self = $class->SUPER::new(@_);
 
-  my @versions = ('3.5a', '4.0a', '4.1a', '4.2a', '4.3a', '4.4a', '4.5c', '4.6c', '4.7c', '4.8c', '4.9c', '4.9a');
+  my @versions = ('3.5a', '4.0a', '4.1a', '4.2a', '4.3a', '4.4a', '4.5c', '4.6c', '4.7c', '4.8c', '4.9c', '4.9a', '5.2c');
   if (! grep {$_ eq $self->annotation_file_version} @versions) {
     die "dbNSFP version " . $self->annotation_file_version . " is not supported.";
   }
