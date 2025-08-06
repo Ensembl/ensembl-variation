@@ -70,7 +70,7 @@ sub new {
 
   my $self = $class->SUPER::new(@_);
 
-  my @versions = ('3.5a', '4.0a', '4.1a', '4.2a', '4.3a', '4.4a', '4.5c', '4.6c', '4.7c', '4.8c', '4.9c', '4.9a', '5.2c');
+  my @versions = ('3.5a', '4.0a', '4.1a', '4.2a', '4.3a', '4.4a', '4.5c', '4.6c', '4.7c', '4.8c', '4.9c', '4.9a', '5.2c', '5.2a');
   if (! grep {$_ eq $self->annotation_file_version} @versions) {
     die "dbNSFP version " . $self->annotation_file_version . " is not supported.";
   }
@@ -399,6 +399,29 @@ my $column_names = {
     },
   },
   '5.2c' => {
+    assembly_unspecific => {
+      chr => '#chr',
+      ref => 'ref',
+      refcodon => 'refcodon',
+      alt => 'alt',
+      aaalt => 'aaalt',
+      aaref => 'aaref',
+      revel_score => 'undef', # it is in the file, but not used in the pipeline
+      alphamissense_score => 'AlphaMissense_score',
+      alphamissense_pred => 'AlphaMissense_pred',
+      esm1b_score => 'ESM1b_score',
+      esm1b_pred => 'ESM1b_pred',
+    },
+    'assembly_specific' => {
+      'GRCh37' => {
+        pos => 'hg19_pos(1-based)'
+      },
+      'GRCh38' => {
+        pos => 'pos(1-based)'
+      },
+    },
+  },
+  '5.2a' => {
     assembly_unspecific => {
       chr => '#chr',
       ref => 'ref',
