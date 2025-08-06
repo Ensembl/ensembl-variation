@@ -460,19 +460,19 @@ sub add_predictions {
     my $prediction = ($data->{revel_score} >= $REVEL_CUTOFF) ? 'likely disease causing' : 'likely benign';
     $self->add_prediction($i, $mutated_aa, 'dbnsfp_revel', $data->{revel_score}, $prediction);
   }
-  if ($data->{alphamissense_score} ne '.') {
+  if (defined $data->{alphamissense_score} && $data->{alphamissense_score} ne '.') {
     my $prediction = $predictions->{dbnsfp_alphamissense}->{$data->{alphamissense_pred}};
     $self->add_prediction($i, $mutated_aa, 'dbnsfp_alphamissense', $data->{alphamissense_score}, $prediction);
   }
-  if ($data->{esm1b_score} ne '.') {
+  if (defined $data->{esm1b_score} && $data->{esm1b_score} ne '.') {
     my $prediction = $predictions->{dbnsfp_alphamissense}->{$data->{esm1b_pred}};
     $self->add_prediction($i, $mutated_aa, 'dbnsfp_alphamissense', $data->{esm1b_score}, $prediction);
   }
-  if ($data->{meta_lr_score} && $data->{meta_lr_score} ne '.') {
+  if (defined $data->{meta_lr_score} && $data->{meta_lr_score} ne '.') {
     my $prediction = $predictions->{dbnsfp_meta_lr}->{$data->{meta_lr_pred}};
     $self->add_prediction($i, $mutated_aa, 'dbnsfp_meta_lr', $data->{meta_lr_score}, $prediction);
   }
-  if ($data->{mutation_assessor_score} && $data->{mutation_assessor_score} ne '.') {
+  if (defined $data->{mutation_assessor_score} && $data->{mutation_assessor_score} ne '.') {
     my $prediction;
     if ($self->annotation_file_version eq '3.5a') {
       $prediction = $predictions->{dbnsfp_mutation_assessor}->{$data->{mutation_assessor_pred}};  
