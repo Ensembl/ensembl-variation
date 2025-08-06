@@ -80,7 +80,13 @@ sub new {
     # include extra scores if using academic licenced file
     @analysis = qw/dbnsfp_revel/;
   }
-  push @analysis, qw/dbnsfp_alphamissense dbnsfp_esm1b/;
+  if ($self->annotation_file_version =~ /^[3|4]/) {
+    # for dbNSFP versions 3 and 4, include meta lr and mutation assessor
+    push @analysis, qw/dbnsfp_meta_lr dbnsfp_mutation_assessor/;
+  }
+  else {
+    push @analysis, qw/dbnsfp_alphamissense dbnsfp_esm1b/;
+  }
   $self->analysis(\@analysis);
 
   return $self;
