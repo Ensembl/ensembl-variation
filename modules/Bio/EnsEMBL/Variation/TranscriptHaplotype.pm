@@ -504,7 +504,8 @@ sub _get_SimpleAlign_obj {
         throw($@) if $@;
 
         # create alignment
-        $self->{_SimpleAlign_obj} = $factory->pairwise_alignment($s1, $s2);
+        eval {$self->{_SimpleAlign_obj} = $factory->pairwise_alignment($s1, $s2)};
+        throw($@) if $@;
       }
 
       # fall back to slow pure perl NW algorithm from Bio::Ensembl::Variation::Utils::Sequence
