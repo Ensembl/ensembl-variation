@@ -44,6 +44,8 @@ package Bio::EnsEMBL::Variation::Utils::DbNSFPProteinFunctionAnnotation;
 use Bio::EnsEMBL::Variation::Utils::BaseProteinFunctionAnnotation;
 our @ISA = ('Bio::EnsEMBL::Variation::Utils::BaseProteinFunctionAnnotation');
 
+use List::MoreUtils qw(firstidx);
+
 my $REVEL_CUTOFF = 0.5;
 
 =head2 new
@@ -406,6 +408,7 @@ my $column_names = {
       alt => 'alt',
       aaalt => 'aaalt',
       aaref => 'aaref',
+      transcripts => 'Ensembl_transcriptid',
       revel_score => 'undef', # it is in the file, but not used in the pipeline
       alphamissense_score => 'AlphaMissense_score',
       alphamissense_pred => 'AlphaMissense_pred',
@@ -429,6 +432,7 @@ my $column_names = {
       alt => 'alt',
       aaalt => 'aaalt',
       aaref => 'aaref',
+      transcripts => 'Ensembl_transcriptid',
       revel_score => 'REVEL_score',
       alphamissense_score => 'AlphaMissense_score',
       alphamissense_pred => 'AlphaMissense_pred',
@@ -448,7 +452,9 @@ my $column_names = {
 
 sub load_predictions_for_triplets {
   my $self = shift;
-  my $triplets = shift; 
+  my $triplets = shift;
+  my $transcript = shift;
+
   foreach my $entry (@$triplets) {
     my $aa = $entry->{aa};
     $self->amino_acids($aa);
@@ -465,6 +471,7 @@ sub load_predictions_for_triplets {
       next if (!defined $iter);
       while (my $line = $iter->next) {
         my $data = $self->get_dbNSFP_row($line);
+        $self->pick_transcript_specific_data($data, $transcript) if $transcript;
         my $chr = $data->{'chr'};
         my $pos = $data->{'pos'};
         my $ref = $data->{'ref'};
@@ -494,8 +501,8 @@ sub add_predictions {
     $self->add_prediction($i, $mutated_aa, 'dbnsfp_alphamissense', $data->{alphamissense_score}, $prediction);
   }
   if (defined $data->{esm1b_score} && $data->{esm1b_score} ne '.') {
-    my $prediction = $predictions->{dbnsfp_alphamissense}->{$data->{esm1b_pred}};
-    $self->add_prediction($i, $mutated_aa, 'dbnsfp_alphamissense', $data->{esm1b_score}, $prediction);
+    my $prediction = $predictions->{dbnsfp_esm1b}->{$data->{esm1b_pred}};
+    $self->add_prediction($i, $mutated_aa, 'dbnsfp_esm1b', $data->{esm1b_score}, $prediction);
   }
   if (defined $data->{meta_lr_score} && $data->{meta_lr_score} ne '.') {
     my $prediction = $predictions->{dbnsfp_meta_lr}->{$data->{meta_lr_pred}};
@@ -523,6 +530,42 @@ sub add_predictions {
     }
     $self->add_prediction($i, $mutated_aa, 'dbnsfp_mutation_assessor', $data->{mutation_assessor_score}, $prediction);
   }
+}
+
+=head2 pick_transcript_specific_data
+
+  Arg 1      : Hashref $data from parser
+  Description: - Check if the data is for multiple transcripts
+               - If not, return the data as is
+               - If yes, split data and pick the right value for the specific transcript
+  Returntype : Hashref mapping header column to single value from row
+  Exceptions : None
+  Caller     : load_predictions_for_triplets()
+  Status     :
+=cut
+sub pick_transcript_specific_data {
+  my ($self, $data, $transcript) = @_;
+
+  # speedy return in case nothing to do
+  return unless grep(defined && /;/, values %$data);
+
+  return unless defined $data->{transcripts} && $data->{transcripts} =~ /;/;
+
+  # determing the target transcript index in row data value
+  my $target_transcript = $transcript->stable_id;
+  my @transcripts_in_data = split(/;/, $data->{transcripts});
+  my $transcript_index = firstidx {defined && $_ eq $target_transcript} @transcripts_in_data;
+
+  # return the specific data for the target transcript and undef if data for the transcript is not available
+  foreach my $key (keys %$data) {
+    next unless defined $data->{$key} && $data->{$key} =~ /;/;
+
+    my @values = split(/;/, $data->{$key});
+    $data->{$key} = $transcript_index <= $#values ? $values[$transcript_index] : undef;
+
+    $data->{$key} = undef if $transcript_index == -1; # transcript not found in the data
+  }
+  return $data;
 }
 
 =head2 get_dbNSFP_row
