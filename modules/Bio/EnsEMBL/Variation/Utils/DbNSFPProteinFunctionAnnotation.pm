@@ -535,10 +535,11 @@ sub add_predictions {
 =head2 pick_transcript_specific_data
 
   Arg 1      : Hashref $data from parser
+  Arg 2      : Bio::EnsEMBL::Transcript $transcript
   Description: - Check if the data is for multiple transcripts
                - If not, return the data as is
                - If yes, split data and pick the right value for the specific transcript
-  Returntype : Hashref mapping header column to single value from row
+  Returntype : Hashref mapping header column to single value from multiple ; delimited values
   Exceptions : None
   Caller     : load_predictions_for_triplets()
   Status     :
@@ -548,7 +549,7 @@ sub pick_transcript_specific_data {
 
   # speedy return in case nothing to do
   return unless grep(defined && /;/, values %$data);
-
+  
   return unless defined $data->{transcripts} && $data->{transcripts} =~ /;/;
 
   # determing the target transcript index in row data value

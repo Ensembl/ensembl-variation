@@ -42,3 +42,5 @@
 542	citation_source	Citation source	Variant citation data source
 544	phenotype_type	Phenotype type	Type of the phenotype information
 577	somatic_clin_sig	ClinVar somatic classification	The somatic classification of a variant as reported by ClinVar
+585	dbnsfp_alphamissense	dbNSFP AlphaMissense prediction	dbNSFP AlphaMissense prediction
+586	dbnsfp_esm1b	dbNSFP ESM1b prediction	dbNSFP ESM1b prediction

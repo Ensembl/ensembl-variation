@@ -530,6 +530,9 @@ sub prediction_to_short {
     # this value
      
     my $val = $prob;
+    if ($self->{analysis} eq 'dbnsfp_esm1b') {
+      $prob = ($prob + 50) / 100; # convert to 0-1 scale
+    }
     if ($self->{analysis} ne 'cadd') {
       $val = $prob * 1000;
     }
@@ -588,6 +591,9 @@ sub prediction_from_short {
     my $prob = ($val & (2**10 - 1));
     if ($self->{analysis} ne 'cadd') {
       $prob = $prob / 1000;
+    }
+    if ($self->{analysis} eq 'dbnsfp_esm1b') {
+      $prob = ($prob * 100) - 50; # convert to (-50)-50 scale
     }
 
     printf("pfs: 0x%04x => $pred ($prob)\n", $val) if $DEBUG;
