@@ -443,7 +443,7 @@ sub get_all_population_frequencies {
 sub get_aligned_sequences {
   my $self = shift;
 
-  if(!exists($self->{aligned_sequences})) {
+  if(!exists($self->{aligned_sequences}) && defined($self->_get_SimpleAlign_obj())) {
 
     my $aln = $self->_get_SimpleAlign_obj();
 
@@ -505,17 +505,22 @@ sub _get_SimpleAlign_obj {
 
         # create alignment
         eval {$self->{_SimpleAlign_obj} = $factory->pairwise_alignment($s1, $s2)};
-        throw($@) if $@;
+        print "(1)\n";
+	throw($@) if $@;
       }
 
       # fall back to slow pure perl NW algorithm from Bio::Ensembl::Variation::Utils::Sequence
       else {
-        $self->{_SimpleAlign_obj} = $self->_create_SimpleAlign_from_sequence_pair(@{align_seqs($self->reference_seq, $self->seq)});
+        eval {$self->{_SimpleAlign_obj} = $self->_create_SimpleAlign_from_sequence_pair(@{align_seqs($self->reference_seq, $self->seq)})};
+	print "(2)\n";
+        throw($@) if $@;
       }
     }
 
     else {
-      $self->{_SimpleAlign_obj} = $self->_create_SimpleAlign_from_sequence_pair($self->reference_seq, $self->seq);
+      eval {$self->{_SimpleAlign_obj} = $self->_create_SimpleAlign_from_sequence_pair($self->reference_seq, $self->seq)};
+      print "(3)\n";
+      throw($@) if $@;
     }
   }
 
