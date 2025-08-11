@@ -531,10 +531,10 @@ sub prediction_to_short {
      
     my $val = $prob;
     if ($self->{analysis} eq 'dbnsfp_esm1b') {
-      $prob = ($prob + 50) / 100; # convert to 0-1 scale
+      $val = ($val + 50) / 100; # convert to 0-1 scale
     }
     if ($self->{analysis} ne 'cadd') {
-      $val = $prob * 1000;
+      $val = $val * 1000;
     }
 
     # we store the prediction in the top $NUM_PRED_BITS bits
