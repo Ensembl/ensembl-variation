@@ -125,7 +125,7 @@ sub run {
 
   my $all_triplets = $self->get_triplets($translation_stable_id);
 
-  $self->load_predictions_for_triplets($all_triplets);
+  $self->load_predictions_for_triplets($all_triplets, $transcript);
 
   $self->store_protein_matrix($translation_stable_id, $translation_md5) if ($self->{'pipeline_mode'});
 
@@ -161,7 +161,7 @@ sub amino_acids {
 
 =head2 analysis
   Arg 1      : Arrayref of string analysis (optional)  
-  Example    : $self->analysis([qw/dbnsfp_revel dbnsfp_meta_lr dbnsfp_mutation_assessor/]);
+  Example    : $self->analysis([qw/dbnsfp_revel dbnsfp_alphamissense dbnsfp_esm1b/]);
   Description: Set and get available analysis. 
   Returntype : 
   Exceptions : None
