@@ -502,7 +502,7 @@ sub add_predictions {
   }
   if (defined $data->{esm1b_score} && $data->{esm1b_score} ne '.') {
     my $prediction = $predictions->{dbnsfp_esm1b}->{$data->{esm1b_pred}};
-    my $score = sprintf '%.1f', $data->{esm1b_score};
+    my $score = sprintf '%.1f', $data->{esm1b_score};   # round up so that we can have accuracy upto 1 decimal place
     $self->add_prediction($i, $mutated_aa, 'dbnsfp_esm1b', $score, $prediction);
   }
   if (defined $data->{meta_lr_score} && $data->{meta_lr_score} ne '.') {
