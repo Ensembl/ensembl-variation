@@ -504,23 +504,17 @@ sub _get_SimpleAlign_obj {
         throw($@) if $@;
 
         # create alignment
-        eval {$self->{_SimpleAlign_obj} = $factory->pairwise_alignment($s1, $s2)};
-        print "(1)\n";
-	throw($@) if $@;
+        $self->{_SimpleAlign_obj} = $factory->pairwise_alignment($s1, $s2);
       }
 
       # fall back to slow pure perl NW algorithm from Bio::Ensembl::Variation::Utils::Sequence
       else {
-        eval {$self->{_SimpleAlign_obj} = $self->_create_SimpleAlign_from_sequence_pair(@{align_seqs($self->reference_seq, $self->seq)})};
-	print "(2)\n";
-        throw($@) if $@;
+        $self->{_SimpleAlign_obj} = $self->_create_SimpleAlign_from_sequence_pair(@{align_seqs($self->reference_seq, $self->seq)});
       }
     }
 
     else {
-      eval {$self->{_SimpleAlign_obj} = $self->_create_SimpleAlign_from_sequence_pair($self->reference_seq, $self->seq)};
-      print "(3)\n";
-      throw($@) if $@;
+      $self->{_SimpleAlign_obj} = $self->_create_SimpleAlign_from_sequence_pair($self->reference_seq, $self->seq);
     }
   }
 
@@ -561,87 +555,89 @@ sub _get_raw_diffs {
   my $self = shift;
   
   if(!exists($self->{_raw_diffs})) {
-
-    my ($al1, $al2) = @{$self->get_aligned_sequences};
     my @diffs;
-    
-    if($al1 ne $al2) {
 
-      # if there was a stop introduced, then $al2 will be shorter
-      # pad it out with '-' to make seqs same length
-      $al2 .= '-' x (length($al1) - length($al2));
+    if (defined $self->get_aligned_sequences) {
+      my ($al1, $al2) = @{$self->get_aligned_sequences};
       
-      ## this code finds diffs between the sequences
-      ## copied verbatim from http://www.perlmonks.org/?node_id=882593
-      ## can probably be XS'd in future, see http://www.perlmonks.org/?node_id=882590
-      my ($m, @pos, $c1, @p1, $c2, @p2);
-      $m  = $al1 ^ $al2;
-      push @pos, pos( $m ) while $m =~ m{(?=([^\x00]))}g;
-      $m  =~ tr{[\x01-\xfe]}{\xff};
-      $c1 = $al1 & $m;
-      @p1 = $c1 =~ m{([^\x00])}g;
-      $c2 = $al2 & $m;
-      @p2 = $c2 =~ m{([^\x00])}g;
-      
-      ## this bit then joins together consecutive mismatches
-      ## but only if they are the same "type"
-      ## i.e. join consecutive - or [ACGT] characters, but
-      ## don't join - to A
-      ## hopefully this doesn't make it too slow after the efforts above
-      my ($p, $pp, $a1, $a2);
-      for my $i(0..$#pos) {
-        $p = $pos[$i];
+      if($al1 ne $al2) {
+
+        # if there was a stop introduced, then $al2 will be shorter
+        # pad it out with '-' to make seqs same length
+        $al2 .= '-' x (length($al1) - length($al2));
         
-        # only check join if this isn't the first pos
-        if(defined($pp)) {
+        ## this code finds diffs between the sequences
+        ## copied verbatim from http://www.perlmonks.org/?node_id=882593
+        ## can probably be XS'd in future, see http://www.perlmonks.org/?node_id=882590
+        my ($m, @pos, $c1, @p1, $c2, @p2);
+        $m  = $al1 ^ $al2;
+        push @pos, pos( $m ) while $m =~ m{(?=([^\x00]))}g;
+        $m  =~ tr{[\x01-\xfe]}{\xff};
+        $c1 = $al1 & $m;
+        @p1 = $c1 =~ m{([^\x00])}g;
+        $c2 = $al2 & $m;
+        @p2 = $c2 =~ m{([^\x00])}g;
+        
+        ## this bit then joins together consecutive mismatches
+        ## but only if they are the same "type"
+        ## i.e. join consecutive - or [ACGT] characters, but
+        ## don't join - to A
+        ## hopefully this doesn't make it too slow after the efforts above
+        my ($p, $pp, $a1, $a2);
+        for my $i(0..$#pos) {
+          $p = $pos[$i];
           
-          # check positions are consecutive
-          # and consecutive alleles on each string are of same type
-          if(
-            ($pp == $p - 1) &&
-            (($p1[$i] eq '-') == ($p1[$i-1] eq '-')) &&
-            (($p2[$i] eq '-') == ($p2[$i-1] eq '-'))
-          ) {
-            # extend a1 and a2
-            $a1 .= $p1[$i];
-            $a2 .= $p2[$i];
+          # only check join if this isn't the first pos
+          if(defined($pp)) {
+            
+            # check positions are consecutive
+            # and consecutive alleles on each string are of same type
+            if(
+              ($pp == $p - 1) &&
+              (($p1[$i] eq '-') == ($p1[$i-1] eq '-')) &&
+              (($p2[$i] eq '-') == ($p2[$i-1] eq '-'))
+            ) {
+              # extend a1 and a2
+              $a1 .= $p1[$i];
+              $a2 .= $p2[$i];
+            }
+            
+            # if not, create a new diff
+            else {
+              push @diffs, {
+                a1 => $a1,
+                a2 => $a2,
+                p  => $pp,
+              };
+              
+              # re-initiate a1 and a2
+              $a1 = $p1[$i];
+              $a2 = $p2[$i];
+            }
           }
           
-          # if not, create a new diff
+          # initiate a1 and a2
           else {
-            push @diffs, {
-              a1 => $a1,
-              a2 => $a2,
-              p  => $pp,
-            };
-            
-            # re-initiate a1 and a2
             $a1 = $p1[$i];
             $a2 = $p2[$i];
           }
+          
+          # record previous position
+          $pp = $p;
         }
         
-        # initiate a1 and a2
-        else {
-          $a1 = $p1[$i];
-          $a2 = $p2[$i];
-        }
-        
-        # record previous position
-        $pp = $p;
+        # there will be a diff left over
+        push @diffs, {
+          a1 => $a1,
+          a2 => $a2,
+          p  => $pp,
+        };
       }
-      
-      # there will be a diff left over
-      push @diffs, {
-        a1 => $a1,
-        a2 => $a2,
-        p  => $pp,
-      };
     }
     
     $self->{_raw_diffs} = \@diffs;
   }
-  
+
   return $self->{_raw_diffs};
 }
 
