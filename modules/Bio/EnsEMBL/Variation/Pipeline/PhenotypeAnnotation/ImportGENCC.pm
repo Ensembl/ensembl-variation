@@ -82,7 +82,7 @@ sub run {
     $ins->execute(
       'GenCC',
       $version,
-      'Gene Curation Coalition (gene–disease validity assertions)',
+      'Gene Curation Coalition (gene-disease validity assertions)',
       'https://search.thegencc.org/',
       'germline',
       'phenotype_feature',
