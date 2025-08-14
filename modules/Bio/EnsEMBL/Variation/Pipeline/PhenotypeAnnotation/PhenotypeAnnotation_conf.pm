@@ -400,9 +400,35 @@ sub pipeline_analyses {
             -input_ids      => [], #default
             -hive_capacity  => 1,
             -rc_name    => 'default',
+            -flow_into      => {
+                2 => [ 'import_gencc' ],
+            },
             -max_retry_count => 0,
         },
 
+        {   -logic_name => 'import_gencc',
+            -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportGENCC',
+            -parameters => {
+                @common_params,
+            },
+            -input_ids      => [],
+            -hive_capacity  => 1,
+            -rc_name        => 'default',
+            -flow_into      => {
+                2 => [ 'check_gencc' ],
+            },
+        },
+
+        {   -logic_name => 'check_gencc',
+            -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::CheckPhenotypeAnnotation',
+            -parameters => {
+                @common_params,
+            },
+            -input_ids      => [],
+            -hive_capacity  => 1,
+            -rc_name        => 'default',
+            -max_retry_count => 0,
+        },
 
         # Mouse import:
         {   -logic_name => 'import_mouse',
