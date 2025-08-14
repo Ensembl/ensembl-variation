@@ -1,0 +1,235 @@
+package Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportGENCC;
+
+use strict;
+use warnings;
+use base qw/Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess/;
+
+use Text::CSV_XS;
+use POSIX qw(strftime);
+use File::Path qw(make_path);
+use HTTP::Tiny;
+use Bio::EnsEMBL::Registry;
+
+# Parameters (for testing):
+#   species            => 'homo_sapiens'                   # provided by pipeline
+#   pipeline_dir       => '/path'                          # provided by pipeline
+#   gencc_file         => override only in tests           # default: $pipeline_dir/GenCC/gencc.csv
+#   gencc_version      => override only in tests           # default: YYYYMMDD (today)
+#   filter_submitters  => ['G2P','Orphanet']               # default: ['G2P','Orphanet']
+
+sub fetch_input {
+  my ($self) = @_;
+
+  my $species = $self->param_required('species');
+  my $pdir    = $self->param_required('pipeline_dir');
+
+  my $default_dir  = $pdir . "/GenCC";
+  my $default_file = $default_dir . "/gencc.csv";
+  my $file         = $self->param('gencc_file') // $default_file;
+
+  # If file is missing/empty, fetch the latest CSV from GenCC
+  unless (-s $file) {
+    make_path($default_dir);
+    my $url  = 'https://search.thegencc.org/download/action/submissions-export-csv';
+    my $http = HTTP::Tiny->new(timeout => 180);
+    my $res  = $http->get($url);
+    $self->throw("GenCC download failed: $res->{status} $res->{reason}") unless $res->{success};
+    open(my $OUT, ">:encoding(UTF-8)", $default_file) or $self->throw("Cannot write $default_file: $!");
+    print $OUT $res->{content};
+    close $OUT;
+    $file = $default_file;
+  }
+
+  -s $file or $self->throw("GenCC input CSV not found or empty after download: $file");
+
+  my $version = $self->param('gencc_version') // strftime("%Y%m%d", localtime);
+
+  $self->param('input_file',    $file);
+  $self->param('gencc_version', $version);
+}
+
+sub run {
+  my ($self) = @_;
+
+  my $species = $self->param_required('species');
+  my $file    = $self->param_required('input_file');
+  my $version = $self->param_required('gencc_version');
+
+  # Default filters to avoid double attribution (override via pipeline param if needed)
+  my %skip = map { $_ => 1 } @{ $self->param('filter_submitters') || [ 'G2P', 'Orphanet' ] };
+
+  # DB adaptors / handles
+  my $core_dba = $self->get_species_adaptor('core');
+  my $var_dba  = $self->get_species_adaptor('variation');
+
+  my $dbh_core = $core_dba->dbc->db_handle;
+  my $dbh_var  = $var_dba->dbc->db_handle;
+
+  ############################
+  # Ensure source table contains GenCC info
+  ############################
+  my ($source_id) = $dbh_var->selectrow_array("SELECT source_id FROM source WHERE name='GenCC'");
+  if ($source_id) {
+    my $upd = $dbh_var->prepare("UPDATE source SET version=? WHERE source_id=?");
+    $upd->execute($version, $source_id);
+  } else {
+    my $ins = $dbh_var->prepare(q{
+      INSERT INTO source
+        (name, version, description, url, type, somatic_status, data_types)
+      VALUES
+        (?,    ?,       ?,           ?,   NULL, ?,              ?)
+    });
+    $ins->execute(
+      'GenCC',
+      $version,
+      'Gene Curation Coalition (gene–disease validity assertions)',
+      'https://search.thegencc.org/',
+      'germline',
+      'phenotype_feature',
+    );
+    $source_id = $dbh_var->{mysql_insertid};
+  }
+
+  ############################
+  # Ensure attrib_types contains GenCC info
+  ############################
+  my %need_at = (
+    gencc_submitter       => 'GenCC submitter',
+    gencc_classification  => 'GenCC classification',
+    mode_of_inheritance   => 'Mode of inheritance',
+    gencc_uuid            => 'GenCC UUID',
+  );
+  my %atid;
+  while (my ($code,$name) = each %need_at) {
+    my ($id) = $dbh_var->selectrow_array(
+      "SELECT attrib_type_id FROM attrib_type WHERE code=?", undef, $code
+    );
+    unless ($id) {
+      my $i = $dbh_var->prepare("INSERT INTO attrib_type (code, name, description) VALUES (?,?,?)");
+      $i->execute($code, $name, $name);
+      $id = $dbh_var->{mysql_insertid};
+    }
+    $atid{$code} = $id;
+  }
+
+  ############################
+  # SQL commands
+  ############################
+  # HGNC numeric (dbprimary_acc) -> ENSG
+  my $dbq_hgnc_to_ensg = $dbh_core->prepare(q{
+    SELECT g.stable_id
+      FROM gene g
+      JOIN object_xref ox ON ox.ensembl_id=g.gene_id AND ox.ensembl_object_type='Gene'
+      JOIN xref x        ON x.xref_id=ox.xref_id
+      JOIN external_db ed ON ed.external_db_id=x.external_db_id
+     WHERE ed.db_name='HGNC' AND x.dbprimary_acc=? LIMIT 1
+  });
+
+  my $dbq_phen_sel = $dbh_var->prepare("SELECT phenotype_id FROM phenotype WHERE description=? LIMIT 1");
+  my $dbq_phen_ins = $dbh_var->prepare("INSERT INTO phenotype (description) VALUES (?)");
+
+  my $dbq_pf_exists = $dbh_var->prepare(q{
+    SELECT 1 FROM phenotype_feature
+     WHERE phenotype_id=? AND source_id=? AND type='Gene' AND object_id=? LIMIT 1
+  });
+
+  my $dbq_pf_ins = $dbh_var->prepare(q{
+    INSERT INTO phenotype_feature (phenotype_id, source_id, type, object_id)
+    VALUES (?,?, 'Gene', ?)
+  });
+
+  my $dbq_pfa_ins = $dbh_var->prepare(q{
+    INSERT INTO phenotype_feature_attrib (phenotype_feature_id, attrib_type_id, value)
+    VALUES (?,?,?)
+  });
+
+  ############################
+  # Parse CSV and import
+  ############################
+  my $csv = Text::CSV_XS->new({ binary => 1, auto_diag => 1 });
+  open(my $IN, "<:encoding(UTF-8)", $file) or $self->throw("Cannot open $file: $!");
+
+  my $header = $csv->getline($IN) or $self->throw("Empty CSV: $file");
+  $csv->column_names(@$header);
+
+  my ($n_rows, $n_skip, $n_no_gene, $n_dupe, $n_loaded) = (0,0,0,0,0);
+
+  ROW: while (my $r = $csv->getline_hr($IN)) {
+    $n_rows++;
+
+    # Filter submitter
+    my $submitter = $r->{'submitter_title'} // '';
+    $submitter =~ s/^\s+|\s+$//g;
+    if ($submitter && $skip{$submitter}) { $n_skip++; next ROW; }
+
+    # Minimal required field
+    my $disease = $r->{'disease_title'} // '';
+    next ROW unless $disease;
+
+    # Optional attributes
+    my $uuid  = $r->{'uuid'} // '';
+    my $class = $r->{'classification_title'} // '';
+    my $moi   = $r->{'moi_title'} // '';
+    for ($class, $moi) { $_ =~ s/^\s+|\s+$//g if defined $_ }
+
+    # Resolve gene: HGNC first, then symbol
+    my $ensg;
+    if ((my $curie = $r->{'gene_curie'} // '') =~ /^HGNC:(\d+)$/) {
+      $dbq_hgnc_to_ensg->execute($1);
+      ($ensg) = $dbq_hgnc_to_ensg->fetchrow_array;
+    }
+    unless ($ensg) {
+      my $sym = $r->{'gene_symbol'} // '';
+      if ($sym) {
+        my $ga   = Bio::EnsEMBL::Registry->get_adaptor($species, 'core', 'Gene');
+        my $hits = $ga ? ($ga->fetch_all_by_external_name($sym) || []) : [];
+        $ensg = @$hits ? $hits->[0]->stable_id : undef;
+        unless ($ensg) {
+          my $g = $ga ? eval { $ga->fetch_by_display_label($sym) } : undef;
+          $ensg ||= $g && $g->stable_id;
+        }
+      }
+    }
+    unless ($ensg) { $n_no_gene++; next ROW; }
+
+    # Ensure phenotype row (by description)
+    $dbq_phen_sel->execute($disease);
+    my ($phenotype_id) = $dbq_phen_sel->fetchrow_array;
+    unless ($phenotype_id) {
+      $dbq_phen_ins->execute($disease);
+      $phenotype_id = $dbh_var->{mysql_insertid};
+    }
+
+    # Avoid duplicate Phenotype Feature rows
+    $dbq_pf_exists->execute($phenotype_id, $source_id, $ensg);
+    my ($exists) = $dbq_pf_exists->fetchrow_array;
+    if ($exists) { $n_dupe++; next ROW; }
+
+    # Insert link
+    $dbq_pf_ins->execute($phenotype_id, $source_id, $ensg);
+    my $pf_id = $dbh_var->{mysql_insertid};
+
+    # Attributes
+    $dbq_pfa_ins->execute($pf_id, $atid{gencc_submitter},      $submitter) if $submitter;
+    $dbq_pfa_ins->execute($pf_id, $atid{gencc_classification}, $class)     if $class;
+    $dbq_pfa_ins->execute($pf_id, $atid{mode_of_inheritance},  $moi)       if $moi;
+    $dbq_pfa_ins->execute($pf_id, $atid{gencc_uuid},           $uuid)      if $uuid;
+
+    $n_loaded++;
+  }
+  close $IN;
+  
+  # Output useful logs
+  $self->warning(
+    "ImportGenCC: rows=$n_rows, skipped_submitter=$n_skip, unresolved_gene=$n_no_gene, duplicate_links=$n_dupe, loaded=$n_loaded"
+  );
+  $self->param('loaded_count', $n_loaded);
+}
+
+sub write_output {
+  my ($self) = @_;
+  # Pass to the standard post-import checks
+  $self->dataflow_output_id({}, 1);
+}
+
+1;
