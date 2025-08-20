@@ -62,6 +62,7 @@ my $min_id = $vf->[0]->[0];
 my $chunk = 1000000;
 my $max_id = $vf->[0]->[1];
 
+
 debug($config, "Dumping the variation sets and the new variation feature into files");
 for my $tmp_num (map { $_ } $min_id/$chunk .. $max_id/$chunk) {
   dump_old_sql_variation_sets($old_dbh, $tmp_num, $chunk, $max_id);
@@ -84,15 +85,15 @@ temp_table($dbh);
 debug($config, "Loading new variation sets from merged file");
 load_all_variation_sets($dbh, $tmp_merged);
 
-debug($config, "Dumping new variation sets into a file to update the variation feature table");
-for my $tmp_num (map { $_ } $min_id/$chunk .. $max_id/$chunk) {
-  dump_new_variation_sets($dbh, $tmp_num, $chunk, $max_id);
-}
+
+debug($config, "Recalculating the variation sets"); # takes from the merged file and recalculates and creates the concatenate file that will be used to update variation feature
+recalculate($tmp_merged, $tmp_vs_file);
+
 
 debug($config, "Updating the variation feature table");
-update_variation_feature_table($dbh, $tmp_vs_file);
-
-
+for my $tmp_num (map { $_ } $min_id/$chunk .. $max_id/$chunk) {
+  update_variation_feature_table($dbh, $tmp_num, $chunk, $max_id);
+}
 
 debug($config, "Adding failed variation to variation set");
 $dbh->do( qq{ 
@@ -104,6 +105,7 @@ $dbh->do( qq{
 $dbh->do(qq{
   ALTER TABLE variation_set_variation ENABLE keys;
 }) or die "Failed to alter variation_set_variation keys";
+
 
 
 sub temp_table { 
@@ -124,9 +126,9 @@ sub create_merged_file {
   my $new_vf_file = shift; 
   my $tmp_merged = shift;
 
-  open FILE1, "<", "$file" or die "Cannot open $file: $!";
-  open FILE2, "<", "$second_file" or die "Cannot open $second_file: $!";
-  open OUTPUT, ">", "$third_file" or die "Cannot open $third_file: $!";
+  open FILE1, "<", "$tmp_vset" or die "Cannot open $tmp_vset: $!";
+  open FILE2, "<", "$new_vf_file" or die "Cannot open $new_vf_file: $!";
+  open OUTPUT, ">", "$tmp_merged" or die "Cannot open $tmp_merged: $!";
   my %data;
 
   while (<FILE1>) {
@@ -165,71 +167,64 @@ sub load_all_variation_sets {
   my $sql = qq{INSERT INTO variation_set_variation (variation_id, variation_set_id ) VALUES (?, ?)};
   my $sth = $dbhvar->prepare($sql);
 
-  open FH, "<", "$load_file" or die "Can not open $load_file: $!";
-  while (<FH>) {
+  open my $load_vs, "<", "$load_file" or die "Can not open $load_file: $!";
+  while (<$load_vs>) {
     chomp;
     my $var_id = (split)[0];
     my $var_set_id = (split)[1];
     
     $sth->execute($var_id, $var_set_id);
   }
-  close FH;
+  close $load_vs;
   $sth->finish();
 
 }
 
 sub update_variation_feature_table {
-  # this function after populating the variation_feature_backup table created by inserting from the original table would then update the variation_set_id column uaing the file from the 
-  # dump_new_variation_sets
-  my $dbhvar = shift; 
-  my $load_file = shift;
-
-
-  my $update_temp_vf = $dbhvar->prepare(q{ UPDATE variation_feature SET variation_set_id = ? 
-                                          WHERE variation_id = ? AND variation_set_id = ''});
-  
-  #my %var_data;
-  open FH, "<", "$load_file" or die "Can not open $load_file: $!";
-  while (<FH>) {
-    chomp;
-    my $var_id = (split)[0];
-    my $var_set_id = (split)[1];
-    use Data::Dumper;
-    print Dumper($var_set_id, $var_id);
-
-    $update_temp_vf->execute($var_set_id, $var_id); # creating a hash which has the var_id has the key and the set var_set_id has the values 
-  }
-  
-  close FH;
-  $update_temp_vf->finish();
-}
-
-
-sub dump_new_variation_sets {
-  # this would dump the variation_sets table from the backup table and create a file vset_concat.txt with two columns which are var_id and sets of variation_set_id
-  my $dbhvar = shift;
+  # this function after populating the variation_feature_backup table created by inserting from the original table would then update the variation_set_id column uaing the file from the recalculate
+  # using the parents and parents set id to update the variation feature table 
+  my $dbh = shift;
   my $tmp_num = shift;
   my $chunk = shift;
   my $size = shift;
-
+  
   my $start = $chunk * $tmp_num;
   my $end = $chunk + $start;
   $end = $end < $size ? $end : $size;
 
-  my $dump_vs = $dbhvar->prepare(qq{  SELECT variation_id, GROUP_CONCAT(DISTINCT(variation_set_id)) FROM variation_set_variation WHERE variation_id > $start AND variation_id <= $end GROUP BY variation_id});
-  open (FH, ">>$TMP_DIR/$tmp_vs_file" )
-      or die( "Cannot open $TMP_DIR/$tmp_vs_file: $!" );
-  $dump_vs->execute();
 
-  while ( my $aref = $dump_vs->fetchrow_arrayref() ) {
-    my @a = map {defined($_) ? $_ : '\N'} @$aref;
-    print FH join("\t", @a), "\n";
+  my $update_sql = qq{ UPDATE variation_feature SET variation_set_id = ? 
+                                          WHERE variation_id = ? AND variation_id > $start AND variation_id <= $end};
+  
+  my $update_temp_vf = $dbh->prepare($update_sql);
+  #my %var_data;
+  
+  open my $load_fh, "<", "$TMP_DIR/$tmp_vs_file" or die "Can not open $TMP_DIR/$tmp_vs_file`: $!";
+  while (<$load_fh>) {
+    chomp;
+    my @fields = split("\t");
+    my $var_id = $fields[0];
+    my $var_set_id = $fields[1];
+    
+
+    my @sets_array; 
+    my $values;
+    if ($var_set_id =~ /,/) {
+      my @sets_array = unique(split(',', $var_set_id));
+      my @sorted_array = sort { $a<=>$b } @sets_array;
+      $values = join(',', @sorted_array);
+      $values =~ s/\s*,\s*/,/g; # to eliminate spaces and stuff 
+      $values =~ s/^\s+//;  #to eliminate spaces and stuff 
+    } else {
+      $values = "$var_set_id";
+    }
+
+    $update_temp_vf->execute($values, $var_id); # creating a hash which has the var_id has the key and the set var_set_id has the values 
   }
   
-  $dump_vs->finish();
-  close FH;
+  close $load_fh;
+  $update_temp_vf->finish();
 }
-
 
 sub dump_old_sql_variation_sets {
   # this would dump old variation_sets table from the old database and create a file called variation_name_set.txt with two columns var_id and variation_set_id
@@ -244,22 +239,21 @@ sub dump_old_sql_variation_sets {
 
 
   my $sql = qq{SELECT v.name, vs.variation_set_id from variation_set_variation vs LEFT JOIN variation v
-               ON v.variation_id = vs.variation_id where variation_set_id != 1 AND v.variation_id > $start AND v.variation_id <= $end  };
+               ON v.variation_id = vs.variation_id where vs.variation_set_id != 1 AND v.source_id = 1 AND v.variation_id > $start AND v.variation_id <= $end  };
   my $sth = $dbhvar->prepare($sql);
 
-  local *FH;
-  open (FH, ">>$TMP_DIR/$tmp_vset" )
+  open (my $dump_fh, ">>$TMP_DIR/$tmp_vset" )
       or die( "Cannot open $TMP_DIR/$tmp_vset: $!" );
 
   $sth->execute();
 
   while ( my $aref = $sth->fetchrow_arrayref() ) {
     my @a = map {defined($_) ? $_ : '\N'} @$aref;
-    print FH join("\t", @a), "\n";
+    print $dump_fh join("\t", @a), "\n";
   }
   
   $sth->finish();
-  close FH;
+  close $dump_fh;
 
 }
  
@@ -278,21 +272,79 @@ sub dump_new_variation_feature {
   my $sql = qq{SELECT DISTINCT(variation_id), variation_name from variation_feature where variation_id > $start AND variation_id <= $end };
   my $sth = $dbh->prepare($sql);
   
-  local *FH;
-  open (FH, ">>$TMP_DIR/$new_vf_file" )
+  open (my $dump_var, ">>$TMP_DIR/$new_vf_file" )
       or die( "Cannot open $TMP_DIR/$new_vf_file: $!" );
 
   $sth->execute();
 
   while ( my $aref = $sth->fetchrow_arrayref() ) {
     my @a = map {defined($_) ? $_ : '\N'} @$aref;
-    print FH join("\t", @a), "\n";
+    print $dump_var join("\t", @a), "\n";
   }
   
   $sth->finish();
-  close FH;
+  close $dump_var;
 
   
+}
+
+sub get_structure {
+  my $dbhvar = shift;
+
+  my $get_struc_sth = $dbhvar->prepare(qq[ select variation_set_sub, variation_set_super from variation_set_structure]);
+
+  my %parent;
+  $get_struc_sth->execute() ||die;
+  my $dat = $get_struc_sth->fetchall_arrayref();
+  foreach my $l(@{$dat}){
+    $parent{$l->[0]} = $l->[1] ;
+  }
+  return \%parent;
+
+}
+
+sub recalculate {
+  my $input_file = shift;
+  my $output_file = shift;
+  
+  my $parent = get_structure($dbh);
+  my %concat_sets;
+  
+  open my $re_input, "<", "$input_file" or die "Can not open $input_file: $!";
+  
+
+  while (<$re_input>) {
+    chomp;
+    my @fields = split("\t");
+    my $var_id = $fields[0];
+    my $var_set_id = $fields[1];
+    my @sets;
+    
+    push @{$concat_sets{$var_id}}, $var_set_id;
+    push @{$concat_sets{$var_id}}, $parent->{$var_set_id} if exists  $parent->{$var_set_id}; #pushing parents and var_set_id 
+    push @{$concat_sets{$var_id}}, $parent->{$parent->{$var_set_id}} if exists $parent->{$parent->{$var_set_id}}; 
+  
+  }
+
+
+  open(my $re_output, '>', $output_file) or die "Could not open file '$output_file': $!";
+  foreach my $var_id (keys %concat_sets) {  
+    my $values_str = join(", ", @{$concat_sets{$var_id}});
+    print $re_output "$var_id\t$values_str\n"; # adding the values str to it 
+  }
+  
+  # Close the file
+  close $re_output;
+  close $re_input;
+}
+
+sub unique {
+ my @array = shift;
+ 
+ my %u;
+  map { $u{$_} = 1; } @_;
+  return keys %u;
+
 }
 
 sub usage {
