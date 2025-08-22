@@ -59,8 +59,8 @@ sub run {
   my %skip = map { $_ => 1 } @{ $self->param('filter_submitters') || [ 'G2P', 'Orphanet' ] };
 
   # DB adaptors / handles
-  my $core_dba = $self->get_species_adaptor('core');
-  my $var_dba  = $self->get_species_adaptor('variation');
+  my $core_dba = $self->get_species_adaptor($species, 'core');
+  my $var_dba  = $self->get_species_adaptor($species, 'variation');
 
   my $dbh_core = $core_dba->dbc->db_handle;
   my $dbh_var  = $var_dba->dbc->db_handle;
@@ -93,22 +93,21 @@ sub run {
   ############################
   # Ensure attrib_types contains GenCC info
   ############################
-  my %need_at = (
-    gencc_submitter       => 'GenCC submitter',
-    gencc_classification  => 'GenCC classification',
-    mode_of_inheritance   => 'Mode of inheritance',
-    gencc_uuid            => 'GenCC UUID',
+  my @required_codes = qw(
+    gencc_submitter
+    gencc_classification
+    mode_of_inheritance
+    gencc_uuid
   );
+
   my %atid;
-  while (my ($code,$name) = each %need_at) {
+  for my $code (@required_codes) {
     my ($id) = $dbh_var->selectrow_array(
-      "SELECT attrib_type_id FROM attrib_type WHERE code=?", undef, $code
+      'SELECT attrib_type_id FROM attrib_type WHERE code=?', undef, $code
     );
-    unless ($id) {
-      my $i = $dbh_var->prepare("INSERT INTO attrib_type (code, name, description) VALUES (?,?,?)");
-      $i->execute($code, $name, $name);
-      $id = $dbh_var->{mysql_insertid};
-    }
+    $self->throw(
+      "Missing attrib_type '$code' in variation DB. " .
+    ) unless $id;
     $atid{$code} = $id;
   }
 
