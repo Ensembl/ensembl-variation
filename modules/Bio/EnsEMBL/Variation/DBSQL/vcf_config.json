@@ -1526,6 +1526,14 @@
             "type": "remote",
             "filename_template": "https://ftp.ensembl.org/pub/data_files/sus_scrofa/Sscrofa11.1/variation_annotation/ALL_pCADD-PHRED-scores.tsv.gz",
             "annotation_type": "cadd"
+        },
+        {
+            "id": "CADD_GRCg6a_whole_genome_SNVs",
+            "species": "gallus_gallus_gca000002315v5",
+            "assembly": "GRCg6a",
+            "type": "remote",
+            "filename_template": "https://ftp.ensembl.org/pub/data_files/gallus_gallus_gca000002315v5/GRCg6a/variation_annotation/chCADD_updated.tsv.gz",
+            "annotation_type": "cadd"
         }
     ]
 }
