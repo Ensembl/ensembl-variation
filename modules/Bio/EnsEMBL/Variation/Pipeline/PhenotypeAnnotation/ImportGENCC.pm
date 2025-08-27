@@ -10,13 +10,6 @@ use File::Path qw(make_path);
 use HTTP::Tiny;
 use Bio::EnsEMBL::Registry;
 
-# Parameters (for testing):
-#   species            => 'homo_sapiens'                   # provided by pipeline
-#   pipeline_dir       => '/path'                          # provided by pipeline
-#   gencc_file         => override only in tests           # default: $pipeline_dir/GenCC/gencc.csv
-#   gencc_version      => override only in tests           # default: YYYYMMDD (today)
-#   filter_submitters  => ['G2P','Orphanet']               # default: ['G2P','Orphanet']
-
 sub fetch_input {
   my ($self) = @_;
 
@@ -56,11 +49,11 @@ sub run {
   my $version = $self->param_required('gencc_version');
 
   # Default filters to avoid double attribution (override via pipeline param if needed)
-  my %skip = map { $_ => 1 } @{ $self->param('filter_submitters') || [ 'G2P', 'Orphanet' ] };
+  my %skip = map { $_ => 1 } @{ $self->param('filter_submitters') || [ 'G2P' ] };
 
   # DB adaptors / handles
-  my $core_dba = $self->get_species_adaptor($species, 'core');
-  my $var_dba  = $self->get_species_adaptor($species, 'variation');
+  my $core_dba = $self->get_species_adaptor('core');
+  my $var_dba  = $self->get_species_adaptor('variation');
 
   my $dbh_core = $core_dba->dbc->db_handle;
   my $dbh_var  = $var_dba->dbc->db_handle;
@@ -96,7 +89,7 @@ sub run {
   my @required_codes = qw(
     gencc_submitter
     gencc_classification
-    mode_of_inheritance
+    gencc_inherit_mode
     gencc_uuid
   );
 
@@ -106,7 +99,7 @@ sub run {
       'SELECT attrib_type_id FROM attrib_type WHERE code=?', undef, $code
     );
     $self->throw(
-      "Missing attrib_type '$code' in variation DB. " .
+      "Missing attrib_type '$code' in variation DB."
     ) unless $id;
     $atid{$code} = $id;
   }
@@ -211,7 +204,7 @@ sub run {
     # Attributes
     $dbq_pfa_ins->execute($pf_id, $atid{gencc_submitter},      $submitter) if $submitter;
     $dbq_pfa_ins->execute($pf_id, $atid{gencc_classification}, $class)     if $class;
-    $dbq_pfa_ins->execute($pf_id, $atid{mode_of_inheritance},  $moi)       if $moi;
+    $dbq_pfa_ins->execute($pf_id, $atid{gencc_inherit_mode},  $moi)       if $moi;
     $dbq_pfa_ins->execute($pf_id, $atid{gencc_uuid},           $uuid)      if $uuid;
 
     $n_loaded++;
