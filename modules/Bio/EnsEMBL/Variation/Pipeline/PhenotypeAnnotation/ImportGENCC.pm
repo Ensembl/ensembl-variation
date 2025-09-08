@@ -209,9 +209,15 @@ sub run {
 }
 
 sub write_output {
-  my ($self) = @_;
-  # Pass to the standard post-import checks
-  $self->dataflow_output_id({}, 1);
+  my $self = shift;
+
+  $self->print_pipelogFH("Passing $source_info{source_name_short} import (".$self->required_param('species').") for checks (check_phenotypes)\n") if ($debug);
+  close($self->logFH) if defined $self->logFH ;
+  close($self->errFH) if defined $self->errFH ;
+  close($self->pipelogFH) if defined $debug ;
+
+  $self->dataflow_output_id($self->param('output_ids'), 2);
+
 }
 
 1;
