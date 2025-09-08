@@ -52,6 +52,7 @@ my %source2branch = (
   MIMMORBID => 5,
   G2P       => 6,
   CGC       => 7,
+  GENCC     => 4,
 
   HUMAN     => 2,
   HUMAN_VAR => 2,
