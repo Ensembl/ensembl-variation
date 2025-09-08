@@ -239,7 +239,7 @@ sub pipeline_analyses {
                 '6->A' => [ 'import_g2p' ],
                 '7->A' => [ 'import_cancerGC' ],
                 '8->A' => [ 'import_gencc' ],
-                'A->8' => [ 'check_phenotypes'],
+                'A->9' => [ 'check_phenotypes'],
             },
         },
 
