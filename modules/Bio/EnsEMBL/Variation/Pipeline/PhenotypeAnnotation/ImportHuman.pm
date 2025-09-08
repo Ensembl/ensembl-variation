@@ -41,7 +41,7 @@ use warnings;
 use strict;
 
 use Bio::EnsEMBL::Variation::Utils::SeqRegionUtils qw(update_seq_region_ids);
-use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(GWAS EGA ORPHANET MIMMORBID G2P CGC HUMAN HUMAN_VAR HUMAN_GENE NONE SPECIES);
+use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(GWAS EGA ORPHANET MIMMORBID G2P CGC GENCC HUMAN HUMAN_VAR HUMAN_GENE NONE SPECIES);
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
 # branch numbers from config file
