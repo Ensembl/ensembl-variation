@@ -238,6 +238,7 @@ sub pipeline_analyses {
                 '5->A' => [ 'import_mimmorbid' ],
                 '6->A' => [ 'import_g2p' ],
                 '7->A' => [ 'import_cancerGC' ],
+                '8->A' => [ 'import_gencc' ],
                 'A->8' => [ 'check_phenotypes'],
             },
         },
@@ -390,20 +391,6 @@ sub pipeline_analyses {
             -flow_into  => {
                 2 => [ 'check_cancerGC']
             },
-        },
-
-        {   -logic_name => 'check_cancerGC',
-            -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::CheckPhenotypeAnnotation',
-            -parameters => {
-                @common_params,
-            },
-            -input_ids      => [], #default
-            -hive_capacity  => 1,
-            -rc_name    => 'default',
-            -flow_into      => {
-                2 => [ 'import_gencc' ],
-            },
-            -max_retry_count => 0,
         },
 
         {   -logic_name => 'import_gencc',
