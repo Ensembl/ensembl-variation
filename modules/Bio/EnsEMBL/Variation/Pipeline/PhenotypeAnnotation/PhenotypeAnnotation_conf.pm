@@ -393,6 +393,20 @@ sub pipeline_analyses {
             },
         },
 
+        {   -logic_name => 'check_cancerGC',
+            -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::CheckPhenotypeAnnotation',
+            -parameters => {
+                @common_params,
+            },
+            -input_ids      => [], #default
+            -hive_capacity  => 1,
+            -rc_name    => 'default',
+            -flow_into      => {
+                2 => [ 'import_gencc' ],
+            },
+            -max_retry_count => 0,
+        },
+
         {   -logic_name => 'import_gencc',
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportGENCC',
             -parameters => {

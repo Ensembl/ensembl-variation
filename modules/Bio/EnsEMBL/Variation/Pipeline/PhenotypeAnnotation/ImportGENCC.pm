@@ -16,6 +16,24 @@ sub fetch_input {
   my $species = $self->param_required('species');
   my $pdir    = $self->param_required('pipeline_dir');
 
+  my $workdir = $pdir . "/GenCC/" . $species;
+  unless (-d $workdir) {
+    my $err;
+    make_path($workdir, { error => \$err });
+    $self->throw("make_path failed to create $workdir") if $err && @$err;
+  }
+  $self->workdir($workdir);
+
+  open(my $logFH,     ">", $workdir."/log_import_out_GenCC_".$species)
+    || $self->throw("Failed to open log_import_out_GenCC_$species: $!");
+  open(my $errFH,     ">", $workdir."/log_import_err_GenCC_".$species)
+    || $self->throw("Failed to open log_import_err_GenCC_$species: $!");
+  open(my $pipelogFH, ">", $workdir."/log_import_debug_pipe_GenCC_".$species)
+    || $self->throw("Failed to open log_import_debug_pipe_GenCC_$species: $!");
+  $self->logFH($logFH);
+  $self->errFH($errFH);
+  $self->pipelogFH($pipelogFH);
+
   my $default_dir  = $pdir . "/GenCC";
   my $default_file = $default_dir . "/gencc.csv";
   my $file         = $self->param('gencc_file') // $default_file;
@@ -58,7 +76,7 @@ sub run {
   my $dbh_var  = $var_dba->dbc->db_handle;
 
   ############################
-  # Ensure source table contains GenCC info
+  # Source info (store so write_output can use it)
   ############################
   my %source_info = (
     source_description => 'Gene Curation Coalition (gene–disease validity assertions)',
@@ -70,11 +88,15 @@ sub run {
     source_version     => $version,
     data_types         => 'phenotype_feature',
   );
+  $self->param('source_info', \%source_info);
+
+  # Ensure source exists / get id
   my $source_id = $self->get_or_add_source(\%source_info);
-  $self->print_logFH("$source_info{source_name} source_id is $source_id\n") if ($self->debug);
+  $self->print_logFH("$source_info{source_name} source_id is $source_id\n")
+    if ($self->param('debug_mode'));
 
   ############################
-  # Ensure attrib_types contains GenCC info
+  # Ensure attrib_types exist
   ############################
   my @required_codes = qw(
     gencc_submitter
@@ -88,21 +110,18 @@ sub run {
     my ($id) = $dbh_var->selectrow_array(
       'SELECT attrib_type_id FROM attrib_type WHERE code=?', undef, $code
     );
-    $self->throw(
-      "Missing attrib_type '$code' in variation DB."
-    ) unless $id;
+    $self->throw("Missing attrib_type '$code' in variation DB.") unless $id;
     $atid{$code} = $id;
   }
 
   ############################
   # SQL commands
   ############################
-  # HGNC numeric (dbprimary_acc) -> ENSG
   my $dbq_hgnc_to_ensg = $dbh_core->prepare(q{
     SELECT g.stable_id
       FROM gene g
       JOIN object_xref ox ON ox.ensembl_id=g.gene_id AND ox.ensembl_object_type='Gene'
-      JOIN xref x        ON x.xref_id=ox.xref_id
+      JOIN xref x         ON x.xref_id=ox.xref_id
       JOIN external_db ed ON ed.external_db_id=x.external_db_id
      WHERE ed.db_name='HGNC' AND x.dbprimary_acc=? LIMIT 1
   });
@@ -194,30 +213,47 @@ sub run {
     # Attributes
     $dbq_pfa_ins->execute($pf_id, $atid{gencc_submitter},      $submitter) if $submitter;
     $dbq_pfa_ins->execute($pf_id, $atid{gencc_classification}, $class)     if $class;
-    $dbq_pfa_ins->execute($pf_id, $atid{gencc_inherit_mode},  $moi)       if $moi;
+    $dbq_pfa_ins->execute($pf_id, $atid{gencc_inherit_mode},   $moi)       if $moi;
     $dbq_pfa_ins->execute($pf_id, $atid{gencc_uuid},           $uuid)      if $uuid;
 
     $n_loaded++;
   }
   close $IN;
-  
-  # Output useful logs
+
   $self->warning(
     "ImportGenCC: rows=$n_rows, skipped_submitter=$n_skip, unresolved_gene=$n_no_gene, duplicate_links=$n_dupe, loaded=$n_loaded"
   );
   $self->param('loaded_count', $n_loaded);
+
+  my %param_source = (
+    source_name => $source_info{source_name_short},
+    type        => $source_info{object_type}
+  );
+  $self->param('output_ids', {
+    source   => \%param_source,
+    species  => $species,
+    run_type => 'GENCC',
+  });
 }
 
 sub write_output {
   my $self = shift;
 
-  $self->print_pipelogFH("Passing $source_info{source_name_short} import (".$self->required_param('species').") for checks (check_phenotypes)\n") if ($debug);
-  close($self->logFH) if defined $self->logFH ;
-  close($self->errFH) if defined $self->errFH ;
-  close($self->pipelogFH) if defined $debug ;
+  my $debug = $self->param('debug_mode');
+  my $si    = $self->param('source_info') || {};
 
+  if ($debug && $self->pipelogFH && $si->{source_name_short}) {
+    $self->print_pipelogFH(
+      "Passing $si->{source_name_short} import (".$self->required_param('species').") for checks (check_gencc)\n"
+    );
+  }
+
+  close($self->logFH)     if defined $self->logFH;
+  close($self->errFH)     if defined $self->errFH;
+  close($self->pipelogFH) if defined $self->pipelogFH;
+
+  # Flow to branch 2
   $self->dataflow_output_id($self->param('output_ids'), 2);
-
 }
 
 1;
