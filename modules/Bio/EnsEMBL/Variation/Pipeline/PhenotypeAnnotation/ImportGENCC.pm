@@ -2,7 +2,7 @@ package Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::ImportGENCC;
 
 use strict;
 use warnings;
-use base qw/Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess/;
+use base qw/Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation/;
 
 use Text::CSV_XS;
 use POSIX qw(strftime);
@@ -48,10 +48,9 @@ sub run {
   my $file    = $self->param_required('input_file');
   my $version = $self->param_required('gencc_version');
 
-  # Default filters to avoid double attribution (override via pipeline param if needed)
   my %skip = map { $_ => 1 } @{ $self->param('filter_submitters') || [ 'G2P' ] };
 
-  # DB adaptors / handles
+  # DB adaptors
   my $core_dba = $self->get_species_adaptor('core');
   my $var_dba  = $self->get_species_adaptor('variation');
 
@@ -61,27 +60,18 @@ sub run {
   ############################
   # Ensure source table contains GenCC info
   ############################
-  my ($source_id) = $dbh_var->selectrow_array("SELECT source_id FROM source WHERE name='GenCC'");
-  if ($source_id) {
-    my $upd = $dbh_var->prepare("UPDATE source SET version=? WHERE source_id=?");
-    $upd->execute($version, $source_id);
-  } else {
-    my $ins = $dbh_var->prepare(q{
-      INSERT INTO source
-        (name, version, description, url, type, somatic_status, data_types)
-      VALUES
-        (?,    ?,       ?,           ?,   NULL, ?,              ?)
-    });
-    $ins->execute(
-      'GenCC',
-      $version,
-      'Gene Curation Coalition (gene-disease validity assertions)',
-      'https://search.thegencc.org/',
-      'germline',
-      'phenotype_feature',
-    );
-    $source_id = $dbh_var->{mysql_insertid};
-  }
+  my %source_info = (
+    source_description => 'Gene Curation Coalition (gene–disease validity assertions)',
+    source_url         => 'https://search.thegencc.org/',
+    object_type        => 'Gene',
+    source_status      => 'germline',
+    source_name        => 'GenCC',
+    source_name_short  => 'GenCC',
+    source_version     => $version,
+    data_types         => 'phenotype_feature',
+  );
+  my $source_id = $self->get_or_add_source(\%source_info);
+  $self->print_logFH("$source_info{source_name} source_id is $source_id\n") if ($self->debug);
 
   ############################
   # Ensure attrib_types contains GenCC info
