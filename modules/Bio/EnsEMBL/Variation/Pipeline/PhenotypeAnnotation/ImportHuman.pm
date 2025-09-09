@@ -102,7 +102,7 @@ sub write_output {
 
     $self->print_pipelogFH("Passing on check jobs (". scalar @{$self->param('output_ids')} .") for check_phenotypes \n") if $self->param('debug_mode');
 
-    $self->dataflow_output_id($self->param('output_ids'), 8);
+    $self->dataflow_output_id($self->param('output_ids'), 9);
   }
   close($self->pipelogFH) if defined $self->pipelogFH;
 

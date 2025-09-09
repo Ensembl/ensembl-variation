@@ -76,7 +76,7 @@ sub run {
   my $dbh_var  = $var_dba->dbc->db_handle;
 
   ############################
-  # Source info (store so write_output can use it)
+  # Source info
   ############################
   my %source_info = (
     source_description => 'Gene Curation Coalition (gene–disease validity assertions)',
@@ -90,7 +90,7 @@ sub run {
   );
   $self->param('source_info', \%source_info);
 
-  # Ensure source exists / get id
+  # Ensure source exists or get id
   my $source_id = $self->get_or_add_source(\%source_info);
   $self->print_logFH("$source_info{source_name} source_id is $source_id\n")
     if ($self->param('debug_mode'));
@@ -252,8 +252,8 @@ sub write_output {
   close($self->errFH)     if defined $self->errFH;
   close($self->pipelogFH) if defined $self->pipelogFH;
 
-  # Flow to branch 2
-  $self->dataflow_output_id($self->param('output_ids'), 2);
+  my $output_ids = $self->param('output_ids') || {};
+  $self->dataflow_output_id($output_ids, 2);
 }
 
 1;
