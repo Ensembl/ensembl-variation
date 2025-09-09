@@ -127,8 +127,8 @@ sub run {
   my $file    = $self->param_required('input_file');
   my $version = $self->param_required('gencc_version');
 
-  # Allow excluding submitters, i.e. G2P is the default
-  my %skip = map { $_ => 1 } @{ $self->param('filter_submitters') || [ 'G2P' ] };
+  # Allow excluding submitters
+  my %skip = map { $_ => 1 } @{ $self->param('filter_submitters') || [ 'G2P', 'Orphanet' ] };
 
   # Get DB handles
   my $core_dba = $self->get_species_adaptor('core');
