@@ -24,25 +24,44 @@ sub _demojibake {
   return $s;
 }
 
-# Make phenotype text safe for DB/ accepted by pipeline
+# Clean phenotype text
 sub _clean_text {
   my ($s) = @_;
   return undef unless defined $s;
 
-  $s =~ s/^\x{FEFF}//;                                            # strip BOM
-  $s =~ s/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]//g;                    # ASCII controls
-  $s =~ s/[\x{0080}-\x{009F}]//g;                                 # C1 controls
-  $s =~ s/\x{FFFD}//g;                                            # replacement char
-  $s = _demojibake($s);                                           # fix incorrect decoding
-  $s =~ s/[\x{00A0}\x{202F}\x{2000}-\x{200A}\x{205F}\x{3000}]/ /g;# space-like chars into space
-  $s =~ s/[\x{2010}-\x{2015}\x{2212}]/-/g;                        # dashes into hyphen
-  $s =~ s/[\x{2018}\x{2019}\x{201B}]/'/g;                         # quotes into '
-  $s =~ s/[\x{201C}\x{201D}]/"/g;                                 # quotes into "
-  $s = NFD($s); $s =~ s/\pM//g;                                   # drop accents
-  $s =~ tr/ßØøÆæŒœŁłÐðÞþ/ssOoAEaeOEoeLlDdThth/;                   # map some remaining Latin letters
-  $s =~ s/\s{2,}/ /g; $s =~ s/^\s+//; $s =~ s/\s+$//;             # collapse/trim
-  $s =~ s/[;,.\s]+$//;                                            # no trailing punctuation
-  $s =~ s/[^\x00-\x7F]//g;                                        # final ASCII backup
+  # remove BOM & control chars as these trigger "unsupported characters"
+  $s =~ s/^\x{FEFF}//;
+  $s =~ s/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]//g;
+  $s =~ s/[\x{0080}-\x{009F}]//g;
+  $s =~ s/\x{FFFD}//g;
+
+  # undo incorrect decoding (e.g. StÃ¼ve to Stüve)
+  $s = _demojibake($s);
+
+  # normalise spaces & punctuation; keep semantics
+  $s =~ s/[\x{00A0}\x{202F}\x{2000}-\x{200A}\x{205F}\x{3000}]/ /g;
+  $s =~ s/[\x{2010}-\x{2015}\x{2212}]/-/g;    # dashes to hyphen
+  $s =~ s/[\x{2018}\x{2019}\x{201B}]/'/g;     # smart single quotes to '
+  $s =~ s/[\x{201C}\x{201D}]/"/g;             # smart double quotes to "
+
+  # remove accents but keep the base letters
+  $s = NFD($s);
+  $s =~ s/\pM//g;
+
+  # map Latin letters that didn't get decoded to ASCII
+  $s =~ tr/ßØøÆæŒœŁłÐðÞþ/ssOoAEaeOEoeLlDdThth/;
+
+  # collapse interior spaces and trim ends (otherwise dups appear that aren't real dups)
+  $s =~ s/\s{2,}/ /g;
+  $s =~ s/^\s+//;
+  $s =~ s/\s+$//;
+
+  # capitalise first letter if it was lower-case
+  $s =~ s/^([a-z])/\U$1/;
+
+  # final check to ensure ASCII only (post accent stripping)
+  $s =~ s/[^\x00-\x7F]//g;
+
   return $s;
 }
 
