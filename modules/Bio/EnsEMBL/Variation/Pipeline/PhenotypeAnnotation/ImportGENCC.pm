@@ -180,7 +180,9 @@ sub run {
       JOIN object_xref ox ON ox.ensembl_id=g.gene_id AND ox.ensembl_object_type='Gene'
       JOIN xref x         ON x.xref_id=ox.xref_id
       JOIN external_db ed ON ed.external_db_id=x.external_db_id
-     WHERE ed.db_name='HGNC' AND x.dbprimary_acc=? LIMIT 1
+    WHERE ed.db_name='HGNC'
+      AND (x.dbprimary_acc=? OR x.dbprimary_acc=CONCAT('HGNC:',?))
+    LIMIT 1
   });
   my $dbq_phen_sel = $dbh_var->prepare('SELECT phenotype_id FROM phenotype WHERE description=? LIMIT 1');
   my $dbq_phen_ins = $dbh_var->prepare('INSERT INTO phenotype (description) VALUES (?)');
@@ -215,27 +217,45 @@ sub run {
     my $class     = _clean_text($r->{'classification_title'} // '');
     my $moi       = _clean_text($r->{'moi_title'}            // '');
 
+    # Skip excluded submitters (not “unmatched”; do not log)
     next ROW if $submitter && $skip{$submitter};
-    next ROW unless $disease;
+
+    # Skip empty disease (log as unmatched: no_identifier)
+    unless ($disease) {
+      $self->print_logFH(join("\t", "UNMATCHED", "no_identifier", ($uuid//''), ($submitter//''), ($r->{'gene_curie'}//''), ($r->{'gene_symbol'}//''), ($disease//'')) . "\n");
+      next ROW;
+    }
 
     # Find the gene (HGNC id first, fallback to symbol)
     my $ensg;
+    my $curie_raw = $r->{'gene_curie'}  // '';
+    my $sym_raw   = $r->{'gene_symbol'} // '';
+
     if ((my $curie = $r->{'gene_curie'} // '') =~ /^HGNC:(\d+)$/) {
-      $dbq_hgnc_to_ensg->execute($1);
+      # Try both plain number and prefixed HGNC:<number>
+      $dbq_hgnc_to_ensg->execute($1, $1);
       ($ensg) = $dbq_hgnc_to_ensg->fetchrow_array;
     }
     unless ($ensg) {
-      my $sym = $r->{'gene_symbol'} // '';
-      if ($sym) {
-        my $hits = $gene_adaptor ? ($gene_adaptor->fetch_all_by_external_name($sym) || []) : [];
+      if ($sym_raw) {
+        my $hits = $gene_adaptor ? ($gene_adaptor->fetch_all_by_external_name($sym_raw) || []) : [];
         $ensg = @$hits ? $hits->[0]->stable_id : undef;
         unless ($ensg) {
-          my $g = $gene_adaptor ? eval { $gene_adaptor->fetch_by_display_label($sym) } : undef;
+          my $g = $gene_adaptor ? eval { $gene_adaptor->fetch_by_display_label($sym_raw) } : undef;
           $ensg ||= $g && $g->stable_id;
         }
       }
     }
-    unless ($ensg) { $n_no_gene++; next ROW; }
+
+    # If still no gene, log the reason and skip
+    unless ($ensg) {
+      my $reason = $curie_raw =~ /^HGNC:/ ? 'HGNC_not_found'
+                 : $sym_raw               ? 'symbol_not_found'
+                 :                          'no_identifier';
+      $self->print_logFH(join("\t", "UNMATCHED", $reason, ($uuid//''), ($submitter//''), $curie_raw, $sym_raw, $disease) . "\n");
+      $n_no_gene++;
+      next ROW;
+    }
 
     # Create/find phenotype by cleaned description
     $dbq_phen_sel->execute($disease);
@@ -248,7 +268,10 @@ sub run {
     # Avoid duplicate links
     $dbq_pf_exists->execute($phenotype_id, $source_id, $ensg);
     my ($exists) = $dbq_pf_exists->fetchrow_array;
-    if ($exists) { $n_dupe++; next ROW; }
+    if ($exists) {
+      $n_dupe++;
+      next ROW;
+    }
 
     # Link and add attributes
     $dbq_pf_ins->execute($phenotype_id, $source_id, $ensg);
