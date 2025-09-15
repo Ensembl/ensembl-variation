@@ -41,7 +41,7 @@ use warnings;
 use strict;
 
 use Bio::EnsEMBL::Variation::Utils::SeqRegionUtils qw(update_seq_region_ids);
-use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(GWAS EGA ORPHANET MIMMORBID G2P CGC HUMAN HUMAN_VAR HUMAN_GENE NONE SPECIES);
+use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(GWAS EGA ORPHANET MIMMORBID G2P CGC GENCC HUMAN HUMAN_VAR HUMAN_GENE NONE SPECIES);
 use base ('Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::BasePhenotypeAnnotation');
 
 # branch numbers from config file
@@ -52,6 +52,7 @@ my %source2branch = (
   MIMMORBID => 5,
   G2P       => 6,
   CGC       => 7,
+  GENCC     => 8,
 
   HUMAN     => 2,
   HUMAN_VAR => 2,
@@ -101,7 +102,7 @@ sub write_output {
 
     $self->print_pipelogFH("Passing on check jobs (". scalar @{$self->param('output_ids')} .") for check_phenotypes \n") if $self->param('debug_mode');
 
-    $self->dataflow_output_id($self->param('output_ids'), 8);
+    $self->dataflow_output_id($self->param('output_ids'), 9);
   }
   close($self->pipelogFH) if defined $self->pipelogFH;
 
