@@ -13,7 +13,7 @@ use Encode qw(encode decode);
 use Unicode::Normalize qw(NFD);
 
 # revert UTF-8 to Latin1 incorrect decoding
-sub _demojibake {
+sub _utf8tolatin {
   my ($s) = @_;
   return $s unless defined $s;
   if ($s =~ /Ã|Â|Ãƒ|â|€/) {
@@ -36,7 +36,7 @@ sub _clean_text {
   $s =~ s/\x{FFFD}//g;
 
   # undo incorrect decoding (e.g. StÃ¼ve to Stüve)
-  $s = _demojibake($s);
+  $s = _utf8tolatin($s);
 
   # normalise spaces & punctuation; keep semantics
   $s =~ s/[\x{00A0}\x{202F}\x{2000}-\x{200A}\x{205F}\x{3000}]/ /g;
@@ -95,7 +95,7 @@ sub fetch_input {
   $self->errFH($errFH);
   $self->pipelogFH($pipelogFH);
 
-  # Locate or download the GenCC CSV
+  # locate or download the GenCC CSV
   my $default_dir  = $pdir . "/GenCC";
   my $default_file = $default_dir . "/gencc.csv";
   my $file         = $self->param('gencc_file') // $default_file;
@@ -133,8 +133,6 @@ sub run {
   # Get DB handles
   my $core_dba = $self->get_species_adaptor('core');
   my $var_dba  = $self->get_species_adaptor('variation');
-  my $dbh_core = $core_dba->dbc->db_handle;
-  my $dbh_var  = $var_dba->dbc->db_handle;
 
   # Fetch Gene adaptor
   my $gene_adaptor = Bio::EnsEMBL::Registry->get_adaptor($species, 'core', 'Gene');
@@ -157,152 +155,15 @@ sub run {
   $self->print_logFH("$source_info{source_name} source_id is $source_id\n")
     if ($self->param('debug_mode'));
 
-  # Ensure required attrib types exist
-  my @required_codes = qw(
-    gencc_submitter
-    gencc_classification
-    gencc_inherit_mode
-    gencc_uuid
-  );
-  my %atid;
-  for my $code (@required_codes) {
-    my ($id) = $dbh_var->selectrow_array(
-      'SELECT attrib_type_id FROM attrib_type WHERE code=?', undef, $code
-    );
-    $self->throw("Missing attrib_type '$code' in variation DB.") unless $id;
-    $atid{$code} = $id;
-  }
+  # Dump and clean pre-existing phenotype features
+  $self->dump_phenotypes($source_info{source_name}, 1);
 
-  # SQL
-  my $dbq_hgnc_to_ensg = $dbh_core->prepare(q{
-    SELECT g.stable_id
-      FROM gene g
-      JOIN object_xref ox ON ox.ensembl_id=g.gene_id AND ox.ensembl_object_type='Gene'
-      JOIN xref x         ON x.xref_id=ox.xref_id
-      JOIN external_db ed ON ed.external_db_id=x.external_db_id
-    WHERE ed.db_name='HGNC'
-      AND (x.dbprimary_acc=? OR x.dbprimary_acc=CONCAT('HGNC:',?))
-      AND g.stable_id NOT LIKE 'LRG\_%'
-    LIMIT 1
-  });
-  my $dbq_phen_sel = $dbh_var->prepare('SELECT phenotype_id FROM phenotype WHERE description=? LIMIT 1');
-  my $dbq_phen_ins = $dbh_var->prepare('INSERT INTO phenotype (description) VALUES (?)');
-  my $dbq_pf_exists = $dbh_var->prepare(q{
-    SELECT 1 FROM phenotype_feature
-     WHERE phenotype_id=? AND source_id=? AND type='Gene' AND object_id=? LIMIT 1
-  });
-  my $dbq_pf_ins = $dbh_var->prepare(q{
-    INSERT INTO phenotype_feature (phenotype_id, source_id, type, object_id)
-    VALUES (?,?, 'Gene', ?)
-  });
-  my $dbq_pfa_ins = $dbh_var->prepare(q{
-    INSERT INTO phenotype_feature_attrib (phenotype_feature_id, attrib_type_id, value)
-    VALUES (?,?,?)
-  });
+  # Get phenotype data + save it (all in one method)
+  my $results = $self->parse_input_file($file, \%skip, $gene_adaptor);
 
-  # Read CSV, clean fields, and load rows
-  my $csv = Text::CSV_XS->new({ binary => 1, auto_diag => 1 });
-  open(my $IN, "<:encoding(UTF-8)", $file) or $self->throw("Cannot open $file: $!");
+  # Save phenotypes
+  $self->save_phenotypes(\%source_info, $results);
 
-  my $header = $csv->getline($IN) or $self->throw("Empty CSV: $file");
-  $csv->column_names(@$header);
-
-  my ($n_rows, $n_skip, $n_no_gene, $n_dupe, $n_loaded) = (0,0,0,0,0);
-
-  ROW: while (my $r = $csv->getline_hr($IN)) {
-    $n_rows++;
-
-    my $submitter = _clean_text($r->{'submitter_title'}      // '');
-    my $disease   = _clean_text($r->{'disease_title'}        // '');
-    my $uuid      = _clean_text($r->{'uuid'}                 // '');
-    my $class     = _clean_text($r->{'classification_title'} // '');
-    my $moi       = _clean_text($r->{'moi_title'}            // '');
-
-    # Skip excluded submitters (not “unmatched”; do not log)
-    next ROW if $submitter && $skip{$submitter};
-
-    # Skip empty disease (log as unmatched: no_identifier)
-    unless ($disease) {
-      $self->print_logFH(join("\t", "UNMATCHED", "no_identifier", ($uuid//''), ($submitter//''), ($r->{'gene_curie'}//''), ($r->{'gene_symbol'}//''), ($disease//'')) . "\n");
-      next ROW;
-    }
-
-    # Find the gene (HGNC id first, fallback to symbol)
-    my $ensg;
-    my $curie_raw = $r->{'gene_curie'}  // '';
-    my $sym_raw   = $r->{'gene_symbol'} // '';
-
-    if ((my $curie = $r->{'gene_curie'} // '') =~ /^HGNC:(\d+)$/) {
-      # Try both plain number and prefixed HGNC:<number>; exclude LRG
-      $dbq_hgnc_to_ensg->execute($1, $1);
-      ($ensg) = $dbq_hgnc_to_ensg->fetchrow_array;
-    }
-
-    # If no ensg, resolve by symbol, restricted to HGNC but excluding 'LRG' IDs
-    unless ($ensg) {
-      if ($sym_raw && $gene_adaptor) {
-        my $genes = $gene_adaptor->fetch_all_by_external_name($sym_raw, 'HGNC');
-        @$genes   = grep { $_->stable_id !~ /^LRG_/ } @$genes;# drop LRG hits
-        if (@$genes > 1) {
-          my @tmp = grep { ($_->external_name // '') eq $sym_raw } @$genes; # exact symbol match
-          $genes = \@tmp if @tmp;
-        }
-        $ensg = @$genes ? $genes->[0]->stable_id : undef;
-      }
-    }
-
-    # If anything still came back as LRG, consider as not found and log
-    if ($ensg && $ensg =~ /^LRG_/) {
-      my $reason = 'LRG_mapped';
-      $self->print_logFH(join("\t", "UNMATCHED", $reason, ($uuid//''), ($submitter//''), $curie_raw, $sym_raw, $disease) . "\n");
-      $n_no_gene++;
-      next ROW;
-    }
-
-    # If still no gene, log the reason and skip
-    unless ($ensg) {
-      my $reason = $curie_raw =~ /^HGNC:/ ? 'HGNC_not_found'
-                 : $sym_raw               ? 'symbol_not_found'
-                 :                          'no_identifier';
-      $self->print_logFH(join("\t", "UNMATCHED", $reason, ($uuid//''), ($submitter//''), $curie_raw, $sym_raw, $disease) . "\n");
-      $n_no_gene++;
-      next ROW;
-    }
-
-    # Create/find phenotype by cleaned description
-    $dbq_phen_sel->execute($disease);
-    my ($phenotype_id) = $dbq_phen_sel->fetchrow_array;
-    unless ($phenotype_id) {
-      $dbq_phen_ins->execute($disease);
-      $phenotype_id = $dbh_var->{mysql_insertid};
-    }
-
-    # Avoid duplicate links
-    $dbq_pf_exists->execute($phenotype_id, $source_id, $ensg);
-    my ($exists) = $dbq_pf_exists->fetchrow_array;
-    if ($exists) {
-      $n_dupe++;
-      next ROW;
-    }
-
-    # Link and add attributes
-    $dbq_pf_ins->execute($phenotype_id, $source_id, $ensg);
-    my $pf_id = $dbh_var->{mysql_insertid};
-    $dbq_pfa_ins->execute($pf_id, $atid{gencc_submitter},      $submitter) if $submitter;
-    $dbq_pfa_ins->execute($pf_id, $atid{gencc_classification}, $class)     if $class;
-    $dbq_pfa_ins->execute($pf_id, $atid{gencc_inherit_mode},   $moi)       if $moi;
-    $dbq_pfa_ins->execute($pf_id, $atid{gencc_uuid},           $uuid)      if $uuid;
-
-    $n_loaded++;
-  }
-  close $IN;
-
-  $self->warning(
-    "ImportGenCC: rows=$n_rows, skipped_submitter=$n_skip, unresolved_gene=$n_no_gene, duplicate_links=$n_dupe, loaded=$n_loaded"
-  );
-  $self->param('loaded_count', $n_loaded);
-
-  # Go to downstream checks
   my %param_source = (
     source_name => $source_info{source_name_short},
     type        => $source_info{object_type}
@@ -312,6 +173,106 @@ sub run {
     species  => $species,
     run_type => 'GENCC',
   });
+}
+
+sub parse_input_file {
+  my ($self, $infile, $skip_href, $gene_adaptor) = @_;
+
+  my $dbh_core = $self->get_species_adaptor('core')->dbc->db_handle;
+
+  # HGNC id to ENSG (accept 32700 or HGNC:32700), exclude LRG_*
+  my $sth_hgnc_to_ensg = $dbh_core->prepare(q{
+    SELECT g.stable_id
+      FROM gene g
+      JOIN object_xref ox ON ox.ensembl_id = g.gene_id AND ox.ensembl_object_type = 'Gene'
+      JOIN xref x         ON x.xref_id = ox.xref_id
+      JOIN external_db ed ON ed.external_db_id = x.external_db_id
+     WHERE ed.db_name = 'HGNC'
+       AND (x.dbprimary_acc = ? OR x.dbprimary_acc = CONCAT('HGNC:', ?))
+       AND g.stable_id NOT LIKE 'LRG\_%'
+     LIMIT 1
+  });
+
+  my $csv = Text::CSV_XS->new({ binary => 1, auto_diag => 1 });
+  open(my $IN, "<:encoding(UTF-8)", $infile) or $self->throw("Cannot open $infile: $!");
+
+  my $header = $csv->getline($IN) or $self->throw("Empty CSV: $infile");
+  $csv->column_names(@$header);
+
+  my @phenotypes;
+  my ($n_rows, $n_skip, $n_unmatched) = (0,0,0);
+
+  ROW: while (my $r = $csv->getline_hr($IN)) {
+    $n_rows++;
+
+    my $submitter = _clean_text($r->{'submitter_title'}      // '');
+    my $disease   = _clean_text($r->{'disease_title'}        // '');
+    my $uuid      = _clean_text($r->{'uuid'}                 // '');
+    my $class     = _clean_text($r->{'classification_title'} // '');
+    my $moi       = _clean_text($r->{'moi_title'}            // '');
+    my $curie     = $r->{'gene_curie'}  // '';
+    my $symbol    = $r->{'gene_symbol'} // '';
+
+    # Skip excluded submitters
+    if ($submitter && $skip_href->{$submitter}) { $n_skip++; next ROW; }
+
+    # Skip empty disease with log
+    unless ($disease) {
+      $self->print_logFH(join("\t","UNMATCHED","no_identifier",($uuid//''),($submitter//''),($curie//''),($symbol//''),'')."\n");
+      $n_unmatched++; next ROW;
+    }
+
+    # Resolving the gene mapping - HGNC id is preferred, or HGNC symbol (exclude LRG)
+    my $ensg;
+    if ($curie =~ /^HGNC:(\d+)$/) {
+      $sth_hgnc_to_ensg->execute($1, $1);
+      ($ensg) = $sth_hgnc_to_ensg->fetchrow_array;
+    }
+    unless ($ensg && $ensg !~ /^LRG_/) {
+      if ($symbol && $gene_adaptor) {
+        my $genes = $gene_adaptor->fetch_all_by_external_name($symbol, 'HGNC') || [];
+        @$genes = grep { $_->stable_id !~ /^LRG_/ } @$genes;  # drop LRGs
+        if (@$genes > 1) {
+          my @tmp = grep { (($_->external_name // '') eq $symbol) } @$genes; # exact symbol tie-break
+          $genes = \@tmp if @tmp;
+        }
+        $ensg = @$genes ? $genes->[0]->stable_id : undef;
+      }
+    }
+
+    unless ($ensg) {
+      my $reason = $curie =~ /^HGNC:/ ? 'HGNC_not_found'
+                 : $symbol            ? 'symbol_not_found'
+                 :                      'no_identifier';
+      $self->print_logFH(join("\t","UNMATCHED",$reason,($uuid//''),($submitter//''),$curie,$symbol,$disease)."\n");
+      $n_unmatched++; next ROW;
+    }
+
+    my @acc = ();
+    if (defined $r->{'disease_curie'} && $r->{'disease_curie'} ne '') {
+      my $acc = $r->{'disease_curie'};
+      $acc =~ s/_/:/; # e.g. MONDO_0012345 to MONDO:0012345
+      push @acc, $acc;
+    }
+
+    # build phenotype hash for save_phenotypes()
+    push @phenotypes, {
+      id          => $ensg,
+      type        => 'Gene',
+      description => $disease,
+      gencc_submitter      => $submitter,
+      gencc_classification => $class,
+      gencc_inherit_mode   => $moi,
+      gencc_uuid           => $uuid,
+      accessions           => \@acc,
+    };
+  }
+  close $IN;
+
+  $self->print_logFH("Parsed rows=$n_rows, skipped_submitter=$n_skip, unmatched_gene=$n_unmatched, to_save=".scalar(@phenotypes)."\n")
+    if $self->param('debug_mode');
+
+  return { phenotypes => \@phenotypes };
 }
 
 sub write_output {
