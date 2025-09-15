@@ -182,6 +182,7 @@ sub run {
       JOIN external_db ed ON ed.external_db_id=x.external_db_id
     WHERE ed.db_name='HGNC'
       AND (x.dbprimary_acc=? OR x.dbprimary_acc=CONCAT('HGNC:',?))
+      AND g.stable_id NOT LIKE 'LRG\_%'
     LIMIT 1
   });
   my $dbq_phen_sel = $dbh_var->prepare('SELECT phenotype_id FROM phenotype WHERE description=? LIMIT 1');
@@ -232,19 +233,30 @@ sub run {
     my $sym_raw   = $r->{'gene_symbol'} // '';
 
     if ((my $curie = $r->{'gene_curie'} // '') =~ /^HGNC:(\d+)$/) {
-      # Try both plain number and prefixed HGNC:<number>
+      # Try both plain number and prefixed HGNC:<number>; exclude LRG
       $dbq_hgnc_to_ensg->execute($1, $1);
       ($ensg) = $dbq_hgnc_to_ensg->fetchrow_array;
     }
+
+    # If no ensg, resolve by symbol, restricted to HGNC but excluding 'LRG' IDs
     unless ($ensg) {
-      if ($sym_raw) {
-        my $hits = $gene_adaptor ? ($gene_adaptor->fetch_all_by_external_name($sym_raw) || []) : [];
-        $ensg = @$hits ? $hits->[0]->stable_id : undef;
-        unless ($ensg) {
-          my $g = $gene_adaptor ? eval { $gene_adaptor->fetch_by_display_label($sym_raw) } : undef;
-          $ensg ||= $g && $g->stable_id;
+      if ($sym_raw && $gene_adaptor) {
+        my $genes = $gene_adaptor->fetch_all_by_external_name($sym_raw, 'HGNC');
+        @$genes   = grep { $_->stable_id !~ /^LRG_/ } @$genes;# drop LRG hits
+        if (@$genes > 1) {
+          my @tmp = grep { ($_->external_name // '') eq $sym_raw } @$genes; # exact symbol match
+          $genes = \@tmp if @tmp;
         }
+        $ensg = @$genes ? $genes->[0]->stable_id : undef;
       }
+    }
+
+    # If anything still came back as LRG, consider as not found and log
+    if ($ensg && $ensg =~ /^LRG_/) {
+      my $reason = 'LRG_mapped';
+      $self->print_logFH(join("\t", "UNMATCHED", $reason, ($uuid//''), ($submitter//''), $curie_raw, $sym_raw, $disease) . "\n");
+      $n_no_gene++;
+      next ROW;
     }
 
     # If still no gene, log the reason and skip
