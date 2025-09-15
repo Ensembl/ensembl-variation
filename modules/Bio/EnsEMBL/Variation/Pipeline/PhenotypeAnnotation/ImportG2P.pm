@@ -93,11 +93,7 @@ sub fetch_input {
   $self->errFH($errFH);
   $self->pipelogFH($pipelogFH);
 
-
-
-
-  #get input file G2P:
-  
+  # Get input file G2P
   my $dateStrURL = strftime("%d_%m_%Y", localtime);
 
   for (keys %input_files_url){
@@ -105,12 +101,11 @@ sub fetch_input {
     print $logFH "Found files (".$workdir."/".$file."), will skip new fetch\n" if -e $workdir."/".$file;
     my $resHTTPcode = qx{curl -L -w %{http_code} -X GET $input_files_url{$_} -o $workdir/$file} unless -e $workdir."/".$file;
     print $errFH "WARNING: File cound not be retrieved (HTTP code: $resHTTPcode)" if defined($resHTTPcode) && $resHTTPcode != 200;
-    
   }
 
   gunzip "<$workdir/*.csv.gz>" => "<$workdir/#1.csv>"
   or die "gunzip failed: $GunzipError\n";
-   
+
   my @rows;
   my $g2p_csv = $dateStrURL."DDG2P.csv";
   my $csv = Text::CSV->new ({ binary => 1, sep_char => "," });
@@ -123,16 +118,13 @@ sub fetch_input {
     close $infile;
   } 
 
-  
   open my $fh, ">>:encoding(utf8)", "$workdir/$g2p_csv";
   foreach my $line (@rows) {
     next if $line->[0] =~ /^gene symbol/;
     $csv->say ($fh, $line);
   }
   close $fh or die "$workdir/$g2p_csv: $!";
-  
 
-  
   unlink glob  "$workdir/*.csv.gz"; # to remove the csv.gz file.
   $self->param('ddg2p_file', $g2p_csv);
 }
@@ -220,6 +212,7 @@ sub parse_input_file {
   while (my $content = $csv->getline_hr ($fh)) {
 
     # get data from the line
+    my $g2p_id  = $content->{"g2p id"};
     my $symbol  = $content->{"gene symbol"};
     my $allelic = $content->{"allelic requirement"};
     my $phen    = $content->{"disease name"};
@@ -259,6 +252,7 @@ sub parse_input_file {
           'seq_region_end' => $gene->seq_region_end,
           'seq_region_strand' => $gene->seq_region_strand,
           'inheritance_type' => $allelic,
+          'g2p_stable_id' => $g2p_id,
           'pubmed_id'  => $pubmeds,
           'accessions' => \@accns,
           'g2p_confidence' => $confidence_category,
