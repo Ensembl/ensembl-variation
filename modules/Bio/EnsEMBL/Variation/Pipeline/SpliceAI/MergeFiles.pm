@@ -84,6 +84,11 @@ sub merge_vcf_files {
 
   # Sort final file
   $self->run_system_command("bcftools sort -o $final_file_sorted $final_file");
+  $self->run_system_command("bgzip $final_file_sorted");
+  $self->run_system_command("tabix -p vcf $final_file_sorted.gz");
+
+  # Remove unsorted file
+  $self->run_system_command("rm $final_file");
 }
 
 1;
