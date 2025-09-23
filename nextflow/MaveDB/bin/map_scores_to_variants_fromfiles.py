@@ -329,7 +329,9 @@ def map_scores_to_variants(scores, mappings, metadata, map_ids, matches=None, ro
        continue
 
     row = round_float_columns(row, round)
-    mapped_info = mapping['post_mapped']
+    # some rows don't have post-mapped (i.e. no mapping, so only consider rows with mapping)
+    if 'post_mapped' in mapping.keys():
+      mapped_info = mapping['post_mapped']
     
     # Process phased variants if multiple members exist; otherwise, process the mapping directly
     if mapped_info.get("members", []):
