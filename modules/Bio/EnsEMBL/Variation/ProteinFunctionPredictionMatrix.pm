@@ -593,7 +593,7 @@ sub prediction_from_short {
       $prob = $prob / 1000;
     }
     if ($self->{analysis} eq 'dbnsfp_esm1b') {
-      $prob = ($prob * 100) - 50; # convert to (-50)-50 scale
+      $prob = sprintf '%.1f', ($prob * 100) - 50; # convert to (-50)-50 scale
     }
 
     printf("pfs: 0x%04x => $pred ($prob)\n", $val) if $DEBUG;
