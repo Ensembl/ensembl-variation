@@ -368,6 +368,7 @@ INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES 
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (580, 'oncogenic_status', 'ClinVar somatic oncogenicity review_status', 'ClinVar review_status for assertation for somatic classification of oncogenicity');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (581, 'somatic_date', 'Date last evaluated for ClinVar evidence', 'The most recent date on which evidence was evaluated and this conclusion drawn for ClinVar somatic classification');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (582, 'oncogenic_date', 'Date last evaluated for ClinVar evidence', 'The most recent date on which evidence was evaluated and this conclusion drawn for ClinVar somatic classification of oncogenicity');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (583, 'clinvar_ref_allele', 'ClinVar reference allele', 'The ClinVar reference allele in phenotype association');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (585,'dbnsfp_alphamissense','dbNSFP AlphaMissense prediction','dbNSFP AlphaMissense prediction');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (586,'dbnsfp_esm1b','dbNSFP ESM1b prediction','dbNSFP ESM1b prediction');
 
