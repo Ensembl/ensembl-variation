@@ -33,7 +33,7 @@ package Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::InitPhenotypeAnn
 use strict;
 use warnings;
 
-use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(RGD ANIMALQTL ZFIN GWAS OMIA EGA ORPHANET MIMMORBID G2P CGC IMPC MGI MOUSE HUMAN ANIMALSET NONE SPECIES WORMBASE GROUP_RUN_TYPES SOURCES_IN_RUN_TYPES);
+use Bio::EnsEMBL::Variation::Pipeline::PhenotypeAnnotation::Constants qw(RGD ANIMALQTL ZFIN GWAS OMIA EGA ORPHANET MIMMORBID G2P CGC GENCC IMPC MGI MOUSE HUMAN ANIMALSET NONE SPECIES WORMBASE GROUP_RUN_TYPES SOURCES_IN_RUN_TYPES);
 
 use base qw(Bio::EnsEMBL::Variation::Pipeline::BaseVariationProcess);
 
@@ -49,6 +49,7 @@ my %source2branch = (
   MIMMORBID => 2,
   G2P       => 2,
   CGC       => 2,
+  GENCC     => 2,
 
   MOUSE     => 3,
   IMPC      => 3,
