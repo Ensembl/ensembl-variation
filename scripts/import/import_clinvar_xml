@@ -207,7 +207,7 @@ while($reader->read) {
     my $xml = $reader->readOuterXml;
     my $conv = XML::Hash::XS->new(utf8 => 0, encoding => 'utf-8');
     my $set  = $conv->xml2hash($xml, encoding => 'latin1'); #nice encoding of special char
-    process_clinvar_set($set);
+    process_clinvar_set($set->{ClinVarSet});
   }
 
 }

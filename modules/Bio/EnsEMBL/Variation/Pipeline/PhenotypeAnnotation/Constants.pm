@@ -50,6 +50,7 @@ our @EXPORT_OK = qw(
             MIMMORBID
             G2P
             CGC
+            GENCC
             IMPC
             MGI
             MOUSE
@@ -77,6 +78,7 @@ use constant {
   MIMMORBID => 'MIMmorbid',
   G2P     =>   'G2P',
   CGC       => 'CGC',
+  GENCC     => 'GenCC',
   HUMAN     => 'HUMAN',
   HUMAN_VAR => 'HUMAN_VAR', #perform all variants only imports
   HUMAN_GENE => 'HUMAN_GENE', #perform all gene phenotype only imports
@@ -97,7 +99,7 @@ use constant GROUP_RUN_TYPES => (ANIMALSET => ['OMIA','AnimalQTL'],
                                               'G2P', 'CGC'],
                                 HUMAN_VAR => ['GWAS', 'EGA'],
                                 HUMAN_GENE => ['Orphanet', 'MIMmorbid',
-                                              'G2P', 'CGC'],
+                                              'G2P', 'CGC', 'GenCC'],
                                         );
 
 use constant SOURCES_IN_RUN_TYPES => ( OMIA      => 'ANIMALSET',
@@ -111,6 +113,7 @@ use constant SOURCES_IN_RUN_TYPES => ( OMIA      => 'ANIMALSET',
                                        MIMMORBID => 'HUMAN',
                                        G2P     => 'HUMAN',
                                        CGC       => 'HUMAN',
+                                       GenCC     => 'HUMAN',
                                       );
 
 use constant SPECIES => ( 'RGD'       => ['rattus_norvegicus'],
@@ -128,6 +131,7 @@ use constant SPECIES => ( 'RGD'       => ['rattus_norvegicus'],
                           'MIMMORBID' => ['homo_sapiens'],
                           'G2P'       => ['homo_sapiens'],
                           'CGC'       => ['homo_sapiens'],
+                          'GENCC'     => ['homo_sapiens'],
                           'HUMAN'     => ['homo_sapiens'],
                           'HUMAN_VAR' => ['homo_sapiens'],
                           'HUMAN_GENE'=> ['homo_sapiens'],
