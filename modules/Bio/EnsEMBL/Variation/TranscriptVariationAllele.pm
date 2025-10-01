@@ -1083,6 +1083,38 @@ sub dbnsfp_revel_prediction {
   return $self->_prediction('dbnsfp_revel_prediction', $dbnsfp_revel_prediction);
 }
 
+=head2 dbnsfp_alphamissense_prediction
+
+  Description: Return the qualitative AlphaMissense prediction for the effect of this allele.
+               (Note that we currently only have predictions for variants that 
+               result in single amino acid substitutions in human)
+  Returntype : string (one of 'likely benign', 'benign', 'ambiguous', 'likely pathogenic', 'pathogenic').
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
+sub dbnsfp_alphamissense_prediction {
+  my ($self, $dbnsfp_alphamissense_prediction) = @_;
+  return $self->_prediction('dbnsfp_alphamissense_prediction', $dbnsfp_alphamissense_prediction);
+}
+
+=head2 dbnsfp_esm1b_prediction
+
+  Description: Return the qualitative ESM1b prediction for the effect of this allele.
+               (Note that we currently only have predictions for variants that 
+               result in single amino acid substitutions in human)
+  Returntype : string (one of 'tolerated' or 'deleterious').
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
+sub dbnsfp_esm1b_prediction {
+  my ($self, $dbnsfp_esm1b_prediction) = @_;
+  return $self->_prediction('dbnsfp_esm1b_prediction', $dbnsfp_esm1b_prediction);
+}
+
 =head2 dbnsfp_meta_lr_prediction
 
   Description: Return the qualitative MetaLR prediction for the effect of this allele.
@@ -1169,6 +1201,38 @@ sub cadd_score {
 sub dbnsfp_revel_score {
   my ($self, $dbnsfp_revel_score) = @_;
   return $self->_score('dbnsfp_revel_score');
+}
+
+=head2 dbnsfp_alphamissense_score
+
+  Description: Return the AlphaMissense score for this allele. The score is retrieved from dbNSFP. (We only
+               have predictions for variants that result in single amino acid substitutions in human)
+  Returntype : float if this is a missense change and a prediction is 
+               available, undef otherwise
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
+sub dbnsfp_alphamissense_score {
+  my ($self, $dbnsfp_alphamissense_score) = @_;
+  return $self->_score('dbnsfp_alphamissense_score', $dbnsfp_alphamissense_score);
+}
+
+=head2 dbnsfp_esm1b_score
+
+  Description: Return the ESM1b score for this allele. The score is retrieved from dbNSFP. (We only
+               have predictions for variants that result in single amino acid substitutions in human)
+  Returntype : float if this is a missense change and a prediction is 
+               available, undef otherwise
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
+sub dbnsfp_esm1b_score {
+  my ($self, $dbnsfp_esm1b_score) = @_;
+  return $self->_score('dbnsfp_esm1b_score', $dbnsfp_esm1b_score);
 }
 
 =head2 dbnsfp_meta_lr_score

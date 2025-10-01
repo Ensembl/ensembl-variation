@@ -126,6 +126,17 @@ my $PREDICTION_TO_VAL = {
         'likely disease causing' => 0,
         'likely benign' => 1,
     },
+    dbnsfp_alphamissense => {
+        'likely benign'  => 0,
+        'benign'   => 1,
+        'ambiguous'  => 2,
+        'likely pathogenic'   => 3,
+        'pathogenic'  => 4,
+    },
+    dbnsfp_esm1b => {
+        'tolerated'  => 0,
+        'deleterious'   => 1,
+    },
     dbnsfp_meta_lr => {
         'tolerated'  => 0,
         'damaging'   => 1,
@@ -519,8 +530,11 @@ sub prediction_to_short {
     # this value
      
     my $val = $prob;
+    if ($self->{analysis} eq 'dbnsfp_esm1b') {
+      $val = ($val + 50) / 100; # convert to 0-1 scale
+    }
     if ($self->{analysis} ne 'cadd') {
-      $val = $prob * 1000;
+      $val = $val * 1000;
     }
 
     # we store the prediction in the top $NUM_PRED_BITS bits
@@ -577,6 +591,9 @@ sub prediction_from_short {
     my $prob = ($val & (2**10 - 1));
     if ($self->{analysis} ne 'cadd') {
       $prob = $prob / 1000;
+    }
+    if ($self->{analysis} eq 'dbnsfp_esm1b') {
+      $prob = sprintf '%.1f', ($prob * 100) - 50; # convert to (-50)-50 scale
     }
 
     printf("pfs: 0x%04x => $pred ($prob)\n", $val) if $DEBUG;
