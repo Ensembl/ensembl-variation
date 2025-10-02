@@ -13,6 +13,12 @@ def log(reason, subid="na", **kv):
     sys.stderr.write(f"[{ts}][MaveDB][URN={URN}][STEP={STEP}][REASON={reason}][SUBID={subid}] {extras}\n")
     sys.stderr.flush()
 
+def first_present(*vals, default=None):
+    for v in vals:
+        if v not in (None, {}, []):
+            return v
+    return default
+
 def main(metadata_file, urn):
     # Load the JSON file
     try:
@@ -28,51 +34,74 @@ def main(metadata_file, urn):
     log("extract_start", target_urn=urn)
 
     selected_entry = None
+    selected_experiment = None
+    selected_set_urn = None
     for experiment_set in data.get("experimentSets", []):
         for experiment in experiment_set.get("experiments", []):
             for score_set in experiment.get("scoreSets", []):
                 if score_set.get("urn") == urn:
                     selected_entry = score_set
+                    selected_experiment = experiment
+                    selected_set_urn = experiment_set.get("urn")
                     break
+            if selected_entry: break
+        if selected_entry: break
 
     # Reformat the extracted data to match the downstream-expecting JSON
     if selected_entry:
-        log("metadata_found", title=selected_entry.get("title", ""), shortName=selected_entry.get("license", {}).get("shortName", ""))
+        creator  = first_present(selected_entry.get("createdBy"),
+                                 (selected_experiment or {}).get("createdBy"),
+                                 default={})
+        modifier = first_present(selected_entry.get("modifiedBy"),
+                                 (selected_experiment or {}).get("modifiedBy"),
+                                 default={})
+        primary_pubs = first_present(selected_entry.get("primaryPublicationIdentifiers"),
+                                     (selected_experiment or {}).get("primaryPublicationIdentifiers"),
+                                     default=[])
+        doi_ids = first_present(selected_entry.get("doiIdentifiers"),
+                                (selected_experiment or {}).get("doiIdentifiers"),
+                                default=[])
+
+        lic_short = selected_entry.get("license", {}).get("shortName", "")
+        log("metadata_found",
+            title=selected_entry.get("title", ""),
+            shortName=lic_short if lic_short else "")
+
         formatted_data = {
             "abstractText": selected_entry.get("abstractText", ""),
             "contributors": [],
             "createdBy": {
-                "firstName": selected_entry["createdBy"].get("firstName", ""),
-                "lastName": selected_entry["createdBy"].get("lastName", ""),
-                "orcidId": selected_entry["createdBy"].get("orcidId", ""),
+                "firstName": creator.get("firstName", ""),
+                "lastName":  creator.get("lastName", ""),
+                "orcidId":   creator.get("orcidId", ""),
                 "recordType": "User"
             },
             "creationDate": selected_entry.get("creationDate", ""),
             "datasetColumns": selected_entry.get("datasetColumns", {}),
-            "doiIdentifiers": selected_entry.get("doiIdentifiers", []),
+            "doiIdentifiers": doi_ids,
             "experiment": {
                 "abstractText": selected_entry.get("abstractText", ""),
                 "contributors": [],
                 "createdBy": {
-                    "firstName": selected_entry["createdBy"].get("firstName", ""),
-                    "lastName": selected_entry["createdBy"].get("lastName", ""),
-                    "orcidId": selected_entry["createdBy"].get("orcidId", ""),
+                    "firstName": creator.get("firstName", ""),
+                    "lastName":  creator.get("lastName", ""),
+                    "orcidId":   creator.get("orcidId", ""),
                     "recordType": "User"
                 },
                 "creationDate": selected_entry.get("creationDate", ""),
-                "doiIdentifiers": selected_entry.get("doiIdentifiers", []),
-                "experimentSetUrn": experiment_set.get("urn"),
+                "doiIdentifiers": doi_ids,
+                "experimentSetUrn": selected_set_urn,
                 "extraMetadata": selected_entry.get("extraMetadata", {}),
                 "keywords": [],
                 "methodText": selected_entry.get("methodText", ""),
                 "modificationDate": selected_entry.get("modificationDate", ""),
                 "modifiedBy": {
-                    "firstName": selected_entry["modifiedBy"].get("firstName", ""),
-                    "lastName": selected_entry["modifiedBy"].get("lastName", ""),
-                    "orcidId": selected_entry["modifiedBy"].get("orcidId", ""),
+                    "firstName": modifier.get("firstName", ""),
+                    "lastName":  modifier.get("lastName", ""),
+                    "orcidId":   modifier.get("orcidId", ""),
                     "recordType": "User"
                 },
-                "primaryPublicationIdentifiers": selected_entry.get("primaryPublicationIdentifiers", []),
+                "primaryPublicationIdentifiers": primary_pubs,
                 "publishedDate": selected_entry.get("publishedDate", ""),
                 "rawReadIdentifiers": selected_entry.get("rawReadIdentifiers", []),
                 "recordType": "Experiment",
@@ -90,7 +119,7 @@ def main(metadata_file, urn):
                 "link": selected_entry.get("license", {}).get("link", ""),
                 "longName": selected_entry.get("license", {}).get("longName", ""),
                 "recordType": "ShortLicense",
-                "shortName": selected_entry.get("license", {}).get("shortName", ""),
+                "shortName": lic_short,
                 "version": selected_entry.get("license", {}).get("version", ""),
             },
             "mappingState": "complete",
@@ -99,13 +128,13 @@ def main(metadata_file, urn):
             "methodText": selected_entry.get("methodText", ""),
             "modificationDate": selected_entry.get("modificationDate", ""),
             "modifiedBy": {
-                "firstName": selected_entry["modifiedBy"].get("firstName", ""),
-                "lastName": selected_entry["modifiedBy"].get("lastName", ""),
-                "orcidId": selected_entry["modifiedBy"].get("orcidId", ""),
+                "firstName": modifier.get("firstName", ""),
+                "lastName":  modifier.get("lastName", ""),
+                "orcidId":   modifier.get("orcidId", ""),
                 "recordType": "User"
             },
             "numVariants": selected_entry.get("numVariants", ""),
-            "primaryPublicationIdentifiers": selected_entry.get("primaryPublicationIdentifiers", []),
+            "primaryPublicationIdentifiers": primary_pubs,
             "private": selected_entry.get("private", ""),
             "processingState": selected_entry.get("processingState", ""),
             "publishedDate": selected_entry.get("publishedDate", ""),
@@ -116,6 +145,10 @@ def main(metadata_file, urn):
             "title": selected_entry.get("title", ""),
             "urn": selected_entry.get("urn"),
         }
+
+        if not lic_short:
+            log("license_missing_shortName", target_urn=urn)
+
     else:
         log("metadata_not_found", file=metadata_file, target_urn=urn)
         sys.stderr.flush()
