@@ -8,25 +8,38 @@ process import_from_files {
     tuple val(urn), file("mappings.json"), file("scores.csv")
     
   script:
-  """
-  #!/usr/bin/env bash
-  
-  set +e
-  
-  import_from_files.sh ${urn} ${params.mappings_path} ${params.scores_path}
+"""
+#!/usr/bin/env bash
+set +e
 
-  # Check if the mappings.json file exists and is non-empty, if not, create an empty file
-  if [ ! -s mappings.json ]; then
-      echo "{}" > mappings.json
-      echo "WARNING: mappings.json is empty for ${urn}; using fallback empty JSON." >&2
-  fi
-  
-  # Check if the scores.csv file exists and is non-empty, if not, create an empty file
-  if [ ! -s scores.csv ]; then
-      echo "" > scores.csv
-      echo "WARNING: scores.csv is empty for ${urn}; using fallback empty file." >&2
-  fi
+log() {
+  local ts; ts="$(date -Is)"
+  >&2 echo "[$ts][MaveDB][URN=${MAVEDB_URN:-na}][STEP=${STEP:-na}][REASON=$1][SUBID=${2:-na}] ${3:-}"
+}
 
-  echo "Import from files completed for ${urn}"
-  """
+log "stage_start"
+
+# run the stager (does its own logging if you've added it)
+import_from_files.sh ${urn} ${params.mappings_path} ${params.scores_path}
+rc=$?
+if [ "$rc" -ne 0 ]; then
+  log "stager_nonzero_exit" "na" "rc=$rc"
+fi
+
+if [ ! -s mappings.json ]; then
+  echo "{}" > mappings.json
+  log "missing_mappings_after_staging; wrote empty JSON"
+else
+  log "mappings_present"
+fi
+
+if [ ! -s scores.csv ]; then
+  echo "" > scores.csv
+  log "missing_scores_after_staging; wrote empty CSV"
+else
+  log "scores_present"
+fi
+
+log "stage_complete"
+"""
 }
