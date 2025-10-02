@@ -3,7 +3,9 @@
 // It then reformats it to match the JSON format expected by the rest of the pipeline which 
 // was originally written to handle a different JSON structure. It uses extract_metadata.py to do this. 
 process extract_metadata {
-  // publishDir "${params.output}", mode: 'copy', overwrite: true
+  tag { urn }
+  env.MAVEDB_URN = { urn }
+  env.STEP       = 'extract_metadata'
 
   input:
     val urn
@@ -15,16 +17,28 @@ process extract_metadata {
   script:
   """
   #!/usr/bin/env bash
-  
   set +e
-  
+
+  log() {
+    local ts; ts="\$(date -Is)"
+    >&2 echo "[\$ts][MaveDB][URN=\${MAVEDB_URN:-na}][STEP=\${STEP:-na}][REASON=\$1][SUBID=\${2:-na}] \${3:-}"
+  }
+
+  log "stage_start"
+
   extract_metadata.py --metadata_file ${metadata_file} --urn "${urn}"
-  
-  # If metadata.json is missing or empty, create fallback files.
+  rc=\$?
+  if [ "\$rc" -ne 0 ]; then
+    log "extractor_nonzero_exit" "na" "rc=\$rc"
+  fi
+
+  # If metadata.json is missing or empty, create fallback files (unchanged functionality)
   if [ ! -s metadata.json ]; then
       echo "{}" > metadata.json
-      echo "" > LICENCE.txt
-      echo "WARNING: No metadata extracted for ${urn}, using fallback empty file." >&2
+      echo ""  > LICENCE.txt
+      log "missing_metadata_after_extractor; wrote empty JSON/LICENCE"
   fi
+
+  log "stage_complete"
   """
 }
