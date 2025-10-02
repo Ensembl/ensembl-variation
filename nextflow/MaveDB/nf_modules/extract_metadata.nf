@@ -24,7 +24,7 @@ process extract_metadata {
     >&2 echo "[\$ts][MaveDB][URN=\${MAVEDB_URN:-na}][STEP=\${STEP:-na}][REASON=\$1][SUBID=\${2:-na}] \${3:-}"
   }
 
-  log "stage_start"
+  log "stage_start" "na" "metadata_file=${metadata_file}"
 
   extract_metadata.py --metadata_file ${metadata_file} --urn "${urn}"
   rc=\$?
@@ -39,6 +39,8 @@ process extract_metadata {
       log "missing_metadata_after_extractor; wrote empty JSON/LICENCE"
   fi
 
-  log "stage_complete"
+  meta_bytes=\$(wc -c < metadata.json 2>/dev/null || echo 0)
+  lic_bytes=\$(wc -c < LICENCE.txt 2>/dev/null || echo 0)
+  log "stage_complete" "na" "meta_bytes=\${meta_bytes} licence_bytes=\${lic_bytes} out=metadata.json,LICENCE.txt"
   """
 }
