@@ -1,7 +1,8 @@
 process map_scores_to_HGVSp_variants {
-  // Download MaveDB scores and map associated variants by HGVSp
+  tag { urn }
+  env.MAVEDB_URN = { urn }
+  env.STEP       = 'map_scores_hgvsp'
 
-  tag "${urn}"
   input:  tuple val(urn), path(mappings), path(scores), path(metadata), path(vr)
   output: tuple val(urn), path('map_*.tsv')
 
@@ -9,35 +10,42 @@ process map_scores_to_HGVSp_variants {
 
   script:
   def round = params.round ? "--round ${params.round}" : ""
-
-  // If --from_files is true, use local files instead of downloading via the MaveDB API
   def script_name = params.from_files ? "map_scores_to_variants_fromfiles.py" : "map_scores_to_variants.py"
 
   """
   #!/usr/bin/env bash
-  
   set +e
-  
+
+  log() { local ts; ts="\$(date -Is)"; >&2 echo "[\$ts][MaveDB][URN=\${MAVEDB_URN:-na}][STEP=\${STEP:-na}][REASON=\$1][SUBID=\${2:-na}] \${3:-}"; }
+
+  log "stage_start"
+
   ${script_name} --urn ${urn} \\
                  --scores ${scores} \\
                  --mappings ${mappings} \\
                  --metadata ${metadata} \\
-                 --vr $vr \\
+                 --vr ${vr} \\
                  ${round} \\
                  --output map_${urn}.tsv
-
-  # Check if the output file exists and is non-empty, if not, create an empty file
-  if [ ! -s map_${urn}.tsv ]; then
-      echo "WARNING: map_${urn}.tsv is empty or doesn't exist. Creating fallback empty file." >&2
-      echo "" > map_${urn}.tsv
+  rc=\$?
+  if [ "\$rc" -ne 0 ]; then
+    log "mapper_nonzero_exit" "na" "rc=\$rc"
   fi
+
+  if [ ! -s map_${urn}.tsv ]; then
+      : > map_${urn}.tsv
+      log "mapper_empty_output_created"
+  fi
+
+  log "stage_complete"
   """
 }
 
 process map_scores_to_HGVSg_variants {
-  // Download MaveDB scores and map associated variants from HGVSg
+  tag { urn }
+  env.MAVEDB_URN = { urn }
+  env.STEP       = 'map_scores_hgvs_g'
 
-  tag "${urn}"
   input:  tuple val(urn), path(mappings), path(scores), path(metadata), val(hgvs)
   output: tuple val(urn), path(metadata), path('*map_*.tsv')
 
@@ -45,12 +53,15 @@ process map_scores_to_HGVSg_variants {
 
   script:
   def round = params.round ? "--round ${params.round}" : ""
-
-  // If --from_files is true, use local files instead of downloading via the MaveDB API
   def script_name = params.from_files ? "map_scores_to_variants_fromfiles.py" : "map_scores_to_variants.py"
 
   """
+  #!/usr/bin/env bash
   set +e
+
+  log() { local ts; ts="\$(date -Is)"; >&2 echo "[\$ts][MaveDB][URN=\${MAVEDB_URN:-na}][STEP=\${STEP:-na}][REASON=\$1][SUBID=\${2:-na}] \${3:-}"; }
+
+  log "stage_start"
 
   ${script_name} --urn ${urn} \\
                  --scores ${scores} \\
@@ -58,11 +69,16 @@ process map_scores_to_HGVSg_variants {
                  --metadata ${metadata} \\
                  ${round} \\
                  --output map_${urn}.tsv
-
-  # Check if the output file exists and is non-empty, if not, create an empty file
-  if [ ! -s map_${urn}.tsv ]; then
-      echo "WARNING: map_${urn}.tsv is empty or doesn't exist. Creating fallback empty file." >&2
-      echo "" > map_${urn}.tsv
+  rc=\$?
+  if [ "\$rc" -ne 0 ]; then
+    log "mapper_nonzero_exit" "na" "rc=\$rc"
   fi
+
+  if [ ! -s map_${urn}.tsv ]; then
+      : > map_${urn}.tsv
+      log "mapper_empty_output_created"
+  fi
+
+  log "stage_complete"
   """
 }
