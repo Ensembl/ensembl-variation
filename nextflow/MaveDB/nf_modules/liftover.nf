@@ -52,11 +52,11 @@ process liftover_to_hg38 {
   fi
 
   # Ensure an output exists
-  if [ ! -s liftover_${urn}.tsv ]; then
-      : > liftover_${urn}.tsv
+  if [ ! -s liftover_map_${urn}.tsv ]; then
+      : > liftover_map_${urn}.tsv
       log "liftover_empty_output_created"
   fi
 
-  log "stage_complete" "out=liftover_${urn}.tsv"
+  log "stage_complete" "out=liftover_map_${urn}.tsv"
   """
 }
