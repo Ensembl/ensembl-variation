@@ -99,7 +99,9 @@ while (my ($dbname) = $sth_h->fetchrow_array) {
   next if ($dbname =~ /^master_schema/ || $dbname =~ /private/);
 
   next if ($dbname !~ /^[a-z]+_[a-z]+_variation_\d+_\d+$/i &&
-           $dbname !~ /^ovis_aries_rambouillet_variation_\d+_\d+$/ &&
+           $dbname !~ /^ovis_aries_texel_variation_\d+_\d+$/ &&
+           $dbname !~ /^felis_catus_abyssinian_variation_\d+_\d+$/ &&
+           $dbname !~ /^gallus_gallus_gca000002315v5_variation_\d+_\d+$/ &&
            $dbname !~ /^canis_lupus_familiaris(boxer)?_variation_\d+_\d+$/ );
 
   $dbname =~ /^(.+)_variation_.+_(.+)/;
