@@ -4,8 +4,6 @@
 // was originally written to handle a different JSON structure. It uses extract_metadata.py to do this. 
 process extract_metadata {
   tag { urn }
-  env.MAVEDB_URN = { urn }
-  env.STEP       = 'extract_metadata'
 
   input:
     val urn
@@ -18,6 +16,8 @@ process extract_metadata {
   """
   #!/usr/bin/env bash
   set +e
+  export MAVEDB_URN='${urn}'
+  export STEP='extract_metadata'
 
   log() {
     local ts; ts="\$(date -Is)"

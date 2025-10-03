@@ -32,12 +32,11 @@ process liftover_to_hg38 {
   output:
     tuple val(urn), path("liftover_*.tsv")
 
-  env.MAVEDB_URN = { urn }
-  env.STEP       = 'liftover'
-
   """
   #!/usr/bin/env bash
   set +e
+  export MAVEDB_URN='${urn}'
+  export STEP='liftover'
 
   log() { ts=\$(date -Is); >&2 echo "[\$ts][MaveDB][URN=\${MAVEDB_URN:-na}][STEP=\${STEP:-na}][REASON=\$1][SUBID=\${2:-na}] \${3:-}"; }
 

@@ -1,21 +1,22 @@
 process map_scores_to_HGVSp_variants {
   tag { urn }
-  env.MAVEDB_URN = { urn }
-  env.STEP       = 'map_scores_hgvsp'
 
-  input:  tuple val(urn), path(mappings), path(scores), path(metadata), path(vr)
-  output: tuple val(urn), path('map_*.tsv')
+  input:
+    tuple val(urn), path(mappings), path(scores), path(metadata), path(vr)
+  output:
+    tuple val(urn), path('map_*.tsv')
 
   memory { mappings.size() * 4.B + 1.GB }
-
+  
   script:
-  def round = params.round ? "--round ${params.round}" : ""
+  def round       = params.round ? "--round ${params.round}" : ""
   def script_name = params.from_files ? "map_scores_to_variants_fromfiles.py" : "map_scores_to_variants.py"
-
   """
   #!/usr/bin/env bash
   set +e
 
+  export MAVEDB_URN='${urn}'
+  export STEP='map_scores_hgvsp'
   log() { local ts; ts="\$(date -Is)"; >&2 echo "[\$ts][MaveDB][URN=\${MAVEDB_URN:-na}][STEP=\${STEP:-na}][REASON=\$1][SUBID=\${2:-na}] \${3:-}"; }
 
   log "stage_start"
@@ -43,22 +44,23 @@ process map_scores_to_HGVSp_variants {
 
 process map_scores_to_HGVSg_variants {
   tag { urn }
-  env.MAVEDB_URN = { urn }
-  env.STEP       = 'map_scores_hgvs_g'
 
-  input:  tuple val(urn), path(mappings), path(scores), path(metadata), val(hgvs)
-  output: tuple val(urn), path(metadata), path('*map_*.tsv')
+  input:
+    tuple val(urn), path(mappings), path(scores), path(metadata), val(hgvs)
+  output:
+    tuple val(urn), path(metadata), path('*map_*.tsv')
 
   memory { mappings.size() * 2.B + 1.GB }
 
   script:
-  def round = params.round ? "--round ${params.round}" : ""
+  def round       = params.round ? "--round ${params.round}" : ""
   def script_name = params.from_files ? "map_scores_to_variants_fromfiles.py" : "map_scores_to_variants.py"
-
   """
   #!/usr/bin/env bash
   set +e
 
+  export MAVEDB_URN='${urn}'
+  export STEP='map_scores_hgvs_g'
   log() { local ts; ts="\$(date -Is)"; >&2 echo "[\$ts][MaveDB][URN=\${MAVEDB_URN:-na}][STEP=\${STEP:-na}][REASON=\$1][SUBID=\${2:-na}] \${3:-}"; }
 
   log "stage_start"
