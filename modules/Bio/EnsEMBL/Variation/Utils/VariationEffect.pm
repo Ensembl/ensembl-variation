@@ -1369,6 +1369,10 @@ sub _overlaps_stop_codon {
 
         my ($cdna_start, $cdna_end) = ($bvfo->cdna_start, $bvfo->cdna_end);
         return 0 unless $cdna_start && $cdna_end;
+
+        # for insertion add inserted seq length to see overlap
+        my $vf_feature_seq = $bvfoa->feature_seq;
+        $cdna_end = $cdna_end < $cdna_start ? $cdna_start + length $vf_feature_seq : $cdna_end;
         
         $cache->{overlaps_stop_codon} = overlap(
             $cdna_start, $cdna_end,
