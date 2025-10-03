@@ -1122,7 +1122,7 @@ sub inframe_insertion {
         # trim off everything after it
         # this allows us to detect inframe insertions that retain a stop
         $alt_pep =~ s/\*.+/\*/;
-        return 0 if $ref_pep eq "*" && $alt_pep eq "*";
+        return 0 if $ref_pep eq "*" && $alt_pep eq "*"; # e.g. ref codon - TAG, alt codon - TAAG 
         return 0 if $ref_pep eq "" && $alt_pep eq "*";
         return 1 if ($alt_pep =~ /^\Q$ref_pep\E/) || ($alt_pep =~ /\Q$ref_pep\E$/);
 
@@ -1251,7 +1251,7 @@ sub stop_lost {
     #        }
             
             my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
-            if(defined($ref_pep) && defined($alt_pep) && $alt_pep !~ /\X/) {
+            if(defined($ref_pep) && defined($alt_pep) && $alt_pep !~ 'X') {
                 $cache->{stop_lost} = ( ($alt_pep !~ /\*/) and ($ref_pep =~ /\*/) );
             }
             else {
