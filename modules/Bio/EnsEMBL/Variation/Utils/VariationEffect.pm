@@ -1118,12 +1118,13 @@ sub inframe_insertion {
         # we can use start_retained to check this
         return 0 if start_retained_variant(@_) && $alt_pep =~ /\Q$ref_pep\E$/;
 
+        return 0 if $ref_pep eq "*" && $alt_pep eq "*"; # e.g. ref codon - TAG, alt codon - TAAG 
+        return 0 if $ref_pep eq "" && $alt_pep eq "*";
+
         # if we have a stop codon in the alt peptide
         # trim off everything after it
         # this allows us to detect inframe insertions that retain a stop
         $alt_pep =~ s/\*.+/\*/;
-        return 0 if $ref_pep eq "*" && $alt_pep eq "*"; # e.g. ref codon - TAG, alt codon - TAAG 
-        return 0 if $ref_pep eq "" && $alt_pep eq "*";
         return 1 if ($alt_pep =~ /^\Q$ref_pep\E/) || ($alt_pep =~ /\Q$ref_pep\E$/);
 
     }
@@ -1372,8 +1373,10 @@ sub _overlaps_stop_codon {
 
         # for insertion add inserted seq length to see overlap
         my $vf_feature_seq = $bvfoa->feature_seq;
-        $cdna_end = $cdna_end < $cdna_start ? $cdna_start + length $vf_feature_seq : $cdna_end;
-        
+        $cdna_end = (($cdna_end < $cdna_start) && $vf_feature_seq =~ /^[ACTGN]+$/) ? 
+            $cdna_start + length $vf_feature_seq : 
+            $cdna_end;
+
         $cache->{overlaps_stop_codon} = overlap(
             $cdna_start, $cdna_end,
             $feat->cdna_coding_end - 2, $feat->cdna_coding_end
