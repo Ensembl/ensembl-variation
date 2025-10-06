@@ -75,7 +75,7 @@ my $triplet = {
   'aa' => 'G'
 };
 
-my @file_versions = ('3.5a', '4.0a', '4.1a', '4.2a', '4.3a', '4.4a', '4.5c', '4.6c', '4.7c', '4.8c', '4.9c', '4.9a');
+my @file_versions = ('3.5a', '4.0a', '4.1a', '4.2a', '4.3a', '4.4a', '4.5c', '4.6c', '4.7c', '4.8c', '4.9c', '4.9a', '5.2a', '5.2c');
 my @assemblies = ('GRCh37', 'GRCh38');
 my $expected_results = {
   'GRCh37' => {
@@ -98,6 +98,8 @@ my $expected_results = {
     '4.8c' => { 'dbnsfp_mutation_assessor' => { '21' => { 'A' => { 'high' => '0.99996' }, 'S' => { 'high' => '0.99244' }, 'D' => { 'high' => '0.99996' }, 'C' => { 'high' => '0.99996' }, 'R' => { 'high' => '0.99996' }, 'V' => { 'high' => '0.99996' }}}, 'dbnsfp_meta_lr' => { '21' => { 'A' => { 'damaging' => '0.9814' },'S' => {'damaging' => '0.9798'},'D' => {'damaging' => '0.9836'},'C' => {'damaging' => '0.9836'},'R' => {'damaging' => '0.9814'},'V' => {'damaging' => '0.9814'}}},},
     '4.9c' => { 'dbnsfp_mutation_assessor' => { '21' => { 'A' => { 'high' => '0.99996' }, 'S' => { 'high' => '0.99244' }, 'D' => { 'high' => '0.99996' }, 'C' => { 'high' => '0.99996' }, 'R' => { 'high' => '0.99996' }, 'V' => { 'high' => '0.99996' }}}, 'dbnsfp_meta_lr' => { '21' => { 'A' => { 'damaging' => '0.9814' },'S' => {'damaging' => '0.9798'},'D' => {'damaging' => '0.9836'},'C' => {'damaging' => '0.9836'},'R' => {'damaging' => '0.9814'},'V' => {'damaging' => '0.9814'}}},},
     '4.9a' => { 'dbnsfp_revel' => { '21' => { 'A' => { 'likely disease causing' => '0.940' }, 'S' => { 'likely disease causing' => '0.943' }, 'D' => { 'likely disease causing' => '0.908' }, 'C' => { 'likely disease causing' => '0.901' }, 'R' => { 'likely disease causing' => '0.944' }, 'V' => { 'likely disease causing' => '0.965' }}}, 'dbnsfp_mutation_assessor' => { '21' => { 'A' => { 'high' => '0.99996' }, 'S' => { 'high' => '0.99244' }, 'D' => { 'high' => '0.99996' }, 'C' => { 'high' => '0.99996' }, 'R' => { 'high' => '0.99996' }, 'V' => { 'high' => '0.99996' }}}, 'dbnsfp_meta_lr' => { '21' => { 'A' => { 'damaging' => '0.9814' },'S' => {'damaging' => '0.9798'},'D' => {'damaging' => '0.9836'},'C' => {'damaging' => '0.9836'},'R' => {'damaging' => '0.9814'},'V' => {'damaging' => '0.9814'}}},},
+    '5.2a' => { 'dbnsfp_revel' => { '21' => { 'A' => { 'likely disease causing' => '0.940' }, 'S' => { 'likely disease causing' => '0.943' }, 'D' => { 'likely disease causing' => '0.908' }, 'C' => { 'likely disease causing' => '0.901' }, 'R' => { 'likely disease causing' => '0.944' }, 'V' => { 'likely disease causing' => '0.965' }}}, 'dbnsfp_alphamissense' => { '21' => { 'A' => { 'pathogenic' => '0.9962' }, 'S' => { 'pathogenic' => '0.9979' }, 'D' => { 'pathogenic' => '0.9994' }, 'C' => { 'pathogenic' => '0.9992' }, 'R' => { 'pathogenic' => '0.9995' }, 'V' => { 'pathogenic' => '0.9991' }}}, 'dbnsfp_esm1b' => { '21' => { 'A' => { 'deleterious' => '-11.5' },'S' => {'deleterious' => '-11.8'},'D' => {'deleterious' => '-11.4'},'C' => {'deleterious' => '-11.9'},'R' => {'deleterious' => '-9.7'},'V' => {'deleterious' => '-12.2'}}},},
+    '5.2c' => { 'dbnsfp_alphamissense' => { '21' => { 'A' => { 'pathogenic' => '0.9962' }, 'S' => { 'pathogenic' => '0.9979' }, 'D' => { 'pathogenic' => '0.9994' }, 'C' => { 'pathogenic' => '0.9992' }, 'R' => { 'pathogenic' => '0.9995' }, 'V' => { 'pathogenic' => '0.9991' }}}, 'dbnsfp_esm1b' => { '21' => { 'A' => { 'deleterious' => '-11.5' },'S' => {'deleterious' => '-11.8'},'D' => {'deleterious' => '-11.4'},'C' => {'deleterious' => '-11.9'},'R' => {'deleterious' => '-9.7'},'V' => {'deleterious' => '-12.2'}}},},
   },
 
   'GRCh38' => {
@@ -120,6 +122,8 @@ my $expected_results = {
     '4.8c' => { 'dbnsfp_mutation_assessor' => { '21' => { 'A' => { 'high' => '0.99996' }, 'S' => { 'high' => '0.99244' }, 'D' => { 'high' => '0.99996' }, 'C' => { 'high' => '0.99996' }, 'R' => { 'high' => '0.99996' }, 'V' => { 'high' => '0.99996' }}}, 'dbnsfp_meta_lr' => { '21' => { 'A' => { 'damaging' => '0.9814' },'S' => {'damaging' => '0.9798'},'D' => {'damaging' => '0.9836'},'C' => {'damaging' => '0.9836'},'R' => {'damaging' => '0.9814'},'V' => {'damaging' => '0.9814'}}},},
     '4.9c' => { 'dbnsfp_mutation_assessor' => { '21' => { 'A' => { 'high' => '0.99996' }, 'S' => { 'high' => '0.99244' }, 'D' => { 'high' => '0.99996' }, 'C' => { 'high' => '0.99996' }, 'R' => { 'high' => '0.99996' }, 'V' => { 'high' => '0.99996' }}}, 'dbnsfp_meta_lr' => { '21' => { 'A' => { 'damaging' => '0.9814' },'S' => {'damaging' => '0.9798'},'D' => {'damaging' => '0.9836'},'C' => {'damaging' => '0.9836'},'R' => {'damaging' => '0.9814'},'V' => {'damaging' => '0.9814'}}},},
     '4.9a' => { 'dbnsfp_revel' => { '21' => { 'A' => { 'likely disease causing' => '0.940' }, 'S' => { 'likely disease causing' => '0.943' }, 'D' => { 'likely disease causing' => '0.908' }, 'C' => { 'likely disease causing' => '0.901' }, 'R' => { 'likely disease causing' => '0.944' }, 'V' => { 'likely disease causing' => '0.965' }}}, 'dbnsfp_mutation_assessor' => { '21' => { 'A' => { 'high' => '0.99996' }, 'S' => { 'high' => '0.99244' }, 'D' => { 'high' => '0.99996' }, 'C' => { 'high' => '0.99996' }, 'R' => { 'high' => '0.99996' }, 'V' => { 'high' => '0.99996' }}}, 'dbnsfp_meta_lr' => { '21' => { 'A' => { 'damaging' => '0.9814' },'S' => {'damaging' => '0.9798'},'D' => {'damaging' => '0.9836'},'C' => {'damaging' => '0.9836'},'R' => {'damaging' => '0.9814'},'V' => {'damaging' => '0.9814'}}},},
+    '5.2a' => { 'dbnsfp_revel' => { '21' => { 'A' => { 'likely disease causing' => '0.940' }, 'S' => { 'likely disease causing' => '0.943' }, 'D' => { 'likely disease causing' => '0.908' }, 'C' => { 'likely disease causing' => '0.901' }, 'R' => { 'likely disease causing' => '0.944' }, 'V' => { 'likely disease causing' => '0.965' }}}, 'dbnsfp_alphamissense' => { '21' => { 'A' => { 'pathogenic' => '0.9962' }, 'S' => { 'pathogenic' => '0.9979' }, 'D' => { 'pathogenic' => '0.9994' }, 'C' => { 'pathogenic' => '0.9992' }, 'R' => { 'pathogenic' => '0.9995' }, 'V' => { 'pathogenic' => '0.9991' }}}, 'dbnsfp_esm1b' => { '21' => { 'A' => { 'deleterious' => '-11.5' },'S' => {'deleterious' => '-11.8'},'D' => {'deleterious' => '-11.4'},'C' => {'deleterious' => '-11.9'},'R' => {'deleterious' => '-9.7'},'V' => {'deleterious' => '-12.2'}}},},
+    '5.2c' => { 'dbnsfp_alphamissense' => { '21' => { 'A' => { 'pathogenic' => '0.9962' }, 'S' => { 'pathogenic' => '0.9979' }, 'D' => { 'pathogenic' => '0.9994' }, 'C' => { 'pathogenic' => '0.9992' }, 'R' => { 'pathogenic' => '0.9995' }, 'V' => { 'pathogenic' => '0.9991' }}}, 'dbnsfp_esm1b' => { '21' => { 'A' => { 'deleterious' => '-11.5' },'S' => {'deleterious' => '-11.8'},'D' => {'deleterious' => '-11.4'},'C' => {'deleterious' => '-11.9'},'R' => {'deleterious' => '-9.7'},'V' => {'deleterious' => '-12.2'}}},},
   }
 };
 
@@ -422,6 +426,42 @@ my $expected_rows =  [
         ];
 
 cmp_deeply(\@rows, $expected_rows, "dbNSFP rows for location 13:32907425-32907425");
+
+%dbNSFP_params = (
+  -working_dir => $dir,
+  -species => 'Homo_sapiens',
+  -annotation_file => $dir . '/testdata/test_data_dbNSFP5.2c_GRCh37.txt.gz',
+  -assembly => 'GRCh37',
+  -annotation_file_version => '5.2c',
+  -pipeline_mode => 1,
+  -write_mode => 0,
+  -debug_mode => 1,
+);
+
+my $dbNSFP_2 = Bio::EnsEMBL::Variation::Utils::DbNSFPProteinFunctionAnnotation->new(%dbNSFP_params);
+ok($dbNSFP_2->working_dir eq $dir, 'working_dir');
+$dbNSFP_2->run('959d80b7a903d37397e2203612e1d6e4', {'959d80b7a903d37397e2203612e1d6e4' => 'ENSP00000304891'});
+$debug_data = get_debug_data($dbNSFP_2, '959d80b7a903d37397e2203612e1d6e4', 226, 'M');
+$expected_results = [
+          {
+            'position' => 226,
+            'analysis' => 'dbnsfp_esm1b',
+            'new_score' => '-3.4',
+            'aa' => 'M',
+            'new_pred' => 'tolerated'
+          },
+          {
+            'new_score' => '0.077',
+            'aa' => 'M',
+            'new_pred' => 'likely benign',
+            'position' => 226,
+            'analysis' => 'dbnsfp_alphamissense'
+          }
+        ];
+ 
+cmp_deeply($debug_data, $expected_results, "dbNSFP - pick specific trancript data where multiple transcripts data available.");
+$amino_acids = join('', @{$dbNSFP_2->amino_acids}[0..9]);
+ok($amino_acids eq 'MALSDVDVKK', 'Compare first 10 amino acids ' . $amino_acids);
 
 
 my %cadd_params = ( 

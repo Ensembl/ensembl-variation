@@ -380,3 +380,5 @@
 663	544	non_specified
 664	544	tumour
 665	544	trait
+683	12	dbnsfp_alphamissense
+684	12	dbnsfp_esm1b
