@@ -1,6 +1,4 @@
-"""
-Version: 1.0 (2022-08-22)
-"""
+#!/usr/bin/env python3
 
 import argparse
 import json
@@ -10,13 +8,24 @@ import urllib.parse
 import urllib.request
 import os
 from ftplib import FTP, error_perm
+import pandas as pd
+import io
+
+
+"""
+Script to download files from the OpenTargets FTP and prepare them for the
+phenotype pipeline.
+
+Usage:
+    python download_cgc_file.py
+"""
 
 
 HOST = "ftp.ebi.ac.uk"
 BASE_DIR = "/pub/databases/opentargets/platform"
-EVIDENCE_DIR = "output/etl/json/evidence/sourceId=cancer_gene_census"
+EVIDENCE_DIR = "output/association_by_datasource_direct"
 
-def find_json_files(ftp, pathname):
+def find_parquet_files(ftp, pathname):
     current = ftp.pwd()
     try:
         ftp.cwd(pathname)
@@ -25,10 +34,12 @@ def find_json_files(ftp, pathname):
         return  # file or private directory
 
     for name in ftp.nlst():
-        if name.endswith(".json"):
+        if name.endswith(".parquet"):
             yield f"{pathname}/{name}"
+        elif name == "_SUCCESS":
+            continue
         else:
-            yield from find_json_files(ftp, f"{pathname}/{name}")
+            yield from find_parquet_files(ftp, f"{pathname}/{name}")
 
     ftp.cwd(current)
 
@@ -38,13 +49,23 @@ def walk_ftp(host, dirname):
     ftp.login()
 
     try:
-        for filename in find_json_files(ftp, dirname):
+        for filename in find_parquet_files(ftp, dirname):
             url = f"ftp://{host}{filename}"
 
-            items = []
-            with urllib.request.urlopen(url) as f:
-                for line in f:
-                    yield json.loads(line.decode("utf-8").rstrip())
+            with urllib.request.urlopen(url) as resp:
+                data = resp.read()
+
+            try:
+                df = pd.read_parquet(io.BytesIO(data))
+            except Exception as e:
+                raise RuntimeError("Failed to read parquet file.")
+
+            # Convert DataFrame to a list of JSON serialisable python dicts
+            records = json.loads(df.to_json(orient='records', date_format='iso'))
+
+            for rec in records:
+                yield rec
+
     finally:
         ftp.quit()
 
@@ -71,10 +92,7 @@ def main():
             parser.exit(status=2,
                         message=f"error: invalid release version: "
                                 f"{args.release}\n")
-        elif release == "21.02":
-            evidence_dir = f"{BASE_DIR}/21.02/output/ETL/evidences/succeeded/"
-            evidence_dir += "sourceId=cancer_gene_census/"
-        elif float(release) >= 22.07:
+        elif float(release) < 25.03:
             parser.exit(status=2,
                         message=f"error: release {args.release} "
                                 f"not supported\n")
@@ -84,15 +102,15 @@ def main():
 
     with open(output_file, "w") as f:
       for obj in walk_ftp(HOST, evidence_dir):
-          try:
-              disease_id = obj["diseaseId"]
-          except KeyError:
-              continue
+        try:
+            disease_id = obj["diseaseId"]
+        except KeyError:
+            continue
 
-          if obj["datasourceId"] != "cancer_gene_census":
-              continue
+        if obj["datasourceId"] != "cancer_gene_census":
+            continue
 
-          f.write(json.dumps(obj) + "\n")
+        f.write(json.dumps(obj) + "\n")
 
 if __name__ == '__main__':
     main()
