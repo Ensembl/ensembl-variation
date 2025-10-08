@@ -1540,7 +1540,7 @@
             "species": "meleagris_gallopavo",
             "assembly": "Turkey_5.1",
             "type": "remote",
-            "filename_template": "https://ftp.ensembl.org/pub/data_files/meleagris_gallopavo/Turkey_5.1/variant_annotation/CADD_ALL.tsv.gz",
+            "filename_template": "https://ftp.ensembl.org/pub/data_files/meleagris_gallopavo/Turkey_5.1/variant_annotation/tCADD.tsv.gz",
             "annotation_type": "cadd"
         }
         
