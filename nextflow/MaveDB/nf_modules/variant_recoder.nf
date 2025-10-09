@@ -7,7 +7,11 @@ process run_variant_recoder {
     tuple val(urn), path(mappings), path(scores), path(metadata), path('vr.json')
 
   tag "${urn}"
-  memory { file(hgvs.target).countLines() * 100.MB + 10.GB }
+  memory { 
+    def want = file(hgvs.target).countLines() * 100.MB + 10.GB 
+    def cap  = 300.GB
+    [want, cap].min()
+  }
 
   script:
   def bin = "${params.ensembl}/ensembl-vep"
