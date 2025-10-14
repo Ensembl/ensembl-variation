@@ -1119,7 +1119,6 @@ sub inframe_insertion {
         return 0 if start_retained_variant(@_) && $alt_pep =~ /\Q$ref_pep\E$/;
 
         return 0 if $ref_pep eq "*" && $alt_pep eq "*"; # e.g. ref codon - TAG, alt codon - TAAG 
-        return 0 if $ref_pep eq "" && $alt_pep eq "*";
 
         # if we have a stop codon in the alt peptide
         # trim off everything after it
@@ -1349,8 +1348,9 @@ sub ref_eq_alt_sequence {
    
    # 1 is the ref_seq eq $mut_substring and the final stop is *
    # 2 is * in ref_pep and the same index position exists for both the ref and alt pep
+#    print $final_stop, "\n";
    return 1 if (
-        ($ref_seq eq $mut_substring && defined($final_stop) && $final_stop eq "*") ||  
+        ($ref_seq eq $mut_substring && defined($final_stop) && $final_stop =~ /^\Q*\E/) ||
         ($ref_pep =~ /\*/ && (index($ref_pep, "*") == index($alt_pep, "*")))
     );
    return 0;
