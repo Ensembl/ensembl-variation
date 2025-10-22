@@ -21,7 +21,11 @@ export MAVEDB_URN="${MAVEDB_URN:-$urn}"
 export STEP="${STEP:-import_from_files}"
 
 # Locate the mapping file using the original urn (with colons)
-mapping_file=$(find ${mappings_path} -type f -iname "*${urn}*.json" | head -n 1)
+pattern="${urn}_mapping_*.json"
+mapping_file="$(
+  find "$mappings_path" -type f -name "$pattern" -printf '%T@ %p\n' \
+  | sort -nr | head -1 | cut -d' ' -f2-
+)"
 
 # Replace colons with hyphens for searching the scores directory
 score_urn=$(echo "${urn}" | sed 's/:/-/g')
