@@ -166,15 +166,23 @@ my $BYTES_PER_PREDICTION = 2;
 
 # constants derived from the the user-defined constants
 
-# the maximum number of distinct qualitative predictions used by any tool
-
-my $MAX_NUM_PREDS = max( map { scalar keys %$_ } values %$PREDICTION_TO_VAL ); 
-
 # the number of bits used to encode the qualitative prediction
 
-my $NUM_PRED_BITS = ceil( log($MAX_NUM_PREDS) / log(2) );
+# my $NUM_PRED_BITS = ceil( log($MAX_NUM_PREDS) / log(2) );
+my $NUM_PRED_BITS = {
+	polyphen => 2,
+	sift => 2,
+	cadd => 2,
+    dbnsfp_revel => 2,
+    dbnsfp_alphamissense => 3,
+    dbnsfp_esm1b => 3,
+    dbnsfp_meta_lr => 2,
+    dbnsfp_mutation_assessor => 2
+};
 
-throw("Cannot represent more than ".(2**6-1)." predictions") if $NUM_PRED_BITS > 6;
+# the maximum number of distinct qualitative predictions used by any tool 
+my $MAX_NUM_PREDS = max( values %$NUM_PRED_BITS );
+throw("Cannot represent more than ".(2**6-1)." predictions") if $MAX_NUM_PREDS > 6;
 
 # a hash mapping back from a numerical value to a qualitative prediction
 
@@ -549,7 +557,7 @@ sub prediction_to_short {
     throw("No value defined for prediction: '$pred'?")
         unless defined $pred_val;
 
-    $val |= ($pred_val << (16 - $NUM_PRED_BITS));
+    $val |= ($pred_val << (16 - $NUM_PRED_BITS->{$self->{analysis}}));
 
     printf("p2s: $pred ($prob) => 0x%04x\n", $val) if $DEBUG;
     
@@ -584,7 +592,7 @@ sub prediction_from_short {
 
     # shift the prediction bits down and look up the prediction string
 
-    my $pred = $VAL_TO_PREDICTION->{$self->{analysis}}->{$val >> (16 - $NUM_PRED_BITS)};
+    my $pred = $VAL_TO_PREDICTION->{$self->{analysis}}->{$val >> (16 - $NUM_PRED_BITS->{$self->{analysis}})};
 
     # mask off the top 6 bits reserved for the prediction and convert back to a 3 d.p. float
 
