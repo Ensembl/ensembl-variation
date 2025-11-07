@@ -928,11 +928,13 @@ sub _inv_start_altered {
         my $shifting_offset = defined($bvfoa->{shift_hash}) ? $bvfoa->{shift_hash}->{shift_length} : 0;
         $cdna_start += $shifting_offset;
         $cdna_end += $shifting_offset;
-        
+
+        return 0 if($cdna_end > length($utr_and_translateable));
+
         my $vf_feature_seq = $bvfoa->feature_seq;
         $vf_feature_seq = '' if $vf_feature_seq eq '-';
         my $atg_start = length($utr->seq);
-        
+
         substr($utr_and_translateable, $cdna_start - 1, ($cdna_end - $cdna_start) + 1) = $vf_feature_seq;
         my $new_sc = substr($utr_and_translateable, $atg_start, 3);
 
@@ -1044,7 +1046,7 @@ sub _ins_del_start_altered {
         # get cDNA coords
         my ($cdna_start, $cdna_end) = ($bvfo->cdna_start, $bvfo->cdna_end);
         return 0 unless $cdna_start && $cdna_end;
-
+        
         # make and edit UTR + translateable seq
         my $translateable = $bvfo->_translateable_seq();
         my $utr = $bvfo->_five_prime_utr();
@@ -1060,7 +1062,6 @@ sub _ins_del_start_altered {
             my $atg_start = length($utr->seq);
             my $new_sc = substr($utr_and_translateable, $atg_start, 3);
             my $new_utr = substr($utr_and_translateable, 0, length($utr->seq));
-
             return $cache->{ins_del_start_altered} if ($new_utr eq $utr->seq && $new_sc eq 'ATG');
         }
 

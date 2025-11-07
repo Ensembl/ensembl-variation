@@ -100,6 +100,13 @@ my %species_synonyms = (
   'zebrafish' => 'danio_rerio'
 );
 
+my %nonref_species = (
+  'gallus_gallus' => 'gallus_gallus_gca000002315v5',
+  'canis_lupus_familiaris' => 'canis_lupus_familiarisboxer',
+  'felis_catus' => 'felis_catus_abyssinian',
+  'ovis_aries' => 'ovis_aries_texel'
+);
+
 sub fetch_input {
   my $self = shift;
 
@@ -290,21 +297,16 @@ sub split_omia {
     close(OUT);
   }
 
-  #sheep is exception where it stands for ovis_aries and ovis_aries_rambouillet
-  if (-e  "$workdir/omia_split/$prefix"."ovis_aries".$suffix) {
-    my $cmd = "cp -p $workdir/omia_split/$prefix"."ovis_aries$suffix $workdir/omia_split/$prefix"."ovis_aries_rambouillet$suffix";
-    my ($return_value, $stderr, $flat_cmd) = $self->run_system_command($cmd);
-    if ($return_value) {
-      die("there was an error running as ($flat_cmd: $stderr)");
-    }
-  }
+  # copy OMIA data for non reference species
+  for my $r_species (keys %nonref_species) {
+    my $nr_species = $nonref_species{$r_species};
 
-  #dog stands for canis_lupus_familiaris and canis_lupus_familiarisboxer
-  if (-e  "$workdir/omia_split/$prefix"."canis_lupus_familiaris".$suffix) {
-    my $cmd = "cp -p $workdir/omia_split/$prefix"."canis_lupus_familiaris$suffix $workdir/omia_split/$prefix"."canis_lupus_familiarisboxer$suffix";
-    my ($return_value, $stderr, $flat_cmd) = $self->run_system_command($cmd);
-    if ($return_value) {
-      die("there was an error running as ($flat_cmd: $stderr)");
+    if (-e  "$workdir/omia_split/$prefix$r_species$suffix") {
+      my $cmd = "cp -p $workdir/omia_split/$prefix$r_species$suffix $workdir/omia_split/$prefix$nr_species$suffix";
+      my ($return_value, $stderr, $flat_cmd) = $self->run_system_command($cmd);
+      if ($return_value) {
+        die("there was an error running as ($flat_cmd: $stderr)");
+      }
     }
   }
 }
