@@ -471,7 +471,7 @@ sub load_predictions_for_triplets {
       next if (!defined $iter);
       while (my $line = $iter->next) {
         my $data = $self->get_dbNSFP_row($line);
-        $self->pick_transcript_specific_data($data, $transcript) if $transcript;
+        $self->pick_transcript_specific_data($data, $transcript) if $transcript && $transcript->stable_id =~ /^ENS/;
         my $chr = $data->{'chr'};
         my $pos = $data->{'pos'};
         my $ref = $data->{'ref'};

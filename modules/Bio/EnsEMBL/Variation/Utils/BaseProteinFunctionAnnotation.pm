@@ -340,8 +340,11 @@ sub get_stable_id_for_md5 {
   });
 
   $get_stable_id_sth->execute($md5);
-  my ($stable_id) = $get_stable_id_sth->fetchrow_array;
-  return $stable_id;
+  my $stable_ids = $get_stable_id_sth->fetchall_arrayref;
+  foreach (@{$stable_ids}) {
+    print $_->[0] if $_->[0] =~ /^ENS/;
+  }
+  return $stable_ids->[0]->[0];
 }
 
 =head2 get_translation
