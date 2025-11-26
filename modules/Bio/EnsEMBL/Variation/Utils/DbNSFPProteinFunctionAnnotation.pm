@@ -492,15 +492,15 @@ sub load_predictions_for_triplets {
 
 sub add_predictions {
   my ($self, $data, $i, $mutated_aa) = @_;
-  if (defined $data->{revel_score} && $data->{revel_score} ne '.') {
+  if (defined $data->{revel_score} && $data->{revel_score} ne '.' && $data->{revel_score} !~ /;/) {
     my $prediction = ($data->{revel_score} >= $REVEL_CUTOFF) ? 'likely disease causing' : 'likely benign';
     $self->add_prediction($i, $mutated_aa, 'dbnsfp_revel', $data->{revel_score}, $prediction);
   }
-  if (defined $data->{alphamissense_score} && $data->{alphamissense_score} ne '.') {
+  if (defined $data->{alphamissense_score} && $data->{alphamissense_score} ne '.' && $data->{alphamissense_score} !~ /;/) {
     my $prediction = $predictions->{dbnsfp_alphamissense}->{$data->{alphamissense_pred}};
     $self->add_prediction($i, $mutated_aa, 'dbnsfp_alphamissense', $data->{alphamissense_score}, $prediction);
   }
-  if (defined $data->{esm1b_score} && $data->{esm1b_score} ne '.') {
+  if (defined $data->{esm1b_score} && $data->{esm1b_score} ne '.' && $data->{esm1b_score} !~ /;/) {
     my $prediction = $predictions->{dbnsfp_esm1b}->{$data->{esm1b_pred}};
     my $score = sprintf '%.1f', $data->{esm1b_score};   # round up so that we can have accuracy upto 1 decimal place
     $self->add_prediction($i, $mutated_aa, 'dbnsfp_esm1b', $score, $prediction);
