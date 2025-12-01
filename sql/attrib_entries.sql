@@ -369,8 +369,14 @@ INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES 
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (581, 'somatic_date', 'Date last evaluated for ClinVar evidence', 'The most recent date on which evidence was evaluated and this conclusion drawn for ClinVar somatic classification');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (582, 'oncogenic_date', 'Date last evaluated for ClinVar evidence', 'The most recent date on which evidence was evaluated and this conclusion drawn for ClinVar somatic classification of oncogenicity');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (583, 'clinvar_ref_allele', 'ClinVar reference allele', 'The ClinVar reference allele in phenotype association');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (584,'ens_canon_extended','Ensembl Canonical Extended','Copy of the MANE Select transcript (or MANE Plus Clinical transcript) that has had either of its ends extended by the LEAP pipeline. This copy had to be created because the MANE transcripts cannot be altered.');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (585,'dbnsfp_alphamissense','dbNSFP AlphaMissense prediction','dbNSFP AlphaMissense prediction');
 INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (586,'dbnsfp_esm1b','dbNSFP ESM1b prediction','dbNSFP ESM1b prediction');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (587,'gencc_inherit_mode','GenCC mode of inheritance','GenCC mode of inheritance');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (588,'gencc_submitter','GenCC submitter','GenCC submitter');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (589,'gencc_classification','GenCC classification','GenCC classification');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (590,'gencc_uuid','GenCC UUID','GenCC submission ID');
+INSERT IGNORE INTO attrib_type (attrib_type_id, code, name, description) VALUES (591,'g2p_stable_id','G2P Stable ID','The G2P stable ID of the record');
 
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (1, 469, 'SO:0001483');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (2, 470, 'SNV');
@@ -961,6 +967,7 @@ INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (678, 542, '
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (679, 477, 'barley50k');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (680, 477, 'EMS_Kronos_Exome_Capture');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (681, 477, 'Watkins_Collection');
+INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (682, 477, 'TaNG');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (683, 481, 'dbnsfp_alphamissense');
 INSERT IGNORE INTO attrib (attrib_id, attrib_type_id, value) VALUES (684, 481, 'dbnsfp_esm1b');
 
