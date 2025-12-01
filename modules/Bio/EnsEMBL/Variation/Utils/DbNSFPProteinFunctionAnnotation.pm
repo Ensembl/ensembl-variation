@@ -492,9 +492,8 @@ sub load_predictions_for_triplets {
 
 sub add_predictions {
   my ($self, $data, $i, $mutated_aa) = @_;
-#   use Data::Dumper; print Dumper($data), "\n";
-  if (defined $data->{revel_pred} && 
-        defined $data->{revel_score} && $data->{revel_score} ne '.' && $data->{revel_score} !~ /;/) {
+
+  if (defined $data->{revel_score} && $data->{revel_score} ne '.' && $data->{revel_score} !~ /;/) {
     my $prediction = ($data->{revel_score} >= $REVEL_CUTOFF) ? 'likely disease causing' : 'likely benign';
     $self->add_prediction($i, $mutated_aa, 'dbnsfp_revel', $data->{revel_score}, $prediction);
   }
