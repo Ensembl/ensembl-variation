@@ -64,7 +64,7 @@ sub new {
     if (!@$breakends) {
         # construct a fake 'allele(s)'
         if ($vf->{allele_string}) {
-            my $num = 0;
+            my $num = 1;
             foreach (split(/\//, $vf->{allele_string})) {
                 $self->add_StructuralVariationOverlapAllele(
                     Bio::EnsEMBL::Variation::StructuralVariationOverlapAllele->new_fast({
