@@ -5,6 +5,10 @@
     This file contains data about the transcript that is being used for each gene.
     SpliceAI only annotates variants overlapping these transcripts.
 
+    Two routes:
+      * DB mode (default): pulls MANE_Select protein-coding transcripts from the core DB (one per gene) and outputs their exon lists.
+      * GFF3 mode (--gff3): reads the supplied GFF3, keeps protein-coding transcripts tagged MANE_Select (or gencode_primary when flagged), aggregates their exons per gene, and writes the same output format.
+
     Template provided by SpliceAI: https://github.com/Illumina/SpliceAI/blob/master/spliceai/annotations/grch38.txt
 
     Gene annotation file format:
@@ -15,20 +19,25 @@
             --output_file   gene annotation output file (Optional. Default: gene_annotation.txt)
             --species       species name                (Optional. Default: homo_sapiens)
             --assembly      assembly version            (Optional. Default: 38)
-            --host          core database host          (Mandatory)
-            --port          host port                   (Mandatory)
-            --user          host user                   (Mandatory)
+            --host          core database host          (Mandatory unless using --gff3)
+            --port          host port                   (Mandatory unless using --gff3)
+            --user          host user                   (Mandatory unless using --gff3)
+            --database      override DB name            (Optional. Default: <species>_core_<release>_<assembly>)
             --release       core database version       (Mandatory)
+            --gff3          GFF3 file path              (Optional. Enables file mode)
+            --gencode_primary   switch to filter for GENCODE primary instead of MANE Select (GFF3 mode only)
 """
 
 import argparse
 import mysql.connector
 from mysql.connector import Error
+import sys
+import gzip
 
 
-def fetch_transcripts(species, assembly, release, host, port, user):
+def fetch_transcripts(species, assembly, release, host, port, user, database_name=None):
     gene_annotation = {}
-    database = f"{species}_core_{release}_{assembly}"
+    database = database_name or f"{species}_core_{release}_{assembly}"
 
     # For human we select 'MANE_Select' transcripts and the gene name is a gene attrib
     if species == "homo_sapiens":
@@ -107,30 +116,182 @@ def fetch_transcripts(species, assembly, release, host, port, user):
 
     return gene_annotation
 
+def fetch_transcripts_gff3(gff3_path, use_gencode_primary):
+    gene_annotation = {}
+    open_func = gzip.open if gff3_path.endswith(".gz") else open
+    tag_to_keep = "gencode_primary" if use_gencode_primary else "mane_select"
+
+    def strip_prefix(value):
+        if not value:
+            return None
+        val = value.split(",")[0]
+        return val.split(":", 1)[1] if ":" in val else val
+
+    with open_func(gff3_path, "rt") as handle:
+        transcripts_keep = {}
+        gene_meta = {}
+        for line in handle:
+            if line.startswith("#"):
+                continue
+            fields = line.rstrip("\n").split("\t")
+            if len(fields) < 9:
+                continue
+            chrom, source, feature, start, end, score, strand, phase, attrs = fields
+            chrom = chrom.replace("chr", "")
+
+            attr_dict = {}
+            for entry in attrs.split(";"):
+                if "=" in entry:
+                    k, v = entry.split("=", 1)
+                    attr_dict[k] = v
+
+            if feature == "gene":
+                gene_id = strip_prefix(attr_dict.get("ID"))
+                gene_name = attr_dict.get("Name") or attr_dict.get("gene_name") or gene_id
+                if gene_id:
+                    gene_meta[gene_id] = {"name": gene_name, "chr": chrom, "strand": strand}
+                    if gene_id in gene_annotation:
+                        gene_annotation[gene_id]["name"] = gene_name
+                        gene_annotation[gene_id]["chr"] = chrom
+                        gene_annotation[gene_id]["strand"] = strand
+                continue
+
+            if feature not in ["transcript", "mRNA"] and feature != "exon":
+                continue
+
+            if feature in ["transcript", "mRNA"]:
+                attrs_lower = attrs.lower()
+                if tag_to_keep not in attrs_lower:
+                    continue
+                biotype = attr_dict.get("biotype") or attr_dict.get("gene_biotype")
+                if biotype != "protein_coding":
+                    continue
+                transcript_id = strip_prefix(attr_dict.get("transcript_id") or attr_dict.get("ID"))
+                gene_id = strip_prefix(attr_dict.get("Parent"))
+                if not (transcript_id and gene_id):
+                    continue
+                transcripts_keep[transcript_id] = gene_id
+                if gene_id not in gene_annotation:
+                    gene_info = gene_meta.get(gene_id, {})
+                    gene_annotation[gene_id] = {
+                        "name": gene_info.get("name", gene_id),
+                        "chr": gene_info.get("chr", chrom),
+                        "strand": gene_info.get("strand", strand),
+                        "exons": set()
+                    }
+                continue
+
+            if feature == "exon":
+                parents_raw = attr_dict.get("Parent", "")
+                for parent in parents_raw.split(","):
+                    transcript_id = strip_prefix(parent)
+                    gene_id = transcripts_keep.get(transcript_id)
+                    if not gene_id:
+                        continue
+                    if gene_id not in gene_annotation:
+                        gene_info = gene_meta.get(gene_id, {})
+                        gene_annotation[gene_id] = {
+                            "name": gene_info.get("name", gene_id),
+                            "chr": gene_info.get("chr", chrom),
+                            "strand": gene_info.get("strand", strand),
+                            "exons": set()
+                        }
+                    gene_annotation[gene_id]["exons"].add((int(start), int(end)))
+
+    # convert exon sets to sorted lists and set start/end spans
+    formatted = {}
+    for gene_id, data in gene_annotation.items():
+        exons_sorted = sorted(data["exons"], key=lambda p: (p[0], p[1]))
+        if not exons_sorted:
+            continue
+        exons_start = [str(p[0]) for p in exons_sorted]
+        exons_end = [str(p[1]) for p in exons_sorted]
+        formatted[gene_id] = {
+            "name": data["name"],
+            "chr": data["chr"],
+            "strand": data["strand"],
+            "start": exons_sorted[0][0],
+            "end": exons_sorted[-1][1],
+            "exons_start": exons_start,
+            "exons_end": exons_end
+        }
+    return formatted
+
 def sanity_checks(transcripts_list):
+    ok = {}
     fail_list = []
+    reason_counts = {}
+    warning_counts = {}
+    warning_genes = {}
 
     for gene, data in transcripts_list.items():
+        original_pairs = list(zip(data["exons_start"], data["exons_end"]))
+        # sort exons by start to keep output ordered before validation
+        pairs = sorted(zip(data["exons_start"], data["exons_end"]), key=lambda p: int(p[0]))
+        data["exons_start"] = [str(int(p[0])) for p in pairs]
+        data["exons_end"] = [str(int(p[1])) for p in pairs]
+        reasons = []
+        warnings = []
+        if not pairs:
+            reasons.append("no_exons")
+        else:
+            # span from first to last exon
+            data["start"] = int(data["exons_start"][0])
+            data["end"] = int(data["exons_end"][-1])
+
         check = 1
 
-        # transcript start > end
-        if data["start"] >= data["end"]:
+        # overall start > end
+        if pairs and data["start"] >= data["end"]:
             check = 0
-        
-        # the exon start has to be bigger than the last exon end
-        i = 0
-        for exon_start in data["exons_start"]:
-            if i > 0:
-                last_exon_end = data["exons_end"][i - 1]
-                if(int(exon_start) < int(last_exon_end)):
-                    check = 0
+            reasons.append("span_start_ge_end")
 
-            i += 1
+        # exon start/end validity
+        for exon_start, exon_end in zip(data["exons_start"], data["exons_end"]):
+            if int(exon_start) > int(exon_end):
+                check = 0
+                reasons.append("exon_start_gt_end")
+                break
 
-        if check == 0:
-            fail_list.append(gene)
+        # detect overlaps after sorting (start <= previous end)
+        prev_end = None
+        for exon_start, exon_end in zip(data["exons_start"], data["exons_end"]):
+            if prev_end is not None and int(exon_start) <= int(prev_end):
+                warnings.append("overlap")
+                break
+            prev_end = exon_end
 
-    return fail_list
+        # detect original out-of-order (before sorting, start decreases)
+        prev_start_orig = None
+        for exon_start, exon_end in original_pairs:
+            if prev_start_orig is not None and int(exon_start) < int(prev_start_orig):
+                warnings.append("out_of_order")
+                break
+            prev_start_orig = exon_start
+
+        if check == 0 or reasons:
+            fail_list.append((gene, ";".join(reasons) if reasons else "unknown"))
+            for r in reasons:
+                reason_counts[r] = reason_counts.get(r, 0) + 1
+        else:
+            ok[gene] = data
+            for w in warnings:
+                warning_counts[w] = warning_counts.get(w, 0) + 1
+                warning_genes.setdefault(w, []).append(gene)
+
+    total = len(transcripts_list)
+    print(f"[spliceai_annotation_file] Sanity check: total={total} pass={len(ok)} fail={len(fail_list)}", file=sys.stderr)
+    if reason_counts:
+        parts = [f"{reason}={count}" for reason, count in sorted(reason_counts.items())]
+        print(f"[spliceai_annotation_file] Fail reasons: {', '.join(parts)}", file=sys.stderr)
+    if warning_counts:
+        parts = [f"{reason}={count}" for reason, count in sorted(warning_counts.items())]
+        print(f"[spliceai_annotation_file] Warnings: {', '.join(parts)}", file=sys.stderr)
+        for reason, genes in warning_genes.items():
+            sample = ", ".join(genes[:10])
+            print(f"[spliceai_annotation_file] Warning sample ({reason}): {sample}", file=sys.stderr)
+
+    return ok, fail_list
 
 def write_output(transcripts_list, output_file):
     # Write to output file
@@ -138,6 +299,7 @@ def write_output(transcripts_list, output_file):
         f.write("#NAME\tCHROM\tSTRAND\tTX_START\tTX_END\tEXON_START\tEXON_END\n")
 
         for gene, data in transcripts_list.items():
+            name = data.get("name", gene)
             chr = data["chr"]
             strand = data["strand"]
             start = data["start"]
@@ -145,7 +307,7 @@ def write_output(transcripts_list, output_file):
             exons_start = (",").join(data["exons_start"])
             exons_end = (",").join(data["exons_end"])
 
-            f.write(f"{gene}\t{chr}\t{strand}\t{start}\t{end}\t{exons_start},\t{exons_end},\n")
+            f.write(f"{name}\t{chr}\t{strand}\t{start}\t{end}\t{exons_start},\t{exons_end},\n")
 
 
 def main():
@@ -160,9 +322,15 @@ def main():
                         default="38",
                         help="species assembly (default: 38)")
     parser.add_argument("-r", "--release", required=True)
-    parser.add_argument("--host", required=True)
-    parser.add_argument("--port", required=True)
-    parser.add_argument("--user", required=True)
+    parser.add_argument("--host")
+    parser.add_argument("--port")
+    parser.add_argument("--user")
+    parser.add_argument("--database",
+                        help="Override DB name (default: <species>_core_<release>_<assembly>)")
+    parser.add_argument("--gff3",
+                        help="GFF3 file path (enables file mode)")
+    parser.add_argument("--gencode_primary", action="store_true",
+                        help="Filter GFF3 transcripts to tag=gencode_primary instead of MANE_Select")
     args = parser.parse_args()
 
     output_file = args.output_file
@@ -173,14 +341,26 @@ def main():
     port = args.port
     user = args.user
 
-    transcripts_list = fetch_transcripts(species, assembly, release, host, port, user)
-
-    check = sanity_checks(transcripts_list)
-
-    if not check:
-        write_output(transcripts_list, output_file)
+    if args.gff3:
+        if species.lower() not in ["homo_sapiens", "human"]:
+            parser.error("GFF3 mode currently supports human only")
+        filter_label = "gencode_primary" if args.gencode_primary else "MANE_Select"
+        print(f"[spliceai_annotation_file] Mode: GFF3 | file={args.gff3} | filter={filter_label}", file=sys.stderr)
+        transcripts_list = fetch_transcripts_gff3(args.gff3, args.gencode_primary)
     else:
-        print("Sanity checks failed for the following genes: ", (", ").join(check))
+        if not (host and port and user):
+            parser.error("DB mode requires --host, --port and --user")
+        if args.gencode_primary:
+            print("[spliceai_annotation_file] Warning: --gencode_primary is ignored in DB mode (only MANE_Select is used)", file=sys.stderr)
+        print(f"[spliceai_annotation_file] Mode: DB | db={args.database or f'{species}_core_{release}_{assembly}'} | host={host} | port={port} | user={user}", file=sys.stderr)
+        transcripts_list = fetch_transcripts(species, assembly, release, host, port, user, args.database)
+
+    ok, fail = sanity_checks(transcripts_list)
+    sorted_list = dict(sorted(ok.items(), key=lambda kv: kv[0]))
+    write_output(sorted_list, output_file)
+    if fail:
+        fail_strings = [f"{g}({r})" for g, r in fail]
+        print("Sanity checks failed for the following genes: ", (", ").join(fail_strings), file=sys.stderr)
 
 
 if __name__ == '__main__':
