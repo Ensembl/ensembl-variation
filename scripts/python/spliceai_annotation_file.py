@@ -9,6 +9,8 @@
       * DB mode (default): pulls MANE_Select protein-coding transcripts from the core DB (one per gene) and outputs their exon lists.
       * GFF3 mode (--gff3): reads the supplied GFF3, keeps protein-coding transcripts tagged MANE_Select (or gencode_primary when flagged), aggregates their exons per gene, and writes the same output format.
 
+    Overlapping or nested exons are merged to the outermost span so the final exon list is non-overlapping.
+
     Template provided by SpliceAI: https://github.com/Illumina/SpliceAI/blob/master/spliceai/annotations/grch38.txt
 
     Gene annotation file format:
@@ -217,6 +219,28 @@ def fetch_transcripts_gff3(gff3_path, use_gencode_primary):
         }
     return formatted
 
+def merge_overlapping_exons(pairs):
+    """
+    Collapse overlapping exon pairs, keeping the outermost span.
+    Input pairs are tuples of ints sorted by start.
+    Returns merged pairs (as strings) and a flag indicating if any merges happened.
+    """
+    merged = []
+    merged_flag = False
+    for start, end in pairs:
+        if not merged:
+            merged.append([start, end])
+            continue
+        prev_start, prev_end = merged[-1]
+        if start <= prev_end:
+            merged_flag = True
+            if end > prev_end:
+                merged[-1][1] = end
+            # if the new exon is contained within the previous one, drop it
+            continue
+        merged.append([start, end])
+    return [(str(p[0]), str(p[1])) for p in merged], merged_flag
+
 def sanity_checks(transcripts_list):
     ok = {}
     fail_list = []
@@ -225,11 +249,12 @@ def sanity_checks(transcripts_list):
     warning_genes = {}
 
     for gene, data in transcripts_list.items():
-        original_pairs = list(zip(data["exons_start"], data["exons_end"]))
+        original_pairs = [(int(s), int(e)) for s, e in zip(data["exons_start"], data["exons_end"])]
         # sort exons by start to keep output ordered before validation
-        pairs = sorted(zip(data["exons_start"], data["exons_end"]), key=lambda p: int(p[0]))
-        data["exons_start"] = [str(int(p[0])) for p in pairs]
-        data["exons_end"] = [str(int(p[1])) for p in pairs]
+        pairs = sorted(original_pairs, key=lambda p: (p[0], p[1]))
+        merged_pairs, had_merges = merge_overlapping_exons(pairs)
+        data["exons_start"] = [p[0] for p in merged_pairs]
+        data["exons_end"] = [p[1] for p in merged_pairs]
         reasons = []
         warnings = []
         if not pairs:
@@ -261,10 +286,13 @@ def sanity_checks(transcripts_list):
                 break
             prev_end = exon_end
 
+        if had_merges:
+            warnings.append("overlap_merged")
+
         # detect original out-of-order (before sorting, start decreases)
         prev_start_orig = None
         for exon_start, exon_end in original_pairs:
-            if prev_start_orig is not None and int(exon_start) < int(prev_start_orig):
+            if prev_start_orig is not None and exon_start < prev_start_orig:
                 warnings.append("out_of_order")
                 break
             prev_start_orig = exon_start
@@ -285,11 +313,19 @@ def sanity_checks(transcripts_list):
         parts = [f"{reason}={count}" for reason, count in sorted(reason_counts.items())]
         print(f"[spliceai_annotation_file] Fail reasons: {', '.join(parts)}", file=sys.stderr)
     if warning_counts:
-        parts = [f"{reason}={count}" for reason, count in sorted(warning_counts.items())]
+        warning_labels = {
+            "overlap": "exons overlap after sorting (check input ordering)",
+            "overlap_merged": "overlapping/nested exons merged to outer span",
+            "out_of_order": "exons not in ascending order in source"
+        }
+        parts = []
+        for reason, count in sorted(warning_counts.items()):
+            label = warning_labels.get(reason, reason)
+            parts.append(f"{reason}={count} [{label}]")
         print(f"[spliceai_annotation_file] Warnings: {', '.join(parts)}", file=sys.stderr)
         for reason, genes in warning_genes.items():
             sample = ", ".join(genes[:10])
-            print(f"[spliceai_annotation_file] Warning sample ({reason}): {sample}", file=sys.stderr)
+            extra = warning_labels.get(reason, reason)
 
     return ok, fail_list
 
