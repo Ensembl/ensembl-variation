@@ -492,15 +492,18 @@ sub load_predictions_for_triplets {
 
 sub add_predictions {
   my ($self, $data, $i, $mutated_aa) = @_;
-  if (defined $data->{revel_score} && $data->{revel_score} ne '.') {
+
+  if (defined $data->{revel_score} && $data->{revel_score} ne '.' && $data->{revel_score} !~ /;/) {
     my $prediction = ($data->{revel_score} >= $REVEL_CUTOFF) ? 'likely disease causing' : 'likely benign';
     $self->add_prediction($i, $mutated_aa, 'dbnsfp_revel', $data->{revel_score}, $prediction);
   }
-  if (defined $data->{alphamissense_score} && $data->{alphamissense_score} ne '.') {
+  if (defined $data->{alphamissense_pred} && 
+        defined $data->{alphamissense_score} && $data->{alphamissense_score} ne '.' && $data->{alphamissense_score} !~ /;/) {
     my $prediction = $predictions->{dbnsfp_alphamissense}->{$data->{alphamissense_pred}};
     $self->add_prediction($i, $mutated_aa, 'dbnsfp_alphamissense', $data->{alphamissense_score}, $prediction);
   }
-  if (defined $data->{esm1b_score} && $data->{esm1b_score} ne '.') {
+  if (defined $data->{esm1b_pred} && 
+        defined $data->{esm1b_score} && $data->{esm1b_score} ne '.' && $data->{esm1b_score} !~ /;/) {
     my $prediction = $predictions->{dbnsfp_esm1b}->{$data->{esm1b_pred}};
     my $score = sprintf '%.1f', $data->{esm1b_score};   # round up so that we can have accuracy upto 1 decimal place
     $self->add_prediction($i, $mutated_aa, 'dbnsfp_esm1b', $score, $prediction);
@@ -557,15 +560,36 @@ sub pick_transcript_specific_data {
   my $target_transcript = $transcript->stable_id;
   my @transcripts_in_data = split(/;/, $data->{transcripts});
   my $transcript_index = firstidx {defined && $_ eq $target_transcript} @transcripts_in_data;
+  
+  # no matching transcript found   
+  if ($transcript_index == -1) {
+    foreach my $key (keys %$data) {
+        next unless defined $data->{$key} && $data->{$key} =~ /;/;
+
+        my @values = split(/;/, $data->{$key});
+
+        # if all the scores are same we can take the score
+        my $match = 1;
+        foreach (@values) {
+            $match = 0 if $values[0] ne $_;
+        }
+
+        if ($match) {
+            $data->{$key} = $values[0];
+        }
+        else {
+            $data->{$key} = undef;
+        }
+    } 
+  }
 
   # return the specific data for the target transcript and undef if data for the transcript is not available
-  foreach my $key (keys %$data) {
-    next unless defined $data->{$key} && $data->{$key} =~ /;/;
-
-    my @values = split(/;/, $data->{$key});
-    $data->{$key} = $transcript_index <= $#values ? $values[$transcript_index] : undef;
-
-    $data->{$key} = undef if $transcript_index == -1; # transcript not found in the data
+  else {
+    foreach my $key (keys %$data) {
+        next unless defined $data->{$key} && $data->{$key} =~ /;/;
+        my @values = split(/;/, $data->{$key});
+        $data->{$key} = $transcript_index <= $#values ? $values[$transcript_index] : undef;
+    }
   }
   return $data;
 }
