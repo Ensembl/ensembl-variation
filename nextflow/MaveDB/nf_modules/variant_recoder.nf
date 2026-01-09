@@ -9,8 +9,9 @@ process run_variant_recoder {
 
   tag "${urn}"
   memory { 
-    def want = file(hgvs.target).countLines() * 200.MB + 50.GB 
-    def cap  = 200.GB
+    // Observed peak_vmem ~100 GB in production trace
+    def want = file(hgvs.target).countLines() * 150.MB + 20.GB
+    def cap  = 120.GB
     [want, cap].min()
   }
 
