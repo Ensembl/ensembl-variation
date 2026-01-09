@@ -1,4 +1,5 @@
 process run_variant_recoder {
+  // Run Variant Recoder on a file with HGVS identifiers
   label 'bigmem'
 
   input:

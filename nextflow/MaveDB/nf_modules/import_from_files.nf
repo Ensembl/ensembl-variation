@@ -1,9 +1,11 @@
 process import_from_files {
   tag { urn }
 
+  // Receives an urn value from the main workflow
   input:
     val urn
 
+  // Outputs a tuple: (urn, mappings file, scores file) - need to add metadata file later, once extraction of URN ID is implemented.
   output:
     tuple val(urn), file("mappings.json"), file("scores.csv")
 

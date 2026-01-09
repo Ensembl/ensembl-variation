@@ -4,6 +4,7 @@
 // was originally written to handle a different JSON structure. It uses extract_metadata.py to do this. 
 process extract_metadata {
   tag { urn }
+  // publishDir "${params.output}", mode: 'copy', overwrite: true
 
   input:
     val urn
@@ -32,7 +33,7 @@ process extract_metadata {
     log "extractor_nonzero_exit" "na" "rc=\$rc"
   fi
 
-  # If metadata.json is missing or empty, create fallback files (unchanged functionality)
+  # If metadata.json is missing or empty, create fallback files
   if [ ! -s metadata.json ]; then
       echo "{}" > metadata.json
       echo ""  > LICENCE.txt

@@ -1,4 +1,6 @@
 process map_scores_to_HGVSp_variants {
+  // Download MaveDB scores and map associated variants by HGVSp
+
   tag { urn }
 
   input:
@@ -43,6 +45,8 @@ process map_scores_to_HGVSp_variants {
 }
 
 process map_scores_to_HGVSg_variants {
+  // Download MaveDB scores and map associated variants from HGVSg
+
   tag { urn }
 
   input:

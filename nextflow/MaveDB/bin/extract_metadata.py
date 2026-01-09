@@ -47,7 +47,10 @@ def main(metadata_file, urn):
             if selected_entry: break
         if selected_entry: break
 
-    # Reformat the extracted data to match the downstream-expecting JSON
+    # Reformat the extracted data to match the json format expected later in the pipeline
+    # This was a pragmatic approach so that the whole pipeline wasn't re-written
+    # This is to cope with the fact that the pipeline was written for API -yielded json structures,
+    # which differ from data-dump download -yielded json structures
     if selected_entry:
         creator  = first_present(selected_entry.get("createdBy"),
                                  (selected_experiment or {}).get("createdBy"),

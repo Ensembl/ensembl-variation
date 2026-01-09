@@ -152,10 +152,10 @@ def load_scores (f):
   scores = []
   with open(f) as csvfile:
     reader = csv.DictReader(csvfile)
-    # Strip whitespace from each header name
+    # Strip whitespace from each header name -- I think only necessary due to the csv viewer adding spacing and then this was cached in a nf run. Consider removing.
     reader.fieldnames = [field.strip() for field in reader.fieldnames]
     for row in reader:
-      # Strip whitespace from each value if it is a string
+      # Strip whitespace from each value if it is a string -- same note as above
       clean_row = { key: value.strip() if isinstance(value, str) else value for key, value in row.items() }
       scores.append(clean_row)
   log("scores_loaded", n=len(scores))
