@@ -114,6 +114,14 @@ is($slice1->subseq(3, 5, -1), 'CCA', 'subseq rev');
 is($slice1->subseq(5, 4), '', 'subseq e > s');
 is($slice1->subseq(-1, 5), 'CGCATGG', "subseq overlap 5'");
 
+# test subseq on transcript feature slice on reverse strand
+my $stable_id = 'ENST00000346798';
+my $transcript_adaptor = $cdb->get_TranscriptAdaptor();
+my $transcript = $transcript_adaptor->fetch_by_stable_id($stable_id);
+my $transcript_slice = $transcript->feature_Slice;
+is($transcript_slice->subseq(1, 2), 'CA', 'subseq on slice on reverse strand');
+
+
 
 # test going off ends
 $slice1 = $sa->fetch_by_region('chromosome', 21, 1, 10);
