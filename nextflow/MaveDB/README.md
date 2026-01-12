@@ -48,6 +48,8 @@ Run this pipeline with that file:
 nextflow run [path_to]/ensembl-variation/nextflow/MaveDB/main.nf \
   -profile slurm -resume \
   --urn urn.txt \
+  --previous_urn processed_urns.txt \
+  --previous_output previous_run_output.tsv.gz \
   --from-files true \
   --mappings_path [path_to]/mappings \
   --scores_path [path_to]/scores \
@@ -60,6 +62,8 @@ nextflow run [path_to]/ensembl-variation/nextflow/MaveDB/main.nf \
   --from-files false
 ```
 
+If both `--previous_urn` and `--previous_output` are provided, URNs listed in `--previous_urn` are skipped, and their rows are pulled from `--previous_output` and merged with the newly processed URNs so the final output still covers every URN in the current `--urn` file.
+
 ### Arguments
 
 | Argument          | Description                                                                                |
@@ -71,6 +75,8 @@ nextflow run [path_to]/ensembl-variation/nextflow/MaveDB/main.nf \
 | `--licences`      | Comma-separated list of accepted licences (default: `CC0`)                                 |
 | `--round`         | Decimal places to round floats in MaveDB data (default: `4`)                               |
 | `--from_files`    | Use local files instead of downloading via the MaveDB API (default: true, this is advised) |
+| `--previous_urn`  | Path to a file of URNs already processed; any URN present is skipped                       |
+| `--previous_output` | Path to the output (`.tsv.gz`) from a previous run; rows for skipped URNs are merged back into the new output |
 | `--mappings_path` | Path to MaveDB mappings files (one JSON file per URN)                                      |
 | `--scores_path`   | Path to MaveDB scores files (one CSV file per URN)                                         |
 | `--metadata_file` | Path to MaveDB metadata file (one collated file, i.e. main.json)                           |
