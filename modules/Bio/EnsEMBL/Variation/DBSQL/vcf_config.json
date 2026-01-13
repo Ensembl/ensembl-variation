@@ -794,6 +794,20 @@
             "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/PRJEB22988/Svardal_et_al_2017_vervet_monkey_SNPs_imputed_phased.vcf.gz"
         },
         {
+            "id": "pig_EVA_PRJEB93975",
+            "source_name": "PRJEB93975",
+            "species": "sus_scrofa",
+            "assembly": "Sscrofa11.1",
+            "type": "remote",
+            "use_as_source": 0,
+            "strict_name_match": 0,
+            "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/PRJEB93975/pig_gca000003025v6_calls_with_strains.cohort.###CHR###.qc.accessioned.vcf.gz",
+            "chromosomes": [
+                "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", 
+                "15", "16", "17", "18", "19", "X", "Y" 
+            ]
+        },
+        {
             "id": "eva_microtus_ochrogaster_gca000317375v1",
             "description": "Variants from EVA",
             "species": "Microtus_ochrogaster",
