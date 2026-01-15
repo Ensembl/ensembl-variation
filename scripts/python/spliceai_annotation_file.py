@@ -31,7 +31,7 @@ import gzip
 def fetch_transcripts_gff3(gff3_path, use_gencode_primary):
     gene_annotation = {}
     open_func = gzip.open if gff3_path.endswith(".gz") else open
-    tag_to_keep = "gencode_primary" if use_gencode_primary else None
+    tag_to_keep = "gencode_primary" if use_gencode_primary else "mane_select"
 
     def strip_prefix(value):
         if not value:
@@ -73,7 +73,7 @@ def fetch_transcripts_gff3(gff3_path, use_gencode_primary):
 
             if feature in ["transcript", "mRNA"]:
                 attrs_lower = attrs.lower()
-                if tag_to_keep and tag_to_keep not in attrs_lower:
+                if tag_to_keep not in attrs_lower:
                     continue
                 biotype = attr_dict.get("biotype") or attr_dict.get("gene_biotype")
                 if biotype != "protein_coding":
