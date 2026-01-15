@@ -5,8 +5,9 @@
     This file contains data about the transcript that is being used for each gene.
     SpliceAI only annotates variants overlapping these transcripts.
     
-    By passing --gff3, the supplied GFF3 is read in, protein-coding transcripts tagged MANE_Select (or gencode_primary when flagged) 
-    are retained, exons per gene are aggregated, and the SpliceAI annotation formatted file is written out.
+    By passing --gff3, the supplied GFF3 is read in, all transcripts tagged MANE_Select are retained
+    (any feature type), or protein-coding transcripts tagged gencode_primary when flagged, exons per gene
+    are aggregated, and the SpliceAI annotation formatted file is written out.
 
     Overlapping or nested exons are merged to the outermost span so the final exon list is non-overlapping.
 
@@ -32,12 +33,34 @@ def fetch_transcripts_gff3(gff3_path, use_gencode_primary):
     gene_annotation = {}
     open_func = gzip.open if gff3_path.endswith(".gz") else open
     tag_to_keep = "gencode_primary" if use_gencode_primary else "mane_select"
+    transcript_features = {"transcript", "mRNA"}
+
+    def detect_transcript_features(path, tag):
+        features = set()
+        with open_func(path, "rt") as feature_handle:
+            for line in feature_handle:
+                if line.startswith("#"):
+                    continue
+                fields = line.rstrip("\n").split("\t")
+                if len(fields) < 9:
+                    continue
+                feature = fields[2]
+                attrs_lower = fields[8].lower()
+                if tag and tag in attrs_lower:
+                    features.add(feature)
+        return features
 
     def strip_prefix(value):
         if not value:
             return None
         val = value.split(",")[0]
         return val.split(":", 1)[1] if ":" in val else val
+
+    # For mane_select, make the allowed transcript feature list to whatever appears tagged in the GFF to capture all
+    if not use_gencode_primary:
+        detected_features = detect_transcript_features(gff3_path, tag_to_keep)
+        if detected_features:
+            transcript_features = detected_features
 
     with open_func(gff3_path, "rt") as handle:
         transcripts_keep = {}
@@ -48,7 +71,7 @@ def fetch_transcripts_gff3(gff3_path, use_gencode_primary):
             fields = line.rstrip("\n").split("\t")
             if len(fields) < 9:
                 continue
-            chrom, source, feature, start, end, score, strand, phase, attrs = fields
+            chrom, _source, feature, start, end, _score, strand, _phase, attrs = fields
             chrom = chrom.replace("chr", "")
 
             attr_dict = {}
@@ -68,15 +91,16 @@ def fetch_transcripts_gff3(gff3_path, use_gencode_primary):
                         gene_annotation[gene_id]["strand"] = strand
                 continue
 
-            if feature not in ["transcript", "mRNA"] and feature != "exon":
+            # In gencode_primary mode, ignore everything except transcript and exon rows.
+            if use_gencode_primary and feature not in transcript_features and feature != "exon":
                 continue
 
-            if feature in ["transcript", "mRNA"]:
+            if feature in transcript_features:
                 attrs_lower = attrs.lower()
-                if tag_to_keep not in attrs_lower:
+                if tag_to_keep and tag_to_keep not in attrs_lower:
                     continue
                 biotype = attr_dict.get("biotype") or attr_dict.get("gene_biotype")
-                if biotype != "protein_coding":
+                if use_gencode_primary and biotype != "protein_coding":
                     continue
                 transcript_id = strip_prefix(attr_dict.get("transcript_id") or attr_dict.get("ID"))
                 gene_id = strip_prefix(attr_dict.get("Parent"))
@@ -141,7 +165,7 @@ def merge_overlapping_exons(pairs):
         if not merged:
             merged.append([start, end])
             continue
-        prev_start, prev_end = merged[-1]
+        _prev_start, prev_end = merged[-1]
         if start <= prev_end:
             merged_flag = True
             if end > prev_end:
@@ -156,7 +180,6 @@ def sanity_checks(transcripts_list):
     fail_list = []
     reason_counts = {}
     warning_counts = {}
-    warning_genes = {}
 
     for gene, data in transcripts_list.items():
         original_pairs = [(int(s), int(e)) for s, e in zip(data["exons_start"], data["exons_end"])]
@@ -215,7 +238,6 @@ def sanity_checks(transcripts_list):
             ok[gene] = data
             for w in warnings:
                 warning_counts[w] = warning_counts.get(w, 0) + 1
-                warning_genes.setdefault(w, []).append(gene)
 
     total = len(transcripts_list)
     print(f"[spliceai_annotation_file] Sanity check: total={total} pass={len(ok)} fail={len(fail_list)}", file=sys.stderr)
@@ -233,9 +255,6 @@ def sanity_checks(transcripts_list):
             label = warning_labels.get(reason, reason)
             parts.append(f"{reason}={count} [{label}]")
         print(f"[spliceai_annotation_file] Warnings: {', '.join(parts)}", file=sys.stderr)
-        for reason, genes in warning_genes.items():
-            sample = ", ".join(genes[:10])
-            extra = warning_labels.get(reason, reason)
 
     return ok, fail_list
 
@@ -250,8 +269,8 @@ def write_output(transcripts_list, output_file):
             strand = data["strand"]
             start = data["start"]
             end = data["end"]
-            exons_start = (",").join(data["exons_start"])
-            exons_end = (",").join(data["exons_end"])
+            exons_start = ",".join(data["exons_start"])
+            exons_end = ",".join(data["exons_end"])
 
             f.write(f"{name}\t{chr}\t{strand}\t{start}\t{end}\t{exons_start},\t{exons_end},\n")
 
