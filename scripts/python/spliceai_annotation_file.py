@@ -4,10 +4,9 @@
     Script to generate the gene annotation file for SpliceAI.
     This file contains data about the transcript that is being used for each gene.
     SpliceAI only annotates variants overlapping these transcripts.
-
-    Two routes:
-      * DB mode (default): pulls MANE_Select protein-coding transcripts from the core DB (one per gene) and outputs their exon lists.
-      * GFF3 mode (--gff3): reads the supplied GFF3, keeps protein-coding transcripts tagged MANE_Select (or gencode_primary when flagged), aggregates their exons per gene, and writes the same output format.
+    
+    By passing --gff3, the supplied GFF3 is read in, protein-coding transcripts tagged MANE_Select (or gencode_primary when flagged) 
+    are retained, exons per gene are aggregated, and the SpliceAI annotation formatted file is written out.
 
     Overlapping or nested exons are merged to the outermost span so the final exon list is non-overlapping.
 
@@ -21,107 +20,18 @@
             --output_file   gene annotation output file (Optional. Default: gene_annotation.txt)
             --species       species name                (Optional. Default: homo_sapiens)
             --assembly      assembly version            (Optional. Default: 38)
-            --host          core database host          (Mandatory unless using --gff3)
-            --port          host port                   (Mandatory unless using --gff3)
-            --user          host user                   (Mandatory unless using --gff3)
-            --database      override DB name            (Optional. Default: <species>_core_<release>_<assembly>)
-            --release       core database version       (Mandatory)
-            --gff3          GFF3 file path              (Optional. Enables file mode)
-            --gencode_primary   switch to filter for GENCODE primary instead of MANE Select (GFF3 mode only)
+            --gff3          GFF3 file path              (Mandatory)
+            --gencode_primary   switch to filter for GENCODE primary instead of MANE Select
 """
 
 import argparse
-import mysql.connector
-from mysql.connector import Error
 import sys
 import gzip
-
-
-def fetch_transcripts(species, assembly, release, host, port, user, database_name=None):
-    gene_annotation = {}
-    database = database_name or f"{species}_core_{release}_{assembly}"
-
-    # For human we select 'MANE_Select' transcripts and the gene name is a gene attrib
-    if species == "homo_sapiens":
-        sql_select = """
-                        SELECT ga.value,s.name,t.seq_region_strand,t.seq_region_start,t.seq_region_end,
-                        e.seq_region_start,e.seq_region_end FROM transcript t
-                        JOIN transcript_attrib ta ON t.transcript_id = ta.transcript_id
-                        JOIN attrib_type atr ON ta.attrib_type_id = atr.attrib_type_id
-                        JOIN seq_region s ON t.seq_region_id = s.seq_region_id
-                        JOIN gene g ON g.gene_id = t.gene_id
-                        JOIN gene_attrib ga ON g.gene_id = ga.gene_id
-                        JOIN exon_transcript et ON t.transcript_id = et.transcript_id
-                        JOIN exon e ON e.exon_id = et.exon_id
-                        WHERE t.stable_id like 'ENST%' and t.biotype = 'protein_coding'
-                        and ga.attrib_type_id = 4 and atr.code = 'MANE_Select'
-                        order by ga.value,s.name,t.seq_region_start,t.seq_region_end,e.seq_region_start,e.seq_region_end
-                """
-    else:
-        # For other species we select the canonical transcripts and the gene name is in xref
-        sql_select = """
-                        SELECT DISTINCT g.stable_id,s.name,t.seq_region_strand,t.seq_region_start,t.seq_region_end,
-                        e.seq_region_start,e.seq_region_end FROM transcript t
-                        JOIN transcript_attrib ta ON t.transcript_id = ta.transcript_id
-                        JOIN attrib_type atr ON ta.attrib_type_id = atr.attrib_type_id
-                        JOIN seq_region s ON t.seq_region_id = s.seq_region_id
-                        JOIN gene g ON g.gene_id = t.gene_id
-                        JOIN exon_transcript et ON t.transcript_id = et.transcript_id
-                        JOIN exon e ON e.exon_id = et.exon_id
-                        JOIN xref xr ON g.display_xref_id = xr.xref_id
-                        WHERE t.stable_id like 'ENS%' and t.biotype = 'protein_coding' and atr.code = 'is_canonical'
-                        order by xr.display_label,s.name,t.seq_region_start,t.seq_region_end,e.seq_region_start,e.seq_region_end
-                     """
-
-    connection = mysql.connector.connect(host=host,
-                                         database=database,
-                                         user=user,
-                                         password='',
-                                         port=port)
-
-    try:
-        if connection.is_connected():
-            cursor = connection.cursor()
-            cursor.execute(sql_select)
-            data = cursor.fetchall()
-            for row in data:
-                strand = row[2]
-                if strand == 1:
-                    strand = "+"
-                else:
-                    strand = "-"
-
-                if row[0] not in gene_annotation:
-                    exons_start = []
-                    exons_end = []
-                    exons_start.append(str(row[5]))
-                    exons_end.append(str(row[6]))
-
-                    gene_annotation[row[0]] = {
-                        "chr": row[1],
-                        "strand": strand,
-                        "start": row[3],
-                        "end": row[4],
-                        "exons_start": exons_start,
-                        "exons_end": exons_end
-                    }
-                else:
-                    gene_annotation[row[0]]["exons_start"].append(str(row[5]))
-                    gene_annotation[row[0]]["exons_end"].append(str(row[6]))
-
-    except Error as e:
-        print(f"Error while connecting to MySQL {database}", e)
-    finally:
-        if connection.is_connected():
-            cursor.close()
-            connection.close()
-
-    return gene_annotation
 
 def fetch_transcripts_gff3(gff3_path, use_gencode_primary):
     gene_annotation = {}
     open_func = gzip.open if gff3_path.endswith(".gz") else open
-    tag_to_keep = "gencode_primary" if use_gencode_primary else "mane_select"
+    tag_to_keep = "gencode_primary" if use_gencode_primary else None
 
     def strip_prefix(value):
         if not value:
@@ -163,7 +73,7 @@ def fetch_transcripts_gff3(gff3_path, use_gencode_primary):
 
             if feature in ["transcript", "mRNA"]:
                 attrs_lower = attrs.lower()
-                if tag_to_keep not in attrs_lower:
+                if tag_to_keep and tag_to_keep not in attrs_lower:
                     continue
                 biotype = attr_dict.get("biotype") or attr_dict.get("gene_biotype")
                 if biotype != "protein_coding":
@@ -358,13 +268,8 @@ def main():
                         default="38",
                         help="species assembly (default: 38)")
     parser.add_argument("-r", "--release", required=True)
-    parser.add_argument("--host")
-    parser.add_argument("--port")
-    parser.add_argument("--user")
-    parser.add_argument("--database",
-                        help="Override DB name (default: <species>_core_<release>_<assembly>)")
-    parser.add_argument("--gff3",
-                        help="GFF3 file path (enables file mode)")
+    parser.add_argument("--gff3", required=True,
+                        help="GFF3 file path (required)")
     parser.add_argument("--gencode_primary", action="store_true",
                         help="Filter GFF3 transcripts to tag=gencode_primary instead of MANE_Select")
     args = parser.parse_args()
@@ -373,23 +278,11 @@ def main():
     species = args.species
     assembly = args.assembly
     release = args.release
-    host = args.host
-    port = args.port
-    user = args.user
-
-    if args.gff3:
-        if species.lower() not in ["homo_sapiens", "human"]:
-            parser.error("GFF3 mode currently supports human only")
-        filter_label = "gencode_primary" if args.gencode_primary else "MANE_Select"
-        print(f"[spliceai_annotation_file] Mode: GFF3 | file={args.gff3} | filter={filter_label}", file=sys.stderr)
-        transcripts_list = fetch_transcripts_gff3(args.gff3, args.gencode_primary)
-    else:
-        if not (host and port and user):
-            parser.error("DB mode requires --host, --port and --user")
-        if args.gencode_primary:
-            print("[spliceai_annotation_file] Warning: --gencode_primary is ignored in DB mode (only MANE_Select is used)", file=sys.stderr)
-        print(f"[spliceai_annotation_file] Mode: DB | db={args.database or f'{species}_core_{release}_{assembly}'} | host={host} | port={port} | user={user}", file=sys.stderr)
-        transcripts_list = fetch_transcripts(species, assembly, release, host, port, user, args.database)
+    if species.lower() not in ["homo_sapiens", "human"]:
+        parser.error("Only human is currently supported")
+    filter_label = "gencode_primary" if args.gencode_primary else "MANE_Select"
+    print(f"[spliceai_annotation_file] file={args.gff3} | filter={filter_label}", file=sys.stderr)
+    transcripts_list = fetch_transcripts_gff3(args.gff3, args.gencode_primary)
 
     ok, fail = sanity_checks(transcripts_list)
     sorted_list = dict(sorted(ok.items(), key=lambda kv: kv[0]))
