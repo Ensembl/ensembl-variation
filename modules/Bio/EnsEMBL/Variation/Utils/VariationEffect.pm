@@ -1517,8 +1517,15 @@ sub ref_eq_alt_sequence {
     my $condition1 = ($ref_pep eq substr($alt_pep, 0, 1) && $alt_pep =~ /\*/ && $ref_pep =~ /\*/);
     
     # Condition 2: Mutated sequence matches reference and trailing stop fragment is short
-    # This handles edge cases where the overall protein sequence is preserved
-    my $condition2 = ($ref_seq eq $mut_substring && defined($final_stop_length) && $final_stop_length < 3);
+    # This handles edge cases where the overall protein sequence is preserved AND
+    # involves a stop codon. Without the stop codon check, insertions at the end of
+    # the CDS that don't involve the stop codon would incorrectly trigger stop_retained.
+    #
+    # CRITICAL FIX (GitHub Issue #1710): Added check that ref_seq ends with '*' (stop)
+    # This ensures we only call it stop_retained when the reference actually has a stop
+    # that could be "retained". For insertions past the peptide end that don't involve
+    # the stop codon, this condition should be FALSE.
+    my $condition2 = ($ref_seq =~ /\*$/ && $ref_seq eq $mut_substring && defined($final_stop_length) && $final_stop_length < 3);
     
     # Condition 3: Stop codon exists in ref AND is at the same position in both ref and alt
     # Note: index() returns -1 if not found, so index()+1 gives 0 for not-found, 1+ for found positions

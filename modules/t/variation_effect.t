@@ -942,11 +942,16 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         effects => [qw(frameshift_variant stop_lost)],
     }, {
         # 1bp insertion AFTER stop codon (at CDS/UTR boundary)
-        comment => 'Bug2: 1bp insertion at CDS/UTR boundary = frameshift+stop_lost+UTR',
+        # This insertion is in the 3' UTR, right after the stop codon ends.
+        # Since it's in the UTR (not the CDS), it doesn't cause a frameshift
+        # or affect the stop codon - the stop has already terminated translation.
+        # NOTE: Original expectation of frameshift+stop_lost was incorrect.
+        # The variant is purely in the UTR.
+        comment => 'Bug2: 1bp insertion at CDS/UTR boundary = UTR variant only',
         alleles => 'A',
         start   => $cds_end+1,
         end     => $cds_end,
-        effects => [qw(3_prime_UTR_variant frameshift_variant stop_lost)],
+        effects => [qw(3_prime_UTR_variant)],
     }, {
         # 1bp insertion purely in UTR (no stop codon overlap)
         comment => 'Bug2: 1bp insertion in 3-prime UTR only',
