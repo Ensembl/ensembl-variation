@@ -1310,6 +1310,54 @@ sub stop_retained {
 
         if(defined($alt_pep) && $alt_pep ne '') {
          
+          # =========================================================================
+          # FRAMESHIFT CHECK (GitHub Issue #1710 Bug 2)
+          # =========================================================================
+          # A frameshift variant cannot be stop_retained, even if both ref and alt
+          # happen to translate to stop codons at the same position. The reading
+          # frame has shifted, so the protein context is fundamentally different.
+          #
+          # We check for frameshift conditions BEFORE calling ref_eq_alt_sequence()
+          # to prevent incorrect stop_retained classification.
+          #
+          # IMPORTANT EXCEPTION: Deletions that span from CDS into 3' UTR should
+          # NOT use this simple frameshift check. For such deletions, the UTR bases
+          # can shift into the CDS and potentially reconstitute a stop codon with
+          # different bases ("stop retained, different codon"). These cases are
+          # handled correctly by the else branch via _ins_del_stop_altered(), which
+          # simulates the actual sequence edit.
+          #
+          # Note: We cannot call frameshift() here because frameshift() calls
+          # stop_retained(), which would cause infinite recursion. Instead, we
+          # inline the length-based frameshift detection logic.
+          # =========================================================================
+          if ($pre->{increase_length} || $pre->{decrease_length}) {
+              # Check if deletion spans into 3' UTR
+              my $spans_into_utr = 0;
+              if ($pre->{decrease_length}) {
+                  $feat ||= $bvfo->feature;
+                  my $cdna_end = $bvfo->cdna_end;
+                  my $cdna_coding_end = $feat->cdna_coding_end if defined($feat);
+                  if (defined($cdna_end) && defined($cdna_coding_end) && $cdna_end > $cdna_coding_end) {
+                      $spans_into_utr = 1;
+                  }
+              }
+              
+              # Only apply frameshift check if NOT spanning into UTR
+              unless ($spans_into_utr) {
+                  my $cds_start = $bvfo->cds_start;
+                  my $cds_end = $bvfo->cds_end;
+                  if (defined($cds_start) && defined($cds_end)) {
+                      my $var_len = $cds_end - $cds_start + 1;
+                      my $allele_len = $bvfoa->seq_length;
+                      if (defined($allele_len) && abs($allele_len - $var_len) % 3 != 0) {
+                          # This is a frameshift - cannot be stop_retained
+                          return $cache->{stop_retained} = 0;
+                      }
+                  }
+              }
+          }
+          
           ## handle inframe insertion of a stop just before the stop (no ref peptide)
           $cache->{stop_retained} = ref_eq_alt_sequence(@_);
         }
