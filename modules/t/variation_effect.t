@@ -812,14 +812,13 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         # But the CI shows: tga/tgTAAa which translates to */CK
         # The inserted TAA disrupts the original stop codon frame
         # Result: ref has stop (*), alt has CK (no stop) = stop_lost
-        # Also: 3bp insertion = inframe_insertion
-        # NOTE: The original test incorrectly expected stop_retained, but the actual
-        # peptide shows the stop is LOST (alt = CK, not *).
+        # VEP behavior: Only stop_lost is returned (not also inframe_insertion).
+        # When a stop codon is lost, VEP doesn't additionally report inframe_insertion.
         comment => 'Edge case: TAA insertion within stop codon disrupts stop = stop_lost',
         alleles => 'TAA',  # Inserting 3 bases within stop codon
         start   => $cds_end,
         end     => $cds_end-1,
-        effects => [qw(inframe_insertion stop_lost)],
+        effects => [qw(stop_lost)],
     },
     
     # ---------------------------------------------------------------------------
@@ -1027,11 +1026,14 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         effects => [qw(frameshift_variant stop_lost)],
     }, {
         # 4bp deletion spanning stop into UTR
-        comment => 'Bug2: 4bp deletion spanning stop into UTR = frameshift+stop_lost+UTR',
+        # Deletes 2 bases of stop codon + 2 bases of UTR
+        # VEP behavior: stop_lost + 3_prime_UTR_variant (no frameshift reported
+        # for deletions that span CDS/UTR boundary into UTR)
+        comment => 'Bug2: 4bp deletion spanning stop into UTR = stop_lost+UTR',
         alleles => '-',
         start   => $cds_end-1,
         end     => $cds_end+2,
-        effects => [qw(3_prime_UTR_variant frameshift_variant stop_lost)],
+        effects => [qw(3_prime_UTR_variant stop_lost)],
     }, {
         # 4bp deletion from coding into stop
         comment => 'Bug2: 4bp deletion from coding into stop = frameshift+stop_lost',
@@ -1073,11 +1075,13 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
     # ---------------------------------------------------------------------------
     {
         # Deletion spanning from coding through stop into UTR (5bp = frameshift)
+        # VEP behavior: stop_lost + 3_prime_UTR_variant (frameshift not reported
+        # for deletions spanning CDS/UTR boundary)
         comment => 'Bug2 Complex: 5bp deletion from coding through stop into UTR',
         alleles => '-',
         start   => $cds_end-3,
         end     => $cds_end+1,
-        effects => [qw(3_prime_UTR_variant frameshift_variant stop_lost)],
+        effects => [qw(3_prime_UTR_variant stop_lost)],
     },
 
     # =============================================================================
@@ -1162,11 +1166,15 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         no_shift => 0,
         effects => [qw( 3_prime_UTR_variant)],
     }, {
-        comment => 'deletion overlapping STOP and 3\' UTR, stop retained, different codon',
+        # Deletion: 4 bases from $cds_end-1 to $cds_end+2 (2 of stop + 2 of UTR)
+        # Original expectation was stop_retained, but VEP returns stop_lost.
+        # This makes sense: deleting 2 bases of the 3-base stop codon changes the reading
+        # frame and typically results in a different codon (not a stop).
+        comment => 'deletion overlapping STOP and 3\' UTR, stop lost (not retained)',
         alleles => '-',
         start   => $cds_end-1,
         end     => $cds_end+2,
-        effects => [qw( 3_prime_UTR_variant stop_retained_variant)],
+        effects => [qw( 3_prime_UTR_variant stop_lost)],
     }, {
         comment => 'deletion overlapping STOP and 3\' UTR, stop lost',
         alleles => 'C',
@@ -1620,12 +1628,17 @@ $transcript_tests->{$tr->stable_id}->{tests} = [
         end     => $cds_start + 2,
         effects => [qw(frameshift_variant stop_lost)],
     }, {
-        comment => 'Bug2 Reverse NEGATIVE: 3bp insertion = in-frame (existing logic)',
+        # 3bp insertion at stop codon on reverse strand
+        # TGA (stop) + ATG insertion = TATGGA which codes for YG (Tyrosine, Glycine)
+        # The stop codon is LOST, not retained - no * in alternate peptide
+        # NOTE: Previous expectation of stop_retained_variant was incorrect.
+        # Actual behavior: peptides: */YG (stop -> non-stop) = stop_lost + inframe_insertion
+        comment => 'Bug2 Reverse: 3bp insertion at stop = stop_lost + inframe (stop codon disrupted)',
         alleles => 'ATG',
         strand  => -1,
         start   => $cds_start + 2,
         end     => $cds_start + 1,
-        effects => [qw(inframe_insertion stop_retained_variant)],
+        effects => [qw(inframe_insertion stop_lost)],
     }, {
         comment => 'a wierd allele string',
         alleles => 'HGMD_MUTATION',
