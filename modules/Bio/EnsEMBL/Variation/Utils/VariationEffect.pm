@@ -1243,14 +1243,49 @@ sub stop_lost {
         # sequence variant
         if($bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele')) {
             
-            # special case frameshift
-    #        if(frameshift(@_)) {
-    #          my $ref_pep = _get_ref_pep(@_);
-    #          return $ref_pep && $ref_pep =~ /\*/;
-    #        }
-            
             my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
+            
             if(defined($ref_pep) && defined($alt_pep)) {
+                # =========================================================================
+                # FRAMESHIFT DETECTION AT STOP CODON (GitHub Issue #1710 Bug 2)
+                # =========================================================================
+                # For frameshift variants (non-3n length changes) that overlap the stop
+                # codon, the stop is ALWAYS lost because:
+                #   1. The reading frame has shifted
+                #   2. Even if a stop codon appears at the original position, the protein
+                #      context is fundamentally different
+                #   3. The peptide comparison ($alt_pep !~ /\*/) can incorrectly show both
+                #      ref and alt having '*' because the same nucleotides may translate
+                #      to stop, but this doesn't mean the stop is "retained" - the frame
+                #      shift means it's a fundamentally different protein
+                #
+                # Without this check, variants like 1bp insertions at the stop codon
+                # would show both ref_pep='*' and alt_pep='*', causing the normal check
+                # to return stop_lost=FALSE, leading to incorrect stop_retained annotation.
+                #
+                # We check for frameshift + overlap with stop codon before the peptide
+                # comparison.
+                # =========================================================================
+                my $pre = $bvfoa->_pre_consequence_predicates;
+                if (($pre->{increase_length} || $pre->{decrease_length}) && $ref_pep =~ /\*/) {
+                    # Check if this is a frameshift that overlaps the stop codon
+                    my $cds_start = $bvfo->cds_start;
+                    my $cds_end = $bvfo->cds_end;
+                    if (defined($cds_start) && defined($cds_end)) {
+                        my $var_len = $cds_end - $cds_start + 1;
+                        my $allele_len = $bvfoa->seq_length;
+                        if (defined($allele_len) && abs($allele_len - $var_len) % 3 != 0) {
+                            # This is a frameshift variant overlapping stop codon
+                            # Check if it actually overlaps the stop codon region
+                            if (_overlaps_stop_codon(@_)) {
+                                # Frameshift at stop = stop is lost
+                                return $cache->{stop_lost} = 1;
+                            }
+                        }
+                    }
+                }
+                
+                # Normal case: compare peptides
                 $cache->{stop_lost} = ( ($alt_pep !~ /\*/) and ($ref_pep =~ /\*/) );
             }
             else {
@@ -1466,17 +1501,6 @@ sub ref_eq_alt_sequence {
    # Note: index() returns -1 if not found, so index()+1 gives 0 for not-found, 1+ for found positions
    # This ensures we're comparing valid positions when both have stop codons
     my $condition3 = ($ref_pep =~ /\*/ && (index($ref_pep, "*") + 1 == index($alt_pep, "*") + 1));
-    
-    # DEBUG: Trace stop_retained logic (remove after debugging)
-    if ($alt_pep =~ /\*/) {
-        # Log any case where alt has a stop codon
-        warn "DEBUG ref_eq_alt_sequence: ref_pep='$ref_pep' alt_pep='$alt_pep' tl_start=$tl_start tl_end=$tl_end\n";
-        warn "DEBUG ref_eq_alt_sequence: ref_seq length=" . length($ref_seq) . " mut_seq length=" . length($mut_seq) . "\n";
-        warn "DEBUG ref_eq_alt_sequence: condition1=$condition1 condition2=$condition2 condition3=$condition3\n";
-        warn "DEBUG ref_eq_alt_sequence: ref_seq eq mut_substring = " . ($ref_seq eq $mut_substring ? 1 : 0) . "\n";
-        warn "DEBUG ref_eq_alt_sequence: final_stop_length=" . (defined($final_stop_length) ? $final_stop_length : 'undef') . "\n";
-        warn "DEBUG ref_eq_alt_sequence: returning " . (($condition1 || $condition2 || $condition3) ? 1 : 0) . "\n";
-    }
     
     return 1 if ($condition1 || $condition2 || $condition3);
     return 0;

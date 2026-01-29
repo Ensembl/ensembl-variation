@@ -736,20 +736,30 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         # ref_pep = single amino acid (no stop), alt_pep = amino acids with embedded stop
         # This should be stop_gained, NOT stop_retained
         # The ref has NO stop codon, so there is nothing to "retain"
+        #
+        # COORDINATES EXPLANATION:
+        # - Insert BETWEEN $cds_end-3 (last base of penultimate codon) and $cds_end-2 (first base of stop)
+        # - This places the insertion at a codon boundary so TAAGGG becomes codons TAA + GGG
+        # - Original: ...XXX|TAA (where XXX is penultimate codon, | is insertion point, TAA is stop)
+        # - After: ...XXX|TAAGGG|TAA -> codons: XXX TAA GGG TAA
+        # - The inserted TAA becomes a new in-frame stop codon = stop_gained
         comment => 'GitHub Issue #1710: inframe insertion with embedded stop should be stop_gained not stop_retained',
-        alleles => 'GGGTAA',  # Inserting GGG (Gly) + TAA (stop)
-        start   => $cds_end-3,  # Before the stop codon
-        end     => $cds_end-4,  # Insertion point
+        alleles => 'TAAGGG',  # Inserting TAA (stop) + GGG (Gly) - TAA first so it's in-frame as stop
+        start   => $cds_end-2,  # First base of original stop codon
+        end     => $cds_end-3,  # Last base of penultimate codon (insertion between them)
         effects => [qw(stop_gained inframe_insertion)],
     }, {
-        # Issue #1710 Case 2: Multi-codon insertion ending with stop
-        # This tests a longer insertion where stop is embedded in the middle/end
+        # Issue #1710 Case 2: Multi-codon insertion with stop in middle
+        # Insert at codon boundary so the embedded stop is in-frame
         # ref has no stop at this position, alt gains a stop -> stop_gained
+        #
+        # COORDINATES: Insert between $cds_end-6 and $cds_end-5 (codon boundary)
+        # This is a 9bp (3 codon) insertion, so still inframe
         comment => 'GitHub Issue #1710: multi-codon insertion with stop in middle should be stop_gained',
-        alleles => 'GGGTAGGGG',  # GGG (Gly) + TAG (stop) + GGG (Gly - but after stop)
-        start   => $cds_end-6,
-        end     => $cds_end-7,
-        effects => [qw(stop_gained frameshift_variant)],
+        alleles => 'GGGTAGGGG',  # GGG (Gly) + TAG (stop) + GGG (Gly - but after stop, won't translate)
+        start   => $cds_end-5,  # First base of second-to-last coding codon
+        end     => $cds_end-6,  # Last base of third-to-last coding codon (insertion between them)
+        effects => [qw(stop_gained inframe_insertion)],
     },
     
     # ---------------------------------------------------------------------------
@@ -784,15 +794,19 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
     # ---------------------------------------------------------------------------
     {
         # Insertion right before stop that does NOT introduce a new stop
-        # ref has stop, insertion preserves stop position -> frameshift or inframe
+        # Insert at codon boundary (between penultimate and stop codon)
+        # 3 bases = inframe insertion, GGG = Gly (not a stop)
+        # ref has stop, insertion pushes stop 3bp downstream -> still stop_retained? No, this is inframe_insertion only
         comment => 'Edge case: insertion before stop without new stop should not be stop_retained',
         alleles => 'GGG',  # Three bases (Gly) without stop
-        start   => $cds_end-3,
-        end     => $cds_end-4,
+        start   => $cds_end-2,  # First base of stop codon
+        end     => $cds_end-3,  # Last base of penultimate codon (insertion between them)
         effects => [qw(inframe_insertion)],
     }, {
         # Insertion that creates stop at SAME position as original
-        # This is a legitimate stop_retained case
+        # This inserts TAA right at the stop codon position
+        # The insertion is within the stop codon, so it's a complex case
+        # TAA inserted at position $cds_end means inserting WITHIN the stop codon
         comment => 'Edge case: insertion preserving stop at same position',
         alleles => 'TAA',  # Inserting a stop codon
         start   => $cds_end,
@@ -836,19 +850,22 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
     {
         # Very long insertion with stop near the beginning
         # Tests that we correctly identify stop_gained even with trailing sequence
+        # 9 bases = inframe (3 codons), insert at codon boundary
+        # Codons: TAA (stop) + GGG (Gly) + AAA (Lys) - stop is first, so stop_gained
         comment => 'Unusual: long insertion with early stop should be stop_gained',
         alleles => 'TAAGGGAAA',  # TAA (stop) + GGG + AAA
-        start   => $cds_end-6,
-        end     => $cds_end-7,
-        effects => [qw(stop_gained frameshift_variant)],
+        start   => $cds_end-5,  # First base of second-to-last coding codon
+        end     => $cds_end-6,  # Last base of third-to-last coding codon (insertion between)
+        effects => [qw(stop_gained inframe_insertion)],
     }, {
         # Insertion of just a stop codon (TAA) in coding region
+        # 3 bases = inframe, insert at codon boundary
         # ref has no stop here, alt has stop -> stop_gained
         comment => 'Unusual: insertion of bare stop codon should be stop_gained',
         alleles => 'TAA',
-        start   => $cds_end-6,
-        end     => $cds_end-7,
-        effects => [qw(stop_gained frameshift_variant)],
+        start   => $cds_end-5,  # First base of second-to-last coding codon
+        end     => $cds_end-6,  # Last base of third-to-last coding codon (insertion between)
+        effects => [qw(stop_gained inframe_insertion)],
     },
     
     # ---------------------------------------------------------------------------
@@ -860,10 +877,12 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         # This was the exact Issue #1710 bug pattern
         # First char matches (L=L), alt has stop, but ref has NO stop
         # Must NOT be stop_retained, MUST be stop_gained
+        # 6 bases = inframe, TGAGGG = TGA (stop) + GGG (Gly)
+        # Insert at codon boundary so TGA becomes a proper stop codon
         comment => 'NEGATIVE TEST #1710: single AA to multi-AA-with-stop must NOT be stop_retained',
-        alleles => 'GGGTGA',  # GGG (G) + TGA (stop)
-        start   => $cds_end-3,
-        end     => $cds_end-4,
+        alleles => 'TGAGGG',  # TGA (stop) + GGG (Gly) - stop first for in-frame stop_gained
+        start   => $cds_end-2,  # First base of stop codon
+        end     => $cds_end-3,  # Last base of penultimate codon (insertion between)
         effects => [qw(stop_gained inframe_insertion)],
     },
     
