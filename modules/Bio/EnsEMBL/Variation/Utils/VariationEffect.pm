@@ -1078,6 +1078,10 @@ sub synonymous_variant {
     my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
     
     return 0 unless $ref_pep;
+    
+    # Frameshifts are not synonymous, even if ref_pep eq alt_pep (e.g., both are '*')
+    # A frameshift at the stop codon changes the reading frame semantically
+    return 0 if frameshift(@_);
 
     return ( ($alt_pep eq $ref_pep) and (not stop_retained(@_) and not start_retained_variant(@_) and ($alt_pep !~ /X/) and ($ref_pep !~ /X/)) );
 }
@@ -1436,8 +1440,22 @@ sub ref_eq_alt_sequence {
    # as there is no resulting change to the amino acid sequence, it is not stop_retained
    #return 0 if $ref_pep ne "*" && $alt_pep ne "*" && $ref_pep eq $alt_pep;
 
-   # this is a logic from the former logic 
-   return 1 if ($bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele') && defined($ref_seq) && $tl_start > length($ref_seq) && $alt_pep =~ /^\*/);
+   # Legacy early-return for insertions past the peptide end where both ref and alt
+   # have stop codons. This handles the case where an insertion occurs at the stop
+   # codon position and maintains the stop.
+   #
+   # CRITICAL FIX (GitHub Issue #1710): Added check that ref_pep ALSO contains '*'.
+   # Without this check, insertions like L -> *G (where ref has no stop but alt
+   # starts with stop) would incorrectly return stop_retained instead of stop_gained.
+   # For stop to be "retained", it must exist in BOTH reference and alternate.
+   #
+   # When ref_pep is empty ('') for pure insertions, we should NOT return
+   # stop_retained because there's no reference stop to retain.
+   return 1 if ($bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele') && 
+                defined($ref_seq) && 
+                $tl_start > length($ref_seq) && 
+                $alt_pep =~ /^\*/ &&
+                $ref_pep =~ /\*/);
 
    substr($mut_seq, $tl_start-1, $tl_end - $tl_start + 1) = $alt_pep; # creating a mutated sequence from the ref sequence. 
 
@@ -1496,19 +1514,33 @@ sub ref_eq_alt_sequence {
    #   - ref='L', alt='LG*AX': L has no *, returns FALSE -> correctly falls through to stop_gained
    #   - ref='*', alt='*XYZ': * has *, returns TRUE -> correctly returns stop_retained
    #   - ref='L*', alt='LG*': L* has *, first char matches, returns TRUE (stop retained at diff pos)
-   my $condition1 = ($ref_pep eq substr($alt_pep, 0, 1) && $alt_pep =~ /\*/ && $ref_pep =~ /\*/);
-   
-   # Condition 2: Mutated sequence matches reference and trailing stop fragment is short
-   # This handles edge cases where the overall protein sequence is preserved
-   my $condition2 = ($ref_seq eq $mut_substring && defined($final_stop_length) && $final_stop_length < 3);
-   
-   # Condition 3: Stop codon exists in ref AND is at the same position in both ref and alt
-   # Note: index() returns -1 if not found, so index()+1 gives 0 for not-found, 1+ for found positions
-   # This ensures we're comparing valid positions when both have stop codons
-    my $condition3 = ($ref_pep =~ /\*/ && (index($ref_pep, "*") + 1 == index($alt_pep, "*") + 1));
+    my $condition1 = ($ref_pep eq substr($alt_pep, 0, 1) && $alt_pep =~ /\*/ && $ref_pep =~ /\*/);
     
-    return 1 if ($condition1 || $condition2 || $condition3);
-    return 0;
+    # Condition 2: Mutated sequence matches reference and trailing stop fragment is short
+    # This handles edge cases where the overall protein sequence is preserved
+    my $condition2 = ($ref_seq eq $mut_substring && defined($final_stop_length) && $final_stop_length < 3);
+    
+    # Condition 3: Stop codon exists in ref AND is at the same position in both ref and alt
+    # Note: index() returns -1 if not found, so index()+1 gives 0 for not-found, 1+ for found positions
+    # This ensures we're comparing valid positions when both have stop codons
+     my $condition3 = ($ref_pep =~ /\*/ && (index($ref_pep, "*") + 1 == index($alt_pep, "*") + 1));
+     
+     # DEBUG: Print detailed trace for stop_retained analysis
+     # Trigger on any case that might be problematic (ref has no stop OR insertion)
+     if (($alt_pep && $alt_pep ne '' && $ref_pep eq '') || ($alt_pep =~ /\*/ && $ref_pep !~ /\*/)) {
+         warn "DEBUG ref_eq_alt_sequence: ref_pep='$ref_pep' alt_pep='$alt_pep'\n";
+         warn "DEBUG   ref_seq length=" . length($ref_seq) . " tl_start=$tl_start tl_end=$tl_end\n";
+         warn "DEBUG   mut_seq length=" . length($mut_seq) . "\n";
+         warn "DEBUG   mut_substring='" . ($mut_substring // 'undef') . "'\n";
+         warn "DEBUG   final_stop='" . ($final_stop // 'undef') . "' final_stop_length=" . ($final_stop_length // 'undef') . "\n";
+         warn "DEBUG   condition1=$condition1 condition2=$condition2 condition3=$condition3\n";
+         warn "DEBUG   ref_seq last 5 chars: '" . substr($ref_seq, -5) . "'\n";
+         warn "DEBUG   mut_substring last 5 chars: '" . substr($mut_substring, -5) . "'\n" if defined($mut_substring);
+         warn "DEBUG   ref_seq eq mut_substring: " . ($ref_seq eq $mut_substring ? 'TRUE' : 'FALSE') . "\n";
+     }
+     
+     return 1 if ($condition1 || $condition2 || $condition3);
+     return 0;
 }
 
 sub _overlaps_stop_codon {

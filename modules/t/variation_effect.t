@@ -806,15 +806,20 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         end     => $cds_end-3,  # Last base of penultimate codon (insertion between them)
         effects => [qw(inframe_insertion)],
     }, {
-        # Insertion that creates stop at SAME position as original
-        # This inserts TAA right at the stop codon position
-        # The insertion is within the stop codon, so it's a complex case
-        # TAA inserted at position $cds_end means inserting WITHIN the stop codon
-        comment => 'Edge case: insertion preserving stop at same position',
-        alleles => 'TAA',  # Inserting a stop codon
+        # Insertion of TAA within the stop codon
+        # This inserts TAA between the 2nd and 3rd base of the stop codon TGA
+        # Original: TGA (stop) -> After insertion: TGTAAA (inserting TAA between G and A)
+        # But the CI shows: tga/tgTAAa which translates to */CK
+        # The inserted TAA disrupts the original stop codon frame
+        # Result: ref has stop (*), alt has CK (no stop) = stop_lost
+        # Also: 3bp insertion = inframe_insertion
+        # NOTE: The original test incorrectly expected stop_retained, but the actual
+        # peptide shows the stop is LOST (alt = CK, not *).
+        comment => 'Edge case: TAA insertion within stop codon disrupts stop = stop_lost',
+        alleles => 'TAA',  # Inserting 3 bases within stop codon
         start   => $cds_end,
         end     => $cds_end-1,
-        effects => [qw(inframe_insertion stop_retained_variant)],
+        effects => [qw(inframe_insertion stop_lost)],
     },
     
     # ---------------------------------------------------------------------------
