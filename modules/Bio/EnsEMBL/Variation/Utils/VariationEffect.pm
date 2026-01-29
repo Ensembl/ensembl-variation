@@ -1532,20 +1532,6 @@ sub ref_eq_alt_sequence {
     # This ensures we're comparing valid positions when both have stop codons
      my $condition3 = ($ref_pep =~ /\*/ && (index($ref_pep, "*") + 1 == index($alt_pep, "*") + 1));
      
-     # DEBUG: Print detailed trace for stop_retained analysis
-     # Trigger on any case that might be problematic (ref has no stop OR insertion)
-     if (($alt_pep && $alt_pep ne '' && $ref_pep eq '') || ($alt_pep =~ /\*/ && $ref_pep !~ /\*/)) {
-         warn "DEBUG ref_eq_alt_sequence: ref_pep='$ref_pep' alt_pep='$alt_pep'\n";
-         warn "DEBUG   ref_seq length=" . length($ref_seq) . " tl_start=$tl_start tl_end=$tl_end\n";
-         warn "DEBUG   mut_seq length=" . length($mut_seq) . "\n";
-         warn "DEBUG   mut_substring='" . ($mut_substring // 'undef') . "'\n";
-         warn "DEBUG   final_stop='" . ($final_stop // 'undef') . "' final_stop_length=" . ($final_stop_length // 'undef') . "\n";
-         warn "DEBUG   condition1=$condition1 condition2=$condition2 condition3=$condition3\n";
-         warn "DEBUG   ref_seq last 5 chars: '" . substr($ref_seq, -5) . "'\n";
-         warn "DEBUG   mut_substring last 5 chars: '" . substr($mut_substring, -5) . "'\n" if defined($mut_substring);
-         warn "DEBUG   ref_seq eq mut_substring: " . ($ref_seq eq $mut_substring ? 'TRUE' : 'FALSE') . "\n";
-     }
-     
      return 1 if ($condition1 || $condition2 || $condition3);
      return 0;
 }
