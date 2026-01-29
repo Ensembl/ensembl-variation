@@ -1465,10 +1465,20 @@ sub ref_eq_alt_sequence {
    # Condition 3: Stop codon exists in ref AND is at the same position in both ref and alt
    # Note: index() returns -1 if not found, so index()+1 gives 0 for not-found, 1+ for found positions
    # This ensures we're comparing valid positions when both have stop codons
-   my $condition3 = ($ref_pep =~ /\*/ && (index($ref_pep, "*") + 1 == index($alt_pep, "*") + 1));
-   
-   return 1 if ($condition1 || $condition2 || $condition3);
-   return 0;
+    my $condition3 = ($ref_pep =~ /\*/ && (index($ref_pep, "*") + 1 == index($alt_pep, "*") + 1));
+    
+    # DEBUG: Trace stop_retained logic (remove after debugging)
+    if ($alt_pep =~ /\*/ && !($ref_pep =~ /\*/)) {
+        # This is a case where alt has stop but ref doesn't - potential Bug 1 case
+        warn "DEBUG ref_eq_alt_sequence: ref_pep='$ref_pep' alt_pep='$alt_pep' tl_start=$tl_start tl_end=$tl_end\n";
+        warn "DEBUG ref_eq_alt_sequence: ref_seq length=" . length($ref_seq) . " mut_seq length=" . length($mut_seq) . "\n";
+        warn "DEBUG ref_eq_alt_sequence: condition1=$condition1 condition2=$condition2 condition3=$condition3\n";
+        warn "DEBUG ref_eq_alt_sequence: ref_seq eq mut_substring = " . ($ref_seq eq $mut_substring ? 1 : 0) . "\n";
+        warn "DEBUG ref_eq_alt_sequence: final_stop_length=" . (defined($final_stop_length) ? $final_stop_length : 'undef') . "\n";
+    }
+    
+    return 1 if ($condition1 || $condition2 || $condition3);
+    return 0;
 }
 
 sub _overlaps_stop_codon {
