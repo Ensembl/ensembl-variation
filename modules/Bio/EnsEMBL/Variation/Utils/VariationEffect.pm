@@ -1254,6 +1254,10 @@ sub stop_lost {
                 $cache->{stop_lost} = ( ($alt_pep !~ /\*/) and ($ref_pep =~ /\*/) );
             }
             else {
+                # When peptide alleles are unavailable (typically for variants at/past
+                # the stop codon), fall back to _ins_del_stop_altered() which performs
+                # sequence-level analysis to determine if the stop codon was altered.
+                # See _ins_del_stop_altered() documentation for detailed logic.
                 $cache->{stop_lost} = _ins_del_stop_altered(@_);
             }
         }
@@ -1310,6 +1314,14 @@ sub stop_retained {
           $cache->{stop_retained} = ref_eq_alt_sequence(@_);
         }
         else {
+            # When peptide alleles are unavailable (empty alt_pep), we use
+            # sequence-level analysis via _ins_del_stop_altered() to determine
+            # if this is a stop_retained case.
+            #
+            # Logic: stop_retained = (is indel) AND (overlaps stop) AND (stop NOT altered)
+            # See _ins_del_stop_altered() documentation for the "stop NOT altered" check.
+            # GitHub Issue #1710 Bug 2: _ins_del_stop_altered now correctly returns TRUE
+            # for frameshift indels at the stop codon, preventing incorrect stop_retained.
             $cache->{stop_retained} = ($pre->{increase_length} || $pre->{decrease_length}) && _overlaps_stop_codon(@_) && !_ins_del_stop_altered(@_);
         }
 
@@ -1347,11 +1359,67 @@ sub ref_eq_alt_sequence {
    
    my $final_stop_length = length($final_stop) if defined($final_stop) ne '';
    
-   # 1 is if the ref_pep and the first letter of the alt_pep is the same and the alt_pep has * in it 
-   # 2 is the ref_seq eq $mut_substring and the final stop length is less than 3
-   # 3 is * in ref_pep and the same index position exists for both the ref and alt pep
-   return 1 if ( ($ref_pep eq substr($alt_pep, 0, 1) && $alt_pep =~ /\*/) ||
-       ($ref_seq eq $mut_substring && defined($final_stop_length) && $final_stop_length < 3) || ( $ref_pep =~ /\*/ && (index($ref_pep, "*") + 1 == index($alt_pep, "*") + 1) ));
+   # =============================================================================
+   # STOP_RETAINED DETECTION LOGIC
+   # =============================================================================
+   # This function determines if a variant results in a "stop_retained" consequence,
+   # meaning the stop codon is preserved despite the sequence change.
+   #
+   # IMPORTANT: For a stop codon to be "retained", BOTH the reference AND alternate
+   # sequences must contain a stop codon. If only the alternate has a stop codon,
+   # that is "stop_gained". If only the reference has a stop codon, that is "stop_lost".
+   #
+   # Three conditions can indicate stop_retained (any one being true returns 1):
+   #
+   # CONDITION 1: Inframe insertion/substitution that preserves stop
+   #   - The first amino acid of alt matches ref (e.g., ref='*', alt='*XYZ')
+   #   - The alt sequence contains a stop codon
+   #   - CRITICAL FIX (GitHub Issue #1710): The ref must ALSO contain a stop codon
+   #     Without this check, insertions like L -> LG*AX would incorrectly be called
+   #     stop_retained when they should be stop_gained (ref has no stop, alt gains one)
+   #
+   # CONDITION 2: Mutated sequence matches reference up to original length
+   #   - The mutated protein sequence equals the reference up to the ref length
+   #   - Any trailing sequence after the original stop is less than a full codon (< 3 bp)
+   #   - This handles cases where the stop is preserved but there's trailing sequence
+   #
+   # CONDITION 3: Stop codon at same position in both ref and alt
+   #   - Both ref and alt contain a stop codon (ref check is explicit here)
+   #   - The stop codon appears at the same position in both sequences
+   #   - Uses index() + 1 to get 1-based position for comparison
+   #
+   # =============================================================================
+   
+   # Condition 1: First AA matches AND alt has stop AND ref has stop
+   # Bug fix for GitHub Issue ensembl-vep#1710:
+   # Previously this was: ($ref_pep eq substr($alt_pep, 0, 1) && $alt_pep =~ /\*/)
+   # This incorrectly returned stop_retained for cases like:
+   #   - ref_pep = 'L', alt_pep = 'LG*AX' (insertion with embedded stop)
+   #   - 'L' eq 'L' (first char of alt) = TRUE
+   #   - 'LG*AX' =~ /\*/ = TRUE
+   #   - Result: stop_retained (WRONG - should be stop_gained because ref has no stop)
+   #
+   # The fix adds: && $ref_pep =~ /\*/
+   # Now the condition only returns true if ref ALSO has a stop codon, which is
+   # the semantic requirement for "retaining" a stop - you can't retain what you
+   # don't have.
+   #
+   # Examples after fix:
+   #   - ref='L', alt='LG*AX': L has no *, returns FALSE -> correctly falls through to stop_gained
+   #   - ref='*', alt='*XYZ': * has *, returns TRUE -> correctly returns stop_retained
+   #   - ref='L*', alt='LG*': L* has *, first char matches, returns TRUE (stop retained at diff pos)
+   my $condition1 = ($ref_pep eq substr($alt_pep, 0, 1) && $alt_pep =~ /\*/ && $ref_pep =~ /\*/);
+   
+   # Condition 2: Mutated sequence matches reference and trailing stop fragment is short
+   # This handles edge cases where the overall protein sequence is preserved
+   my $condition2 = ($ref_seq eq $mut_substring && defined($final_stop_length) && $final_stop_length < 3);
+   
+   # Condition 3: Stop codon exists in ref AND is at the same position in both ref and alt
+   # Note: index() returns -1 if not found, so index()+1 gives 0 for not-found, 1+ for found positions
+   # This ensures we're comparing valid positions when both have stop codons
+   my $condition3 = ($ref_pep =~ /\*/ && (index($ref_pep, "*") + 1 == index($alt_pep, "*") + 1));
+   
+   return 1 if ($condition1 || $condition2 || $condition3);
    return 0;
 }
 
@@ -1379,6 +1447,55 @@ sub _overlaps_stop_codon {
     return $cache->{overlaps_stop_codon};
 }
 
+# =============================================================================
+# _ins_del_stop_altered()
+# =============================================================================
+# PURPOSE:
+#   Determines if an insertion or deletion at/near the stop codon has altered
+#   the stop codon. Used by stop_lost() and stop_retained() when peptide 
+#   alleles are unavailable (typically for variants at/past the stop codon).
+#
+# RETURNS:
+#   1 (TRUE)  = Stop codon IS altered (use for stop_lost consequence)
+#   0 (FALSE) = Stop codon is NOT altered (use for stop_retained consequence)
+#
+# LOGIC:
+#   1. Early exit if not a sequence variant, not unambiguous DNA, or doesn't
+#      overlap stop codon
+#   2. Early exit if not an indel (must have length change)
+#   3. If sequence got shorter after edit, stop is definitely altered (return 1)
+#   4. FRAMESHIFT CHECK (GitHub Issue #1710 Bug 2): If length change is not
+#      divisible by 3 (frameshift), stop is definitely altered (return 1)
+#      Rationale: A frameshift shifts the entire reading frame, so even if
+#      a stop codon appears at the original position, the protein context is
+#      fundamentally different - this is semantically stop_lost + frameshift
+#   5. For in-frame changes only: check if the codon at the original stop
+#      position is still a stop codon after the edit
+#
+# EDGE CASES HANDLED:
+#   - Frameshift insertions (1bp, 2bp, 4bp, 5bp, etc.) -> always returns 1
+#   - Frameshift deletions (1bp, 2bp, 4bp, 5bp, etc.) -> always returns 1
+#   - In-frame insertions (3bp, 6bp, 9bp) -> checks if stop still present
+#   - In-frame deletions (3bp, 6bp, 9bp) -> checks if stop still present
+#   - Sequence shortened after edit -> always returns 1
+#   - Incomplete terminal codons -> handled by _overlaps_stop_codon check
+#
+# CALLED BY:
+#   - stop_lost() (when peptide alleles unavailable)
+#   - stop_retained() (in the else branch when alt_pep empty)
+#
+# RELATED FUNCTIONS:
+#   - _overlaps_stop_codon(): Checks if variant overlaps stop codon region
+#   - stop_lost(): Main stop_lost consequence predicate
+#   - stop_retained(): Main stop_retained consequence predicate
+#   - ref_eq_alt_sequence(): Checks stop_retained when peptide alleles available
+#   - frameshift(): Checks for frameshift variants (uses similar % 3 logic)
+#
+# GITHUB ISSUE HISTORY:
+#   - Issue #1710 Bug 1: Fixed in ref_eq_alt_sequence() - added ref stop check
+#   - Issue #1710 Bug 2: Fixed here - added frameshift detection to correctly
+#     return stop_altered=true for frameshift indels at stop codon
+# =============================================================================
 sub _ins_del_stop_altered {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
 
@@ -1417,6 +1534,33 @@ sub _ins_del_stop_altered {
         # new sequence shorter, we know it has been altered
         return $cache->{ins_del_stop_altered} = 1 if length($utr_and_translateable) < length($translateable);
 
+        # =========================================================================
+        # FRAMESHIFT DETECTION (GitHub Issue #1710 Bug 2)
+        # =========================================================================
+        # For frameshift variants (non-3n length changes) at the stop codon,
+        # the stop is ALWAYS altered because:
+        #   1. The reading frame has shifted
+        #   2. Even if a stop codon appears at the original position, the protein
+        #      context is fundamentally different
+        #   3. This should result in stop_lost + frameshift_variant consequences
+        #
+        # Without this check, variants like 1bp insertions at the stop codon
+        # would incorrectly be annotated as stop_retained_variant because the
+        # codon translation check below only checks the original position.
+        #
+        # The codon translation check (below) is only meaningful for in-frame
+        # variants where the reading frame is preserved.
+        # =========================================================================
+        my $ref_len = ($cdna_end - $cdna_start) + 1;
+        my $alt_len = length($vf_feature_seq);
+        if (abs($alt_len - $ref_len) % 3 != 0) {
+            # Frameshift at stop codon = stop is definitely altered
+            return $cache->{ins_del_stop_altered} = 1;
+        }
+
+        # =========================================================================
+        # IN-FRAME CHECK: For 3n length changes, verify stop codon preservation
+        # =========================================================================
         # now we need the codon from the new seq at the equivalent end pos from translateable
         # and to translate it to check if it is still a stop
         my $pep = Bio::Seq->new(

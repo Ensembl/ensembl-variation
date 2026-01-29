@@ -705,7 +705,354 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         start   => $cds_end,
         end     => $cds_end-1,
         effects => [qw(inframe_insertion)],
+    },
+    
+    # =============================================================================
+    # TEST CASES FOR GITHUB ISSUE ensembl-vep#1710
+    # =============================================================================
+    # Bug: VEP 112+ incorrectly predicts stop_retained_variant instead of stop_gained
+    # for insertions that introduce a stop codon when the reference has no stop.
+    #
+    # Root cause: In ref_eq_alt_sequence(), condition 1 was:
+    #   ($ref_pep eq substr($alt_pep, 0, 1) && $alt_pep =~ /\*/)
+    # This returned stop_retained when first AA matched and alt had stop, WITHOUT
+    # checking if ref also had a stop codon.
+    #
+    # Fix: Added check that ref must also have stop codon for stop_retained.
+    #
+    # The following tests cover:
+    # 1. Issue #1710 main case: insertion with embedded stop -> should be stop_gained
+    # 2. Edge cases: various combinations of ref/alt with/without stop codons
+    # 3. Regression tests: existing stop_retained cases should still work
+    # =============================================================================
+    
+    # ---------------------------------------------------------------------------
+    # ISSUE #1710 REGRESSION TESTS: Insertions with embedded stop codons
+    # These are the PRIMARY bug cases that Issue #1710 reported
+    # ---------------------------------------------------------------------------
+    {
+        # Issue #1710 Case 1: Inframe insertion that introduces a NEW stop codon
+        # Example from issue: 3:56591278-56591278 T>TGGGGTAAGCA (L -> LG*AX)
+        # ref_pep = single amino acid (no stop), alt_pep = amino acids with embedded stop
+        # This should be stop_gained, NOT stop_retained
+        # The ref has NO stop codon, so there is nothing to "retain"
+        comment => 'GitHub Issue #1710: inframe insertion with embedded stop should be stop_gained not stop_retained',
+        alleles => 'GGGTAA',  # Inserting GGG (Gly) + TAA (stop)
+        start   => $cds_end-3,  # Before the stop codon
+        end     => $cds_end-4,  # Insertion point
+        effects => [qw(stop_gained inframe_insertion)],
     }, {
+        # Issue #1710 Case 2: Multi-codon insertion ending with stop
+        # This tests a longer insertion where stop is embedded in the middle/end
+        # ref has no stop at this position, alt gains a stop -> stop_gained
+        comment => 'GitHub Issue #1710: multi-codon insertion with stop in middle should be stop_gained',
+        alleles => 'GGGTAGGGG',  # GGG (Gly) + TAG (stop) + GGG (Gly - but after stop)
+        start   => $cds_end-6,
+        end     => $cds_end-7,
+        effects => [qw(stop_gained frameshift_variant)],
+    },
+    
+    # ---------------------------------------------------------------------------
+    # EDGE CASE: Single nucleotide changes at stop codon positions
+    # These should continue to work correctly after the fix
+    # ---------------------------------------------------------------------------
+    {
+        # Synonymous change in stop codon (TAA -> TAA equivalent via wobble)
+        # This is a true stop_retained case
+        comment => 'Edge case: synonymous stop codon change should be stop_retained',
+        alleles => 'G',
+        start   => $cds_end,  # Last base of stop codon
+        end     => $cds_end,
+        effects => [qw(stop_retained_variant)],
+    },
+    
+    # ---------------------------------------------------------------------------
+    # EDGE CASE: Deletions affecting stop codons
+    # ---------------------------------------------------------------------------
+    {
+        # Deletion that removes stop codon entirely
+        # ref has stop, alt has no stop -> stop_lost
+        comment => 'Edge case: deletion removing entire stop codon should be stop_lost',
+        alleles => '-',
+        start   => $cds_end-2,
+        end     => $cds_end,
+        effects => [qw(stop_lost inframe_deletion)],
+    },
+    
+    # ---------------------------------------------------------------------------
+    # EDGE CASE: Complex insertions near stop codon
+    # ---------------------------------------------------------------------------
+    {
+        # Insertion right before stop that does NOT introduce a new stop
+        # ref has stop, insertion preserves stop position -> frameshift or inframe
+        comment => 'Edge case: insertion before stop without new stop should not be stop_retained',
+        alleles => 'GGG',  # Three bases (Gly) without stop
+        start   => $cds_end-3,
+        end     => $cds_end-4,
+        effects => [qw(inframe_insertion)],
+    }, {
+        # Insertion that creates stop at SAME position as original
+        # This is a legitimate stop_retained case
+        comment => 'Edge case: insertion preserving stop at same position',
+        alleles => 'TAA',  # Inserting a stop codon
+        start   => $cds_end,
+        end     => $cds_end-1,
+        effects => [qw(inframe_insertion stop_retained_variant)],
+    },
+    
+    # ---------------------------------------------------------------------------
+    # EDGE CASE: Substitutions involving stop codons
+    # These test the boundary between stop_gained, stop_lost, and stop_retained
+    # ---------------------------------------------------------------------------
+    {
+        # Substitution changing stop codon to another stop codon (TAA -> TAG)
+        # Both ref and alt have stop -> stop_retained
+        comment => 'Edge case: stop codon to different stop codon should be stop_retained',
+        alleles => 'TAG',
+        start   => $cds_end-2,
+        end     => $cds_end,
+        effects => [qw(stop_retained_variant)],
+    }, {
+        # Substitution changing stop codon to non-stop (TAA -> GAA)
+        # ref has stop, alt has no stop -> stop_lost
+        comment => 'Edge case: stop codon to non-stop should be stop_lost',
+        alleles => 'GAA',
+        start   => $cds_end-2,
+        end     => $cds_end,
+        effects => [qw(stop_lost)],
+    }, {
+        # Substitution in coding region that creates a new stop (creates premature stop)
+        # ref has no stop at this position, alt has stop -> stop_gained
+        comment => 'Edge case: non-stop to stop codon should be stop_gained',
+        alleles => 'TAA',
+        start   => $cds_end-5,  # Before the actual stop codon
+        end     => $cds_end-3,
+        effects => [qw(stop_gained)],
+    },
+    
+    # ---------------------------------------------------------------------------
+    # BIOLOGICALLY UNUSUAL CASES (may not occur naturally but test logic)
+    # ---------------------------------------------------------------------------
+    {
+        # Very long insertion with stop near the beginning
+        # Tests that we correctly identify stop_gained even with trailing sequence
+        comment => 'Unusual: long insertion with early stop should be stop_gained',
+        alleles => 'TAAGGGAAA',  # TAA (stop) + GGG + AAA
+        start   => $cds_end-6,
+        end     => $cds_end-7,
+        effects => [qw(stop_gained frameshift_variant)],
+    }, {
+        # Insertion of just a stop codon (TAA) in coding region
+        # ref has no stop here, alt has stop -> stop_gained
+        comment => 'Unusual: insertion of bare stop codon should be stop_gained',
+        alleles => 'TAA',
+        start   => $cds_end-6,
+        end     => $cds_end-7,
+        effects => [qw(stop_gained frameshift_variant)],
+    },
+    
+    # ---------------------------------------------------------------------------
+    # NEGATIVE TESTS: Ensure we DON'T incorrectly call stop_retained
+    # These are the specific patterns that triggered Issue #1710
+    # ---------------------------------------------------------------------------
+    {
+        # Pattern: L -> LG*AX (ref single AA, alt has embedded stop)
+        # This was the exact Issue #1710 bug pattern
+        # First char matches (L=L), alt has stop, but ref has NO stop
+        # Must NOT be stop_retained, MUST be stop_gained
+        comment => 'NEGATIVE TEST #1710: single AA to multi-AA-with-stop must NOT be stop_retained',
+        alleles => 'GGGTGA',  # GGG (G) + TGA (stop)
+        start   => $cds_end-3,
+        end     => $cds_end-4,
+        effects => [qw(stop_gained inframe_insertion)],
+    },
+    
+    # =============================================================================
+    # END OF ISSUE #1710 TEST CASES
+    # =============================================================================
+
+    # =============================================================================
+    # TEST CASES FOR GITHUB ISSUE ensembl-vep#1710 - BUG 2 (FORWARD STRAND)
+    # =============================================================================
+    # Bug 2: Frameshift insertions/deletions at the stop codon incorrectly return
+    # stop_retained_variant instead of frameshift_variant + stop_lost.
+    #
+    # Root cause: _ins_del_stop_altered() didn't detect frameshifts - it only
+    # checked if the codon at the original stop position was still a stop,
+    # which is semantically wrong for frameshifts where the reading frame shifts.
+    #
+    # Fix: Added frameshift detection (non-3n length change) in _ins_del_stop_altered()
+    # to return TRUE (stop IS altered) for all frameshift variants at stop codon.
+    #
+    # Stop codon positions (forward strand): $cds_end-2, $cds_end-1, $cds_end
+    # Insertion notation: start => X, end => X-1 means insert BETWEEN X-1 and X
+    # =============================================================================
+
+    # ---------------------------------------------------------------------------
+    # POSITION-BASED INSERTION TESTS
+    # ---------------------------------------------------------------------------
+    {
+        # 1bp insertion BEFORE stop codon (in last coding codon, not stop itself)
+        # This causes frameshift but doesn't overlap stop, so no stop_lost
+        comment => 'Bug2: 1bp insertion BEFORE stop codon (frameshift in coding)',
+        alleles => 'A',
+        start   => $cds_end-2,
+        end     => $cds_end-3,
+        effects => [qw(frameshift_variant)],
+    }, {
+        # 1bp insertion BETWEEN 1st and 2nd base of stop (overlaps stop)
+        comment => 'Bug2: 1bp insertion between 1st-2nd base of stop = frameshift+stop_lost',
+        alleles => 'A',
+        start   => $cds_end-1,
+        end     => $cds_end-2,
+        effects => [qw(frameshift_variant stop_lost)],
+    }, {
+        # 1bp insertion BETWEEN 2nd and 3rd base of stop (overlaps stop)
+        comment => 'Bug2: 1bp insertion between 2nd-3rd base of stop = frameshift+stop_lost',
+        alleles => 'A',
+        start   => $cds_end,
+        end     => $cds_end-1,
+        effects => [qw(frameshift_variant stop_lost)],
+    }, {
+        # 1bp insertion AFTER stop codon (at CDS/UTR boundary)
+        comment => 'Bug2: 1bp insertion at CDS/UTR boundary = frameshift+stop_lost+UTR',
+        alleles => 'A',
+        start   => $cds_end+1,
+        end     => $cds_end,
+        effects => [qw(3_prime_UTR_variant frameshift_variant stop_lost)],
+    }, {
+        # 1bp insertion purely in UTR (no stop codon overlap)
+        comment => 'Bug2: 1bp insertion in 3-prime UTR only',
+        alleles => 'A',
+        start   => $cds_end+2,
+        end     => $cds_end+1,
+        effects => [qw(3_prime_UTR_variant)],
+    },
+
+    # ---------------------------------------------------------------------------
+    # SIZE-BASED INSERTION TESTS (at 2nd-3rd base position)
+    # ---------------------------------------------------------------------------
+    {
+        # 2bp insertion = frameshift (2 % 3 != 0)
+        comment => 'Bug2: 2bp insertion at stop = frameshift+stop_lost',
+        alleles => 'AT',
+        start   => $cds_end,
+        end     => $cds_end-1,
+        effects => [qw(frameshift_variant stop_lost)],
+    }, {
+        # 4bp insertion = frameshift (4 % 3 != 0)
+        comment => 'Bug2: 4bp insertion at stop = frameshift+stop_lost',
+        alleles => 'ATCG',
+        start   => $cds_end,
+        end     => $cds_end-1,
+        effects => [qw(frameshift_variant stop_lost)],
+    }, {
+        # 5bp insertion = frameshift (5 % 3 != 0)
+        comment => 'Bug2: 5bp insertion at stop = frameshift+stop_lost',
+        alleles => 'ATCGA',
+        start   => $cds_end,
+        end     => $cds_end-1,
+        effects => [qw(frameshift_variant stop_lost)],
+    }, {
+        # 7bp insertion = frameshift (7 % 3 != 0)
+        comment => 'Bug2: 7bp insertion at stop = frameshift+stop_lost',
+        alleles => 'ATCGATC',
+        start   => $cds_end,
+        end     => $cds_end-1,
+        effects => [qw(frameshift_variant stop_lost)],
+    },
+
+    # ---------------------------------------------------------------------------
+    # DELETION TESTS (frameshift deletions at stop codon)
+    # ---------------------------------------------------------------------------
+    {
+        # 1bp deletion of 1st base of stop
+        comment => 'Bug2: 1bp deletion of 1st base of stop = frameshift+stop_lost',
+        alleles => '-',
+        start   => $cds_end-2,
+        end     => $cds_end-2,
+        effects => [qw(frameshift_variant stop_lost)],
+    }, {
+        # 1bp deletion of 2nd base of stop
+        comment => 'Bug2: 1bp deletion of 2nd base of stop = frameshift+stop_lost',
+        alleles => '-',
+        start   => $cds_end-1,
+        end     => $cds_end-1,
+        effects => [qw(frameshift_variant stop_lost)],
+    }, {
+        # 1bp deletion of 3rd base of stop
+        comment => 'Bug2: 1bp deletion of 3rd base of stop = frameshift+stop_lost',
+        alleles => '-',
+        start   => $cds_end,
+        end     => $cds_end,
+        effects => [qw(frameshift_variant stop_lost)],
+    }, {
+        # 2bp deletion from stop (1st+2nd base)
+        comment => 'Bug2: 2bp deletion from stop = frameshift+stop_lost',
+        alleles => '-',
+        start   => $cds_end-2,
+        end     => $cds_end-1,
+        effects => [qw(frameshift_variant stop_lost)],
+    }, {
+        # 4bp deletion spanning stop into UTR
+        comment => 'Bug2: 4bp deletion spanning stop into UTR = frameshift+stop_lost+UTR',
+        alleles => '-',
+        start   => $cds_end-1,
+        end     => $cds_end+2,
+        effects => [qw(3_prime_UTR_variant frameshift_variant stop_lost)],
+    }, {
+        # 4bp deletion from coding into stop
+        comment => 'Bug2: 4bp deletion from coding into stop = frameshift+stop_lost',
+        alleles => '-',
+        start   => $cds_end-4,
+        end     => $cds_end-1,
+        effects => [qw(frameshift_variant stop_lost)],
+    },
+
+    # ---------------------------------------------------------------------------
+    # NEGATIVE TESTS: In-frame variants (should NOT trigger Bug2 fix)
+    # These verify we didn't break existing in-frame handling
+    # ---------------------------------------------------------------------------
+    {
+        # 3bp insertion = in-frame, uses existing stop codon check logic
+        comment => 'Bug2 NEGATIVE: 3bp insertion at stop = in-frame (existing logic)',
+        alleles => 'ATG',
+        start   => $cds_end,
+        end     => $cds_end-1,
+        effects => [qw(inframe_insertion stop_retained_variant)],
+    }, {
+        # 6bp insertion = in-frame (two codons)
+        comment => 'Bug2 NEGATIVE: 6bp insertion at stop = in-frame (existing logic)',
+        alleles => 'ATGATG',
+        start   => $cds_end,
+        end     => $cds_end-1,
+        effects => [qw(inframe_insertion stop_retained_variant)],
+    }, {
+        # 9bp insertion = in-frame (three codons)
+        comment => 'Bug2 NEGATIVE: 9bp insertion at stop = in-frame (existing logic)',
+        alleles => 'ATGATGATG',
+        start   => $cds_end,
+        end     => $cds_end-1,
+        effects => [qw(inframe_insertion stop_retained_variant)],
+    },
+
+    # ---------------------------------------------------------------------------
+    # COMPLEX EDGE CASE
+    # ---------------------------------------------------------------------------
+    {
+        # Deletion spanning from coding through stop into UTR (5bp = frameshift)
+        comment => 'Bug2 Complex: 5bp deletion from coding through stop into UTR',
+        alleles => '-',
+        start   => $cds_end-3,
+        end     => $cds_end+1,
+        effects => [qw(3_prime_UTR_variant frameshift_variant stop_lost)],
+    },
+
+    # =============================================================================
+    # END OF ISSUE #1710 BUG 2 FORWARD STRAND TEST CASES
+    # =============================================================================
+
+    {
         comment => 'a wierd allele string',
         alleles => 'HGMD_MUTATION',
         start   => $cds_end-10,
@@ -1192,6 +1539,61 @@ $transcript_tests->{$tr->stable_id}->{tests} = [
         start   => $cds_start,
         end     => $cds_start + 2,
         effects => [qw(stop_lost)],
+    },
+    # ============================================================================
+    # Bug 2 Reverse Strand Tests: Frameshift indels at stop codon (Issue #1710)
+    # Stop codon on reverse strand: $cds_start to $cds_start+2
+    # Insertions use start > end (e.g., start=$cds_start+1, end=$cds_start)
+    # ============================================================================
+    {
+        comment => 'Bug2 Reverse: 1bp insertion at stop = frameshift+stop_lost',
+        alleles => 'A',
+        strand  => -1,
+        start   => $cds_start + 1,
+        end     => $cds_start,
+        effects => [qw(frameshift_variant stop_lost)],
+    }, {
+        comment => 'Bug2 Reverse: 1bp insertion between 2nd-3rd base = frameshift+stop_lost',
+        alleles => 'A',
+        strand  => -1,
+        start   => $cds_start + 2,
+        end     => $cds_start + 1,
+        effects => [qw(frameshift_variant stop_lost)],
+    }, {
+        comment => 'Bug2 Reverse: 2bp insertion at stop = frameshift+stop_lost',
+        alleles => 'AT',
+        strand  => -1,
+        start   => $cds_start + 2,
+        end     => $cds_start + 1,
+        effects => [qw(frameshift_variant stop_lost)],
+    }, {
+        comment => 'Bug2 Reverse: 4bp insertion at stop = frameshift+stop_lost',
+        alleles => 'ATCG',
+        strand  => -1,
+        start   => $cds_start + 2,
+        end     => $cds_start + 1,
+        effects => [qw(frameshift_variant stop_lost)],
+    }, {
+        comment => 'Bug2 Reverse: 1bp deletion from stop = frameshift+stop_lost',
+        alleles => '-',
+        strand  => -1,
+        start   => $cds_start + 1,
+        end     => $cds_start + 1,
+        effects => [qw(frameshift_variant stop_lost)],
+    }, {
+        comment => 'Bug2 Reverse: 2bp deletion from stop = frameshift+stop_lost',
+        alleles => '-',
+        strand  => -1,
+        start   => $cds_start + 1,
+        end     => $cds_start + 2,
+        effects => [qw(frameshift_variant stop_lost)],
+    }, {
+        comment => 'Bug2 Reverse NEGATIVE: 3bp insertion = in-frame (existing logic)',
+        alleles => 'ATG',
+        strand  => -1,
+        start   => $cds_start + 2,
+        end     => $cds_start + 1,
+        effects => [qw(inframe_insertion stop_retained_variant)],
     }, {
         comment => 'a wierd allele string',
         alleles => 'HGMD_MUTATION',
