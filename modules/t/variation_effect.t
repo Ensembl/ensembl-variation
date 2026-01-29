@@ -1631,14 +1631,14 @@ $transcript_tests->{$tr->stable_id}->{tests} = [
         # 3bp insertion at stop codon on reverse strand
         # TGA (stop) + ATG insertion = TATGGA which codes for YG (Tyrosine, Glycine)
         # The stop codon is LOST, not retained - no * in alternate peptide
-        # NOTE: Previous expectation of stop_retained_variant was incorrect.
-        # Actual behavior: peptides: */YG (stop -> non-stop) = stop_lost + inframe_insertion
-        comment => 'Bug2 Reverse: 3bp insertion at stop = stop_lost + inframe (stop codon disrupted)',
+        # VEP behavior: Only stop_lost is returned (not also inframe_insertion).
+        # When a stop codon is lost, VEP doesn't additionally report inframe_insertion.
+        comment => 'Bug2 Reverse: 3bp insertion at stop = stop_lost (stop codon disrupted)',
         alleles => 'ATG',
         strand  => -1,
         start   => $cds_start + 2,
         end     => $cds_start + 1,
-        effects => [qw(inframe_insertion stop_lost)],
+        effects => [qw(stop_lost)],
     }, {
         comment => 'a wierd allele string',
         alleles => 'HGMD_MUTATION',
