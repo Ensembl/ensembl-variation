@@ -767,13 +767,16 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
     # These should continue to work correctly after the fix
     # ---------------------------------------------------------------------------
     {
-        # Synonymous change in stop codon (TAA -> TAA equivalent via wobble)
-        # This is a true stop_retained case
-        comment => 'Edge case: synonymous stop codon change should be stop_retained',
+        # Substitution changing last base of stop codon
+        # The stop codon is TGA. Changing 'A' to 'G' creates TGG (Trp) = stop_lost
+        # NOTE: This test was previously incorrectly expecting stop_retained,
+        # assuming the stop was TAA and this was a synonymous change.
+        # The actual stop codon in the test transcript is TGA.
+        comment => 'Edge case: TGA last base change to G creates TGG = stop_lost',
         alleles => 'G',
         start   => $cds_end,  # Last base of stop codon
         end     => $cds_end,
-        effects => [qw(stop_retained_variant)],
+        effects => [qw(stop_lost)],
     },
     
     # ---------------------------------------------------------------------------

@@ -1273,14 +1273,19 @@ sub stop_lost {
                     my $cds_end = $bvfo->cds_end;
                     if (defined($cds_start) && defined($cds_end)) {
                         my $var_len = $cds_end - $cds_start + 1;
+                        # For insertions, var_len can be 0 or negative
+                        $var_len = 0 if $var_len < 0;
                         my $allele_len = $bvfoa->seq_length;
                         if (defined($allele_len) && abs($allele_len - $var_len) % 3 != 0) {
-                            # This is a frameshift variant overlapping stop codon
-                            # Check if it actually overlaps the stop codon region
-                            if (_overlaps_stop_codon(@_)) {
-                                # Frameshift at stop = stop is lost
-                                return $cache->{stop_lost} = 1;
-                            }
+                            # This is a frameshift variant
+                            # Since ref_pep contains '*', the variant affects the stop codon region
+                            # For frameshifts at the stop codon, the stop is always "lost" semantically
+                            # because the reading frame has shifted, even if the same bases translate
+                            # to '*' - the protein context is fundamentally different
+                            #
+                            # We don't use _overlaps_stop_codon() here because it doesn't handle
+                            # insertion coordinates correctly (where cdna_start > cdna_end)
+                            return $cache->{stop_lost} = 1;
                         }
                     }
                 }
