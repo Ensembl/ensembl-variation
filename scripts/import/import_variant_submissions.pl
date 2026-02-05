@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016-2025] EMBL-European Bioinformatics Institute
+# Copyright [2016-2026] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -83,7 +83,7 @@ while (<FH>) {
     # Split the line
     my ($local_id,$hgvs,$ssid,$rsid,$condition,$omim) = split(/\t/);
     
-    # Skip if local id or hgvs notation could not be found
+    #ï¿½Skip if local id or hgvs notation could not be found
     next unless (defined($local_id) && defined($hgvs));
     
     # Set the ssID to be undefined if it's just an empty string
@@ -151,7 +151,7 @@ while (<FH>) {
         $chr_vf->dbID($ext_vf->dbID());
         $chr_vf->variation->dbID($ext_vf->variation->dbID());
         
-        # Flip our vf if it's on a different strand than the existing vf
+        #ï¿½Flip our vf if it's on a different strand than the existing vf
         if ($chr_vf->strand() != $ext_vf->strand()) {
           flip_variation_feature(\$chr_vf);
         }
