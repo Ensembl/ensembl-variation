@@ -1584,6 +1584,15 @@
             "type": "remote",
             "filename_template": "https://ftp.ensembl.org/pub/data_files/gallus_gallus_gca000002315v5/GRCg6a/variation_annotation/chCADD_updated.tsv.gz",
             "annotation_type": "cadd"
+        },
+        {
+            "id": "CADD_Turkey_5.1_whole_genome_SNVs",
+            "species": "meleagris_gallopavo",
+            "assembly": "Turkey_5.1",
+            "type": "remote",
+            "filename_template": "https://ftp.ensembl.org/pub/data_files/meleagris_gallopavo/Turkey_5.1/variant_annotation/tCADD.tsv.gz",
+            "annotation_type": "cadd"
         }
+        
     ]
 }
