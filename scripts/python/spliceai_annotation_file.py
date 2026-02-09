@@ -31,25 +31,29 @@ def fetch_transcripts(species, assembly, release, host, port, user):
     database = f"{species}_core_{release}_{assembly}"
 
     # For human we select 'MANE_Select' transcripts and the gene name is a gene attrib
+    # MANE v1.4 includes 50 non-coding genes, we're not going to filter by biotype 'protein coding'
+    # Also some genes are not in chr, we also include those in the query
+    # Some genes do not have a xref display_label for these we use the gene value
     if species == "homo_sapiens":
         sql_select = """
-                        SELECT ga.value,s.name,t.seq_region_strand,t.seq_region_start,t.seq_region_end,
+                        SELECT x.display_label,ga.value,s.name,t.seq_region_strand,t.seq_region_start,t.seq_region_end,
                         e.seq_region_start,e.seq_region_end FROM transcript t
-                        JOIN transcript_attrib ta ON t.transcript_id = ta.transcript_id
-                        JOIN attrib_type atr ON ta.attrib_type_id = atr.attrib_type_id
-                        JOIN seq_region s ON t.seq_region_id = s.seq_region_id
-                        JOIN gene g ON g.gene_id = t.gene_id
-                        JOIN gene_attrib ga ON g.gene_id = ga.gene_id
-                        JOIN exon_transcript et ON t.transcript_id = et.transcript_id
-                        JOIN exon e ON e.exon_id = et.exon_id
-                        WHERE t.stable_id like 'ENST%' and t.biotype = 'protein_coding'
+                        LEFT JOIN transcript_attrib ta ON t.transcript_id = ta.transcript_id
+                        LEFT JOIN attrib_type atr ON ta.attrib_type_id = atr.attrib_type_id
+                        LEFT JOIN seq_region s ON t.seq_region_id = s.seq_region_id
+                        LEFT JOIN gene g ON g.gene_id = t.gene_id
+                        LEFT JOIN gene_attrib ga ON g.gene_id = ga.gene_id
+                        LEFT JOIN xref x ON g.display_xref_id = x.xref_id
+                        LEFT JOIN exon_transcript et ON t.transcript_id = et.transcript_id
+                        LEFT JOIN exon e ON e.exon_id = et.exon_id
+                        WHERE t.stable_id like 'ENST%'
                         and ga.attrib_type_id = 4 and atr.code = 'MANE_Select'
                         order by ga.value,s.name,t.seq_region_start,t.seq_region_end,e.seq_region_start,e.seq_region_end
                 """
     else:
         # For other species we select the canonical transcripts and the gene name is in xref
         sql_select = """
-                        SELECT DISTINCT g.stable_id,s.name,t.seq_region_strand,t.seq_region_start,t.seq_region_end,
+                        SELECT DISTINCT g.stable_id,g.stable_id,s.name,t.seq_region_strand,t.seq_region_start,t.seq_region_end,
                         e.seq_region_start,e.seq_region_end FROM transcript t
                         JOIN transcript_attrib ta ON t.transcript_id = ta.transcript_id
                         JOIN attrib_type atr ON ta.attrib_type_id = atr.attrib_type_id
@@ -74,29 +78,36 @@ def fetch_transcripts(species, assembly, release, host, port, user):
             cursor.execute(sql_select)
             data = cursor.fetchall()
             for row in data:
-                strand = row[2]
+                strand = row[3]
                 if strand == 1:
                     strand = "+"
                 else:
                     strand = "-"
 
-                if row[0] not in gene_annotation:
+                # Get the gene symbol
+                gene_symbol = ""
+                if not row[0]:
+                    gene_symbol = row[1]
+                else:
+                    gene_symbol = row[0]
+
+                if gene_symbol not in gene_annotation:
                     exons_start = []
                     exons_end = []
-                    exons_start.append(str(row[5]))
-                    exons_end.append(str(row[6]))
+                    exons_start.append(str(row[6]))
+                    exons_end.append(str(row[7]))
 
-                    gene_annotation[row[0]] = {
-                        "chr": row[1],
+                    gene_annotation[gene_symbol] = {
+                        "chr": row[2],
                         "strand": strand,
-                        "start": row[3],
-                        "end": row[4],
+                        "start": row[4],
+                        "end": row[5],
                         "exons_start": exons_start,
                         "exons_end": exons_end
                     }
                 else:
-                    gene_annotation[row[0]]["exons_start"].append(str(row[5]))
-                    gene_annotation[row[0]]["exons_end"].append(str(row[6]))
+                    gene_annotation[gene_symbol]["exons_start"].append(str(row[6]))
+                    gene_annotation[gene_symbol]["exons_end"].append(str(row[7]))
 
     except Error as e:
         print(f"Error while connecting to MySQL {database}", e)
@@ -177,9 +188,9 @@ def main():
 
     check = sanity_checks(transcripts_list)
 
-    if not check:
-        write_output(transcripts_list, output_file)
-    else:
+    write_output(transcripts_list, output_file)
+
+    if check:
         print("Sanity checks failed for the following genes: ", (", ").join(check))
 
 
