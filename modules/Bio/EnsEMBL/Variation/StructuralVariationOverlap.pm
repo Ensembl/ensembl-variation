@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2026] EMBL-European Bioinformatics Institute
+Copyright [2016-2025] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -88,7 +88,7 @@ sub new {
         my $feature = $self->feature;
         my $num = 0;
         for ($vf, @$breakends) {
-            if (_close_to_feature($_, $feature)) {
+            if (_close_to_feature($_, $feature) || ref($self) eq 'Bio::EnsEMBL::Variation::IntergenicStructuralVariation') {
                 $self->add_StructuralVariationOverlapAllele(
                     Bio::EnsEMBL::Variation::StructuralVariationOverlapAllele->new(
                         -structural_variation_overlap => $self,
