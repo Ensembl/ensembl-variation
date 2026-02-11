@@ -1255,11 +1255,16 @@ sub stop_lost {
             
             my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
             
-            if(defined($ref_pep) && defined($alt_pep) && $alt_pep !~ 'X') {
-                # When alt_pep contains 'X' (unknown/incomplete amino acid), peptide-based
-                # analysis is unreliable. For example, peptides L/L*X may look like stop_gained
-                # but sequence analysis reveals stop_retained. Fall through to _ins_del_stop_altered()
-                # for DNA-level analysis in such cases (ENSVAR-6654).
+            if(defined($ref_pep) && defined($alt_pep) && !($alt_pep =~ /X/ && $alt_pep =~ /\*/)) {
+                # When alt_pep contains BOTH 'X' (unknown/incomplete amino acid) AND '*'
+                # (stop codon), the stop codon position in the peptide is unreliable.
+                # For example, peptides L/L*X may look like stop_gained but sequence analysis
+                # reveals stop_retained. Fall through to _ins_del_stop_altered() for DNA-level
+                # analysis in such cases (ENSVAR-6654).
+                #
+                # IMPORTANT: When alt_pep has X but NOT *, the peptide-based check
+                # ($alt_pep !~ /\*/) correctly identifies stop_lost - the absence of *
+                # reliably indicates the stop was lost regardless of X.
                 #
                 # =========================================================================
                 # FRAMESHIFT DETECTION AT STOP CODON (GitHub Issue #1710 Bug 2)
@@ -1365,11 +1370,15 @@ sub stop_retained {
 
         my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
 
-        if(defined($alt_pep) && $alt_pep ne '' && $alt_pep !~ 'X') {
-          # When alt_pep contains 'X' (unknown/incomplete amino acid), peptide-based
-          # analysis is unreliable. For example, peptides L/L*X may appear to indicate
-          # stop_gained but sequence analysis reveals stop_retained. Fall through to
+        if(defined($alt_pep) && $alt_pep ne '' && !($alt_pep =~ /X/ && $alt_pep =~ /\*/)) {
+          # When alt_pep contains BOTH 'X' (unknown/incomplete amino acid) AND '*'
+          # (stop codon), the stop codon position in the peptide is unreliable.
+          # For example, peptides L/L*X may appear to indicate stop_gained but
+          # sequence analysis reveals stop_retained. Fall through to
           # _ins_del_stop_altered() for DNA-level analysis in such cases (ENSVAR-6654).
+          #
+          # IMPORTANT: When alt_pep has X but NOT *, the peptide-based check can
+          # still be relied upon - the absence of * reliably indicates no stop.
           #
           # =========================================================================
           # FRAMESHIFT CHECK (GitHub Issue #1710 Bug 2)
@@ -1519,10 +1528,12 @@ sub ref_eq_alt_sequence {
    #
    # =============================================================================
    
-   # Condition 1: Mutated sequence matches reference AND trailing sequence starts with stop
-   # This handles cases where the overall protein is preserved and the insertion
-   # maintains or adds a stop codon right after the original peptide boundary.
-    my $condition1 = ($ref_seq eq $mut_substring && defined($final_stop) && $final_stop =~ /^\Q*\E/);
+   # Condition 1: Reference ends with stop AND mutated sequence matches reference AND
+   # trailing sequence starts with stop. The $ref_seq =~ /\*$/ guard ensures we only
+   # trigger stop_retained when the reference peptide itself has a stop codon (preventing
+   # false positives for pure insertions where ref_pep is empty but $ref_seq eq
+   # $mut_substring trivially matches).
+    my $condition1 = ($ref_seq =~ /\*$/ && $ref_seq eq $mut_substring && defined($final_stop) && $final_stop =~ /^\Q*\E/);
     
     # Condition 2: Stop codon exists in ref AND is at the same position in both ref and alt
     # index() returns -1 if not found; both must have stop at same position for equality
