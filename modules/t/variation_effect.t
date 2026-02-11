@@ -713,12 +713,14 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
     # Bug: VEP 112+ incorrectly predicts stop_retained_variant instead of stop_gained
     # for insertions that introduce a stop codon when the reference has no stop.
     #
-    # Root cause: In ref_eq_alt_sequence(), condition 1 was:
+    # Root cause: In ref_eq_alt_sequence(), the original condition 1 was:
     #   ($ref_pep eq substr($alt_pep, 0, 1) && $alt_pep =~ /\*/)
     # This returned stop_retained when first AA matched and alt had stop, WITHOUT
     # checking if ref also had a stop codon.
     #
-    # Fix: Added check that ref must also have stop codon for stop_retained.
+    # Fix: Removed the unreliable condition 1 entirely (it was a strict subset of
+    # condition 2 which checks stop position via index()). Also improved the
+    # remaining conditions for semantic correctness (ENSVAR-6654, PR #1184).
     #
     # The following tests cover:
     # 1. Issue #1710 main case: insertion with embedded stop -> should be stop_gained

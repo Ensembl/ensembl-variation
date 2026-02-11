@@ -1298,8 +1298,10 @@ sub stop_lost {
                             # because the reading frame has shifted, even if the same bases translate
                             # to '*' - the protein context is fundamentally different
                             #
-                            # We don't use _overlaps_stop_codon() here because it doesn't handle
-                            # insertion coordinates correctly (where cdna_start > cdna_end)
+                            # Note: _overlaps_stop_codon() now handles insertion coordinates
+                            # correctly (ENSVAR-6654 fix), but we keep this inline check
+                            # because it's faster (avoids the extra function call) and we've
+                            # already confirmed ref_pep contains '*' above.
                             return $cache->{stop_lost} = 1;
                         }
                     }
@@ -1609,7 +1611,9 @@ sub _overlaps_stop_codon {
 #   - frameshift(): Checks for frameshift variants (uses similar % 3 logic)
 #
 # GITHUB ISSUE HISTORY:
-#   - Issue #1710 Bug 1: Fixed in ref_eq_alt_sequence() - added ref stop check
+#   - Issue #1710 Bug 1: Fixed in ref_eq_alt_sequence() - removed unreliable
+#     condition 1 (was a strict subset of condition 2) that allowed false
+#     stop_retained for insertions with embedded stops (ENSVAR-6654, PR #1184)
 #   - Issue #1710 Bug 2: Fixed here - added frameshift detection to correctly
 #     return stop_altered=true for frameshift indels at stop codon
 # =============================================================================
