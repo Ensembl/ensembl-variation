@@ -1122,6 +1122,12 @@ sub inframe_insertion {
         # we can use start_retained to check this
         return 0 if start_retained_variant(@_) && $alt_pep =~ /\Q$ref_pep\E$/;
 
+        # Not an inframe insertion if both ref and alt peptides are just stop codons
+        # e.g. ref codon TAG, alt codon TAAG -> both translate to '*'
+        # This can happen when alt_codon is only 1-2bp larger than ref_codon
+        # and the insertion doesn't actually change the amino acid (ENSVAR-6654)
+        return 0 if $ref_pep eq "*" && $alt_pep eq "*";
+
         # if we have a stop codon in the alt peptide
         # trim off everything after it
         # this allows us to detect inframe insertions that retain a stop
@@ -1249,7 +1255,12 @@ sub stop_lost {
             
             my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
             
-            if(defined($ref_pep) && defined($alt_pep)) {
+            if(defined($ref_pep) && defined($alt_pep) && $alt_pep !~ 'X') {
+                # When alt_pep contains 'X' (unknown/incomplete amino acid), peptide-based
+                # analysis is unreliable. For example, peptides L/L*X may look like stop_gained
+                # but sequence analysis reveals stop_retained. Fall through to _ins_del_stop_altered()
+                # for DNA-level analysis in such cases (ENSVAR-6654).
+                #
                 # =========================================================================
                 # FRAMESHIFT DETECTION AT STOP CODON (GitHub Issue #1710 Bug 2)
                 # =========================================================================
@@ -1352,8 +1363,12 @@ sub stop_retained {
 
         my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
 
-        if(defined($alt_pep) && $alt_pep ne '') {
-         
+        if(defined($alt_pep) && $alt_pep ne '' && $alt_pep !~ 'X') {
+          # When alt_pep contains 'X' (unknown/incomplete amino acid), peptide-based
+          # analysis is unreliable. For example, peptides L/L*X may appear to indicate
+          # stop_gained but sequence analysis reveals stop_retained. Fall through to
+          # _ins_del_stop_altered() for DNA-level analysis in such cases (ENSVAR-6654).
+          #
           # =========================================================================
           # FRAMESHIFT CHECK (GitHub Issue #1710 Bug 2)
           # =========================================================================
@@ -1428,7 +1443,6 @@ sub ref_eq_alt_sequence {
    $bvfo ||= $bvfoa->base_variation_feature_overlap;
    my $ref_seq = $bvfo->_peptide;
 
-   my $mut_seq = $ref_seq;
    my $tl_start = $bvfo->translation_start;
    my $tl_end = $bvfo->translation_end;
    
@@ -1457,13 +1471,13 @@ sub ref_eq_alt_sequence {
                 $alt_pep =~ /^\*/ &&
                 $ref_pep =~ /\*/);
 
+   # Build mutated sequence AFTER early returns to avoid unnecessary copy
+   my $mut_seq = $ref_seq;
    substr($mut_seq, $tl_start-1, $tl_end - $tl_start + 1) = $alt_pep; # creating a mutated sequence from the ref sequence. 
 
    my $mut_substring = substr($mut_seq, 0, length($ref_seq)); # getting a substring up to the length of the ref sequence for comparison from index 0 to the length of the ref seq;
-   
+        
    my $final_stop = substr($mut_seq, length($ref_seq)) if length($ref_seq) < length($mut_seq); # getting the length of the $mut_seq from the length of the ref_seq to the end 
-   
-   my $final_stop_length = length($final_stop) if defined($final_stop) ne '';
    
    # =============================================================================
    # STOP_RETAINED DETECTION LOGIC
@@ -1475,64 +1489,44 @@ sub ref_eq_alt_sequence {
    # sequences must contain a stop codon. If only the alternate has a stop codon,
    # that is "stop_gained". If only the reference has a stop codon, that is "stop_lost".
    #
-   # Three conditions can indicate stop_retained (any one being true returns 1):
+   # Two conditions can indicate stop_retained (any one being true returns 1):
    #
-   # CONDITION 1: Inframe insertion/substitution that preserves stop
-   #   - The first amino acid of alt matches ref (e.g., ref='*', alt='*XYZ')
-   #   - The alt sequence contains a stop codon
-   #   - CRITICAL FIX (GitHub Issue #1710): The ref must ALSO contain a stop codon
-   #     Without this check, insertions like L -> LG*AX would incorrectly be called
-   #     stop_retained when they should be stop_gained (ref has no stop, alt gains one)
-   #
-   # CONDITION 2: Mutated sequence matches reference up to original length
+   # CONDITION 1: Mutated sequence matches reference up to original length
    #   - The mutated protein sequence equals the reference up to the ref length
-   #   - Any trailing sequence after the original stop is less than a full codon (< 3 bp)
-   #   - This handles cases where the stop is preserved but there's trailing sequence
+   #   - The trailing sequence (after original ref length) starts with '*'
+   #   - This checks that the stop codon is preserved at its original position
+   #     and any extra sequence after it also begins with a stop
    #
-   # CONDITION 3: Stop codon at same position in both ref and alt
-   #   - Both ref and alt contain a stop codon (ref check is explicit here)
-   #   - The stop codon appears at the same position in both sequences
-   #   - Uses index() + 1 to get 1-based position for comparison
+   # CONDITION 2: Stop codon at same position in both ref and alt
+   #   - Ref peptide contains a stop codon
+   #   - The stop codon appears at the same index position in both ref and alt
+   #   - Uses index() which returns -1 if not found, so both must have stop
+   #     at matching positions for equality
+   #
+   # HISTORY:
+   #   - Original condition 1 ($ref_pep eq substr($alt_pep, 0, 1) && $alt_pep =~ /\*/)
+   #     was removed because it could not reliably determine if the stop codon was
+   #     at the original stop position. Even after the GitHub Issue #1710 fix that
+   #     added $ref_pep =~ /\*/, this condition was a strict subset of condition 2
+   #     (now condition 2 below) and thus redundant (ENSVAR-6654, PR #1184).
+   #   - Original condition 2 checked $final_stop_length < 3, which was a heuristic.
+   #     Changed to check $final_stop =~ /^\Q*\E/ for semantic correctness: directly
+   #     verify the trailing sequence starts with a stop codon (ENSVAR-6654, PR #1184).
+   #   - Original condition 3 used index()+1 == index()+1; the +1 on both sides is
+   #     unnecessary. Simplified to index() == index() (ENSVAR-6654, PR #1184).
    #
    # =============================================================================
    
-   # Condition 1: First AA matches AND alt has stop AND ref has stop
-   # Bug fix for GitHub Issue ensembl-vep#1710:
-   # Previously this was: ($ref_pep eq substr($alt_pep, 0, 1) && $alt_pep =~ /\*/)
-   # This incorrectly returned stop_retained for cases like:
-   #   - ref_pep = 'L', alt_pep = 'LG*AX' (insertion with embedded stop)
-   #   - 'L' eq 'L' (first char of alt) = TRUE
-   #   - 'LG*AX' =~ /\*/ = TRUE
-   #   - Result: stop_retained (WRONG - should be stop_gained because ref has no stop)
-   #
-   # The fix adds: && $ref_pep =~ /\*/
-   # Now the condition only returns true if ref ALSO has a stop codon, which is
-   # the semantic requirement for "retaining" a stop - you can't retain what you
-   # don't have.
-   #
-   # Examples after fix:
-   #   - ref='L', alt='LG*AX': L has no *, returns FALSE -> correctly falls through to stop_gained
-   #   - ref='*', alt='*XYZ': * has *, returns TRUE -> correctly returns stop_retained
-   #   - ref='L*', alt='LG*': L* has *, first char matches, returns TRUE (stop retained at diff pos)
-    my $condition1 = ($ref_pep eq substr($alt_pep, 0, 1) && $alt_pep =~ /\*/ && $ref_pep =~ /\*/);
+   # Condition 1: Mutated sequence matches reference AND trailing sequence starts with stop
+   # This handles cases where the overall protein is preserved and the insertion
+   # maintains or adds a stop codon right after the original peptide boundary.
+    my $condition1 = ($ref_seq eq $mut_substring && defined($final_stop) && $final_stop =~ /^\Q*\E/);
     
-    # Condition 2: Mutated sequence matches reference and trailing stop fragment is short
-    # This handles edge cases where the overall protein sequence is preserved AND
-    # involves a stop codon. Without the stop codon check, insertions at the end of
-    # the CDS that don't involve the stop codon would incorrectly trigger stop_retained.
-    #
-    # CRITICAL FIX (GitHub Issue #1710): Added check that ref_seq ends with '*' (stop)
-    # This ensures we only call it stop_retained when the reference actually has a stop
-    # that could be "retained". For insertions past the peptide end that don't involve
-    # the stop codon, this condition should be FALSE.
-    my $condition2 = ($ref_seq =~ /\*$/ && $ref_seq eq $mut_substring && defined($final_stop_length) && $final_stop_length < 3);
-    
-    # Condition 3: Stop codon exists in ref AND is at the same position in both ref and alt
-    # Note: index() returns -1 if not found, so index()+1 gives 0 for not-found, 1+ for found positions
-    # This ensures we're comparing valid positions when both have stop codons
-     my $condition3 = ($ref_pep =~ /\*/ && (index($ref_pep, "*") + 1 == index($alt_pep, "*") + 1));
+    # Condition 2: Stop codon exists in ref AND is at the same position in both ref and alt
+    # index() returns -1 if not found; both must have stop at same position for equality
+     my $condition2 = ($ref_pep =~ /\*/ && (index($ref_pep, "*") == index($alt_pep, "*")));
      
-     return 1 if ($condition1 || $condition2 || $condition3);
+     return 1 if ($condition1 || $condition2);
      return 0;
 }
 
@@ -1550,7 +1544,17 @@ sub _overlaps_stop_codon {
 
         my ($cdna_start, $cdna_end) = ($bvfo->cdna_start, $bvfo->cdna_end);
         return 0 unless $cdna_start && $cdna_end;
-        
+
+        # For insertions, cdna_end < cdna_start, so the overlap() check would always
+        # fail. We extend cdna_end by the insertion length to properly detect whether
+        # the inserted sequence reaches/overlaps the stop codon region (ENSVAR-6654).
+        # Only apply for unambiguous DNA sequences to avoid extending for non-sequence
+        # alleles like COSMIC_MUTATION.
+        my $vf_feature_seq = $bvfoa->feature_seq;
+        $cdna_end = (($cdna_end < $cdna_start) && $vf_feature_seq =~ /^[ACTGN]+$/) ? 
+            $cdna_start + length $vf_feature_seq : 
+            $cdna_end;
+
         $cache->{overlaps_stop_codon} = overlap(
             $cdna_start, $cdna_end,
             $feat->cdna_coding_end - 2, $feat->cdna_coding_end

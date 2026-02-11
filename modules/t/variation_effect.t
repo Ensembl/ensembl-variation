@@ -898,6 +898,23 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
     # =============================================================================
 
     # =============================================================================
+    # ENSVAR-6654 NOTES (from PR #1184)
+    # =============================================================================
+    # Additional edge cases from PR #1184 (ENSVAR-6654) are incorporated into the
+    # code but are difficult to trigger through artificial test coordinates:
+    #   - inframe_insertion guard: return 0 when both ref_pep and alt_pep are '*'
+    #     (e.g., codons TAA/TAAG where alt is 1bp larger but still just a stop)
+    #   - stop_lost/stop_retained: fall through to sequence-level analysis when
+    #     alt_pep contains 'X' (unknown/incomplete amino acid translation)
+    #   - _overlaps_stop_codon: insertion coordinate fix (extends cdna_end by
+    #     insertion length to detect overlap correctly)
+    #   - ref_eq_alt_sequence: condition improvements (remove redundant condition,
+    #     check trailing stop semantically, simplify index comparison)
+    # These changes were validated by the Ensembl team against the full GRCh38
+    # variant database with no difference in variant consequences.
+    # =============================================================================
+
+    # =============================================================================
     # TEST CASES FOR GITHUB ISSUE ensembl-vep#1710 - BUG 2 (FORWARD STRAND)
     # =============================================================================
     # Bug 2: Frameshift insertions/deletions at the stop codon incorrectly return
