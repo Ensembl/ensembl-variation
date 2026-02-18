@@ -383,7 +383,6 @@ sub protein_altering_variant{
 
     return 0 if  length($alt_pep) eq length($ref_pep);       # synonymous_variant(@_);  missense_variant(@_);
     return 0 if  $ref_pep =~/^\*/  || $alt_pep =~/^\*/;      # stop lost/ gained/ retained
-    print("REF: $ref_pep ALT: $alt_pep\n");
     return 0 if  $alt_pep =~/^\Q$ref_pep\E|\Q$ref_pep\E$/;   # inframe_insertion(@_);
 
     return 0 if inframe_deletion(@_);  
