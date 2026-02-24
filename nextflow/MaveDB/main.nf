@@ -1,5 +1,8 @@
 #!/usr/bin/env nextflow
 
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+
 /*
  * Nextflow pipeline to create MaveDB plugin data for VEP
  */
@@ -9,6 +12,8 @@ nextflow.enable.dsl=2
 // Default params
 params.help     = false
 params.urn      = null
+params.previous_urn = null
+params.previous_output = null
 params.ensembl  = "${ENSEMBL_ROOT_DIR}"
 params.output   = "output/MaveDB_variants.tsv.gz"
 params.registry = null
@@ -40,6 +45,8 @@ if (params.help) {
     --output        Path to output file (default: output/MaveDB_variants.tsv.gz)
     --registry      Path to Ensembl registry
     --from_files    Use local files instead of downloading via the MaveDB API (default: true, this is advised)
+    --previous_urn  Path to a previous URN list; any URN already present there is skipped
+    --previous_output Path to a previous run's output (.tsv.gz); skipped URNs are taken from here and merged back
     --mappings_path Path to MaveDB mappings files (one JSON file per URN)
     --scores_path   Path to MaveDB scores files (one CSV file per URN)
     --metadata_file Path to MaveDB metadata file (one collated file, i.e. main.json)
@@ -47,6 +54,17 @@ if (params.help) {
     --round         Decimal places to round floats in MaveDB data (default: 4)
   """
   exit 1
+}
+
+def read_urn_file(path) {
+  def urn_file = new File(path.toString())
+  if (!urn_file.exists()) {
+    exit 1, "ERROR: URN file not found: ${urn_file}"
+  }
+
+  return urn_file.readLines()
+                    .collect { it.trim() }
+                    .findAll { it }
 }
 
 // Module imports
@@ -61,17 +79,59 @@ include { concatenate_files; tabix } from './nf_modules/output.nf'
 include { check_JVM_mem; print_params; print_summary } from '../utils/utils.nf'
 include { import_from_files } from './nf_modules/import_from_files.nf'
 include { extract_metadata } from './nf_modules/extract_metadata.nf'
+include { collate_logs } from './nf_modules/collate_logs.nf'
+include { datacheck_urns } from './nf_modules/datacheck.nf'
+include { merge_previous_output } from './nf_modules/merge_previous_output.nf'
 
 // Main workflow
-print_params('Create MaveDB plugin data for VEP', nullable=['registry'])
+print_params('Create MaveDB plugin data for VEP', nullable=['registry', 'previous_urn', 'previous_output'])
 check_JVM_mem(min=50.4)
 print_summary()
 
 workflow {
-  urn = Channel
-      .fromPath(params.urn, checkIfExists: true)
-      .splitText()
-      .map { it.trim() }
+  def urn_list = read_urn_file(params.urn)
+  if (params.previous_output && !file(params.previous_output).exists()) {
+    exit 1, "ERROR: previous output not found: ${params.previous_output}"
+  }
+  def previous_urns = params.previous_urn ? read_urn_file(params.previous_urn).toSet() : [] as Set
+  def filtered_urns = previous_urns ? urn_list.findAll { !previous_urns.contains(it) } : urn_list
+  def skipped_urns = urn_list - filtered_urns
+
+  if (params.previous_urn) {
+    def skipped = urn_list.size() - filtered_urns.size()
+    log.info "Loaded ${previous_urns.size()} URNs from ${params.previous_urn}; skipping ${skipped} already processed URNs; ${filtered_urns.size()} remaining."
+  }
+
+  if (!filtered_urns) {
+    if (params.previous_output) {
+      log.info "No new URNs to process; reusing ${params.previous_output} as final output"
+      Files.copy(file(params.previous_output).toPath(), file(params.output).toPath(), StandardCopyOption.REPLACE_EXISTING)
+      def prevIndex = file(params.previous_output + ".tbi")
+      if (prevIndex.exists()) {
+        Files.copy(prevIndex.toPath(), file(params.output + ".tbi").toPath(), StandardCopyOption.REPLACE_EXISTING)
+      }
+      exit 0
+    } else {
+      exit 0, "No URNs to process after applying --previous_urn filter"
+    }
+  }
+
+  def skipped_urns_file = workflow.workDir.resolve('skipped_urns.txt')
+  skipped_urns_file.toFile().parentFile.mkdirs()
+  skipped_urns_file.toFile().text = skipped_urns ? skipped_urns.join(System.lineSeparator()) + System.lineSeparator() : ""
+
+  def urn_file_for_datacheck
+  if (params.previous_output) {
+    urn_file_for_datacheck = file(params.urn) // expect final merged output to contain all URNs
+  } else if (params.previous_urn) {
+    urn_file_for_datacheck = workflow.workDir.resolve('urns_to_process.txt')
+    urn_file_for_datacheck.toFile().parentFile.mkdirs()
+    urn_file_for_datacheck.toFile().text = filtered_urns.join(System.lineSeparator()) + System.lineSeparator()
+  } else {
+    urn_file_for_datacheck = file(params.urn)
+  }
+
+  urn = Channel.from(filtered_urns)
 
   // If --from_files is true, use local files instead of downloading via the MaveDB API
   if (params.from_files) {
@@ -132,5 +192,19 @@ workflow {
                   .mix(map_scores_to_HGVSp_variants.out)
                   .collect { it.last() }
   concatenate_files(output_files)
-  tabix(concatenate_files.out)
+
+  def tabix_input = concatenate_files.out
+  if (params.previous_output) {
+    tabix_input = merge_previous_output(tabix_input.map { combined -> tuple(combined, file(params.previous_output), file(skipped_urns_file)) })
+  }
+
+  def tabix_out = tabix(tabix_input)
+
+  // collate logs into a single csv
+  log_collation_input = tabix_out.map { t -> [workflow.workDir.toString(), t] }
+  collate_logs(log_collation_input)
+
+  // datacheck: compare final URNs against input list and pull logs for any missing URNs
+  datacheck_input = collate_logs.out.map { logs -> tuple(file(params.output), urn_file_for_datacheck, logs) }
+  datacheck_urns(datacheck_input)
 }
