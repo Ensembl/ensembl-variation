@@ -2716,15 +2716,17 @@ sub _var2transcript_slice_coords{
     ($vf_start, $vf_end) = ($tr_vf->start, $tr_vf->end);
   }
 
-  # Return undef if this VariationFeature does not fall within the supplied feature.
-  return undef if (
-    $vf_start  < 1 || 
-    $vf_end    < 1 || 
-    $vf_start  > ($tr_end - $tr_start + 1) || 
-    $vf_end    > ($tr_end - $tr_start + 1)
-  ); 
-  
-  return( $vf_start , $vf_end, $self->_transcript_feature_Slice($tr));
+  # Check for overlap before clamping
+  my $tr_length = $tr_end - $tr_start + 1;
+
+  # Variant is entirely before or after transcript
+  return undef if (($vf_start < 1 && $vf_end < 1) || ($vf_start > $tr_length && $vf_end > $tr_length));
+
+  # Clamp coordinates to transcript boundaries
+  my $clamped_start = ($vf_start < 1 ? 1 : $vf_start > $tr_length ? $tr_length : $vf_start);
+  my $clamped_end   = ($vf_end   < 1 ? 1 : $vf_end   > $tr_length ? $tr_length : $vf_end);
+
+  return ($clamped_start, $clamped_end, $self->_transcript_feature_Slice($tr));
 }
 
 
