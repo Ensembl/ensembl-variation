@@ -1,0 +1,54 @@
+# See the NOTICE file distributed with this work for additional information
+# regarding copyright ownership.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: "Update Copyright year at the start of every year"
+
+on: 
+  workflow_dispatch:
+  schedule:
+    - cron: '15 15 1 1 *'  # At 15:15 on January 1st every year
+
+jobs:
+  copyright-update:
+    name: Update Copyright
+    runs-on: ubuntu-latest
+    env:
+      branch_name: copyright-update
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+      - name: Update Copyright files
+        run: |
+          last_year=$(date +%Y --date='1 year ago')
+          current_year=$(date +%Y)
+          find . -type f -exec sed -i "s/Copyright \[2016-${last_year}\]/Copyright [2016-${current_year}]/g" {} +
+      
+      - uses: EndBug/add-and-commit@v9
+        with: 
+          new_branch: ${{ env.branch_name }}
+          add: '.'
+          message: "Update copyright year"
+
+      - name : Create pull request
+        env: 
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: | 
+          gh pr create -B main -H $branch_name --title "Update Copyright year" --body 'Created by Github action'
+      
