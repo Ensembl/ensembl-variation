@@ -100,8 +100,8 @@ sub default_options {
                                         },
                                       },
         fasta_file  => {'homo_sapiens' => {
-                              'GRCh37' => $self->o('data_dir') . 'Homo_sapiens.GRCh37.75.dna.primary_assembly.fa',
-                              'GRCh38' => $self->o('data_dir') . 'Homo_sapiens.GRCh38.dna.toplevel.fa.gz',
+                              'GRCh37' => $self->o('data_dir') . 'fasta/Homo_sapiens.GRCh37.dna.primary_assembly.fa.gz',
+                              'GRCh38' => $self->o('data_dir') . 'fasta/Homo_sapiens.GRCh38.dna.primary_assembly.fa',
                             },
                           },
 
