@@ -61,6 +61,8 @@ include { concatenate_files; tabix } from './nf_modules/output.nf'
 include { check_JVM_mem; print_params; print_summary } from '../utils/utils.nf'
 include { import_from_files } from './nf_modules/import_from_files.nf'
 include { extract_metadata } from './nf_modules/extract_metadata.nf'
+include { collate_logs } from './nf_modules/collate_logs.nf'
+include { datacheck_urns } from './nf_modules/datacheck.nf'
 
 // Main workflow
 print_params('Create MaveDB plugin data for VEP', nullable=['registry'])
@@ -132,5 +134,13 @@ workflow {
                   .mix(map_scores_to_HGVSp_variants.out)
                   .collect { it.last() }
   concatenate_files(output_files)
-  tabix(concatenate_files.out)
+  def tabix_out = tabix(concatenate_files.out)
+
+  // collate logs into a single csv
+  log_collation_input = tabix_out.map { t -> [workflow.workDir.toString(), t] }
+  collate_logs(log_collation_input)
+
+  // datacheck: compare final URNs against input list and pull logs for any missing URNs
+  datacheck_input = collate_logs.out.map { logs -> tuple(file(params.output), file(params.urn), logs) }
+  datacheck_urns(datacheck_input)
 }

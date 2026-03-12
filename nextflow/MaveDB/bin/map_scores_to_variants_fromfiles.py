@@ -11,10 +11,23 @@ from math import isclose                  # (Imported but not used explicitly)
 import re                                 # (Imported but not used explicitly)
 import argparse                           # For parsing command-line arguments
 import sys                                # For writing to stderr
+import datetime                           # For timestamping structured logs
 
-# Customize warning messages to simply print the warning message
+# Structured logging (keeps stdout clean and uniform across all tools)
+URN  = os.environ.get("MAVEDB_URN", "na")
+STEP = os.environ.get("STEP", "map_scores")
+def log(reason, subid="na", **kv):
+    """
+    Uniform structured stderr logger to match the pipeline’s format.
+    """
+    ts = datetime.datetime.now().astimezone().isoformat()
+    extra = " ".join(f"{k}={json.dumps(v, ensure_ascii=False)}" for k, v in kv.items())
+    sys.stderr.write(f"[{ts}][MaveDB][URN={URN}][STEP={STEP}][REASON={reason}][SUBID={subid}] {extra}\n")
+    sys.stderr.flush()
+
+# Customize warning messages: route Python warnings through the structured logger
 def customshowwarning(message, category, filename, lineno, file=None, line=None):
-    print("WARNING:", message)
+    log("warning", msg=str(message))
 warnings.showwarning = customshowwarning
 
 def main():
@@ -37,32 +50,35 @@ def main():
   args = parser.parse_args()
 
   # Load the scores (CSV), mappings (JSON), and metadata (JSON) files
-  print("Loading MaveDB data...", flush=True)
-  
+  log("load_start", scores=args.scores, mappings=args.mappings, metadata=args.metadata, vr=args.vr)
+
   scores = load_scores(args.scores)
-  
-  # Check if the scores file is empty, if so, print an error and exit - don't process this URN
+
+  # Check if the scores file is empty, if so, log an error and exit - don't process this URN
   if not scores:
-    print(f"ERROR: The scores file '{args.scores}' for URN '{args.urn}' is empty. Exiting.")
+    log("scores_empty", target=args.scores, urn=args.urn)
     sys.exit(1)
-  
-  # Throw warning if scores file has very few entries, as this will explain lack of mappings 
-  if len(scores) < 10: 
-    print(f"WARNING: The scores file '{args.scores}' for URN '{args.urn}' contains {len(scores)} row(s).")
-  
+
+  # Throw an info/warning if scores file has very few entries, as this may explain lack of mappings
+  if len(scores) < 50:  # (original had 10; using 50 to surface small datasets earlier)
+    log("scores_small", n=len(scores), urn=args.urn)
+
   with open(args.mappings) as f:
     mappings = json.load(f)
-    
+
   with open(args.metadata) as f:
     metadata = json.load(f)
-  
-  # Extract MaveDB IDs from each mapping entry
-  mavedb_ids = [i["mavedb_id"] for i in mappings["mapped_scores"]]
-  
+
+  # Extract MaveDB IDs from each mapping entry (robust access)
+  mapped_scores = mappings.get("mapped_scores", [])
+  mavedb_ids = [i.get("mavedb_id") for i in mapped_scores if "mavedb_id" in i]
+
   # Pre-build a dictionary mapping accession IDs to mapping records
   # This makes lookups robust and order-independent
-  mapping_dict = {mapping["mavedb_id"]: mapping for mapping in mappings["mapped_scores"]}
-  
+  mapping_dict = {m["mavedb_id"]: m for m in mapped_scores if "mavedb_id" in m}
+
+  log("mappings_loaded", n=len(mapped_scores), unique_ids=len(mapping_dict))
+
   # If a Variant Recoder output file is provided, load it; otherwise, set matches to None
   if args.vr is not None:
     hgvsp2vars = load_vr_output(args.vr)
@@ -70,50 +86,53 @@ def main():
     hgvsp2vars = None
 
   # Create the mapping between variant coordinates and MaveDB scores
-  print("Preparing mappings between variants and MaveDB scores...", flush=True)
+  log("map_prepare")
   mapped_data = map_scores_to_variants(scores, mappings, metadata, mavedb_ids, hgvsp2vars, args.round, mapping_dict)
   write_variant_mapping(args.output, mapped_data)
 
-  print("Done: MaveDB score mapped to variants!", flush=True)
+  log("done", out=args.output)
   return True
 
 def load_vr_output (f):
   """
   Load Variant Recoder output.
-  
+
   Iterates over each allele in the JSON data, skipping any entries that couldn't be parsed.
   For each valid allele, splits each VCF string (format: chr-start-ref-alt) and builds an
   ordered dictionary with variant details. Returns a dictionary mapping HGVS strings to lists of variants.
   """
   data = json.load(open(f))
-  
-  # Check if file is full of warnings - means that variant recoder couldn't recode
+
+  # Check if file has warnings - may indicate that variant recoder couldn't recode some or all variants
   if any("warnings" in item for item in data):
-    print("WARNING: The Variant Recoder output file contains warnings. This may indicate that the Variant Recoder was unable to recode some variants.")
-    
+    log("vr_has_warnings", file=f)
+    # If *all* entries are warnings => nothing parseable
     if all("warnings" in item for item in data):
-      print(f"Error: The Variant Recoder output file contains only 'Unable to parse' warnings. It was not able to parse the variants and recode them. Exiting.")
+      log("vr_only_unable_to_parse", file=f)
       sys.exit(1)
-  
+
   matches = {}
   for result in data:
     for allele in result:
       info = result[allele]
-      if isinstance(info, list) and ("Unable to parse" in info[0] or "skipped" in info[0]):
+      # Skip and log entries that variant_recoder could not parse
+      if isinstance(info, list) and (info and ("Unable to parse" in info[0] or "skipped" in info[0])):
+        log("vr_unable_to_parse", subid=allele, msg=info[0] if info else "")
         continue
       hgvs = info["input"]
       for string in info["vcf_string"]:
         chr, start, ref, alt = string.split('-')
         end = int(start) + len(alt) - 1
-        dict = OrderedDict([("HGVSp", hgvs),
-                            ("chr",   chr),
-                            ("start", start),
-                            ("end",   end),
-                            ("ref",   ref),
-                            ("alt",   alt)])
+        d = OrderedDict([("HGVSp", hgvs),
+                         ("chr",   chr),
+                         ("start", start),
+                         ("end",   end),
+                         ("ref",   ref),
+                         ("alt",   alt)])
         if hgvs not in matches:
           matches[hgvs] = []
-        matches[hgvs].append(dict)
+        matches[hgvs].append(d)
+  log("vr_loaded", n=sum(len(v) for v in matches.values()))
   return matches
 
 def load_HGVSp_to_variant_matches (f):
@@ -136,9 +155,10 @@ def load_scores (f):
     # Strip whitespace from each header name -- I think only necessary due to the csv viewer adding spacing and then this was cached in a nf run. Consider removing.
     reader.fieldnames = [field.strip() for field in reader.fieldnames]
     for row in reader:
-      # Strip whitespace from each value if it is a string
-      clean_row = { key: value.strip() if isinstance(value, str) else value for key, value in row.items() } # Same as above
+      # Strip whitespace from each value if it is a string -- same note as above
+      clean_row = { key: value.strip() if isinstance(value, str) else value for key, value in row.items() }
       scores.append(clean_row)
+  log("scores_loaded", n=len(scores))
   return scores
 
 # Global variable for caching chromosome name
@@ -146,7 +166,7 @@ chrom = None
 def get_chromosome (hgvs):
   """
   Lookup chromosome name in the Ensembl REST API (caches result globally).
-  
+
   Splits the HGVS string to extract the chromosome, retrieves synonyms from Ensembl,
   and selects the UCSC name (removing 'chr' if present).
   """
@@ -164,25 +184,25 @@ def get_chromosome (hgvs):
 def join_information(hgvs, mapped_info, row, extra):
   """
   Join variant and MaveDB score information for a given HGVS.
-  
+
   It extracts:
-    - Start and end coordinates from 'location'. 
+    - Start and end coordinates from 'location'.
     - The reference allele from the first element of 'extensions'.
     - The alternate allele from 'state'.
     - The HGVS expression from the first element of 'expressions'.
-  
+
   Then, it builds and returns an ordered dictionary containing these values merged with extra metadata and the score row.
   """
   # Extract coordinate information.
   start = mapped_info["location"]["start"]
-  end = mapped_info["location"]["end"]
+  end   = mapped_info["location"]["end"]
   # Extract the reference allele.
-  ref = mapped_info["extensions"][0]["value"]
+  ref   = mapped_info["extensions"][0]["value"]
   # Extract the alternate allele.
-  alt = mapped_info["state"]["sequence"]
+  alt   = mapped_info["state"]["sequence"]
   # Extract the HGVS expression.
-  hgvs = mapped_info["expressions"][0]["value"]
-            
+  hgvs  = mapped_info["expressions"][0]["value"]
+
   mapped = OrderedDict([
     ("chr", get_chromosome(hgvs)),  # Lookup the chromosome using the full HGVS string.
     ("start", start + 1),           # Convert 0-based to 1-based indexing.
@@ -191,7 +211,7 @@ def join_information(hgvs, mapped_info, row, extra):
     ("alt", alt),
     ("hgvs", hgvs)
   ])
-        
+
   # Merge extra metadata and the current score row.
   mapped.update(extra)
   mapped.update(row)
@@ -200,13 +220,13 @@ def join_information(hgvs, mapped_info, row, extra):
 def match_information (hgvs, matches, row, extra):
   """
   Match a given HGVS to variant details using pre-loaded HGVSp-variant matches.
-  
-  If the provided HGVS is not found in the matches, a warning is issued.
+
+  If the provided HGVS is not found in the matches, a log entry is emitted.
   For each matching entry, merge the match with extra metadata and the score row.
   """
   out = []
   if hgvs not in matches:
-    warnings.warn(f"{hgvs} not found in HGVSp-variant matches")
+    log("hgvsp_not_in_vr_matches", subid=hgvs)
     return out
 
   for match in matches[hgvs]:
@@ -220,13 +240,13 @@ def match_information (hgvs, matches, row, extra):
 def map_variant_to_MaveDB_scores(matches, mapped_info, row, extra):
   """
   Map variant information to a MaveDB score entry.
-  
+
   Extracts the HGVS expression from mapped_info (using the first expression value).
   If no Variant Recoder matches are provided (matches is None), it calls join_information
   to directly join the variant details. Otherwise, it uses match_information to match the HGVS.
   """
   hgvs = mapped_info['expressions'][0]['value']
-    
+
   if matches is None:
     return join_information(hgvs, mapped_info, row, extra)
   else:
@@ -239,7 +259,6 @@ def round_float_columns(row, round):
   if round is not None:
     for i in row.keys():
       try:
-        # Use the built-in round() function to round the value
         rounded = round(float(row[i]), round)
         row[i] = '{0:g}'.format(rounded)
       except:
@@ -250,7 +269,7 @@ def round_float_columns(row, round):
 def map_scores_to_variants(scores, mappings, metadata, map_ids, matches=None, round=None, mapping_dict=None):
   """
   Map MaveDB scores to variant coordinates.
-  
+
   For each score row:
     - Skip rows with special HGVS values (e.g. synonymous or wild-type) or missing scores.
     - Retrieve the corresponding mapping entry using the accession using mapping_dict.
@@ -258,99 +277,118 @@ def map_scores_to_variants(scores, mappings, metadata, map_ids, matches=None, ro
     - Round numeric values if requested.
     - If the mapping contains multiple members (phased variant), process each member;
       otherwise, process the mapping directly.
-  
-  Additional metadata (URN, publish_date, RefSeq, PubMed) is merged into every output record.
+
+  Additional metadata (URN, publish_date, RefSeq, PubMed/DOI/URL) is merged into every output record.
   """
-  
+
+  # Extract reference sequence and publication identifiers
   refseq = None
-  if len(metadata['targetGenes']) > 1:
+  if len(metadata.get('targetGenes', [])) > 1:
     raise Exception("Multiple targets are not currently supported")
   else:
-    for item in metadata['targetGenes'][0]['externalIdentifiers']:
-      if item['identifier']['dbName'] == 'RefSeq':
-        refseq = item['identifier']['identifier']
+    for item in metadata.get('targetGenes', [{}])[0].get('externalIdentifiers', []):
+      if item.get('identifier', {}).get('dbName') == 'RefSeq':
+        refseq = item['identifier'].get('identifier')
 
   pubmed_list = []
-  for pub in metadata['primaryPublicationIdentifiers']:
-    if pub['dbName'] == 'PubMed':
-      pubmed_list.append(pub['identifier'])
+  for pub in metadata.get('primaryPublicationIdentifiers', []):
+    if pub.get('dbName') == 'PubMed':
+      pubmed_list.append(pub.get('identifier'))
     else:
       warnings.warn("No PubMed ID found in metadata")
-  
-  pubmed = ",".join(pubmed_list)
-  
+  pubmed = ",".join([p for p in pubmed_list if p])
+
   doi_list = []
-  for pub in metadata['primaryPublicationIdentifiers']:
-    if pub['doi']:
-      doi_list.append(pub['doi'])
+  for pub in metadata.get('primaryPublicationIdentifiers', []):
+    if pub.get('doi'):
+      doi_list.append(pub.get('doi'))
     else:
       warnings.warn("No doi found in metadata")
+  doi = ",".join([d for d in doi_list if d])
 
-  doi = ",".join(doi_list)
-  
   url_list = []
-  for pub in metadata['primaryPublicationIdentifiers']:
-    if pub['url']:
-      url_list.append(pub['url'])
+  for pub in metadata.get('primaryPublicationIdentifiers', []):
+    if pub.get('url'):
+      url_list.append(pub.get('url'))
     else:
       warnings.warn("No URL found in metadata")
+  url = ",".join([u for u in url_list if u])
 
-  url = ",".join(url_list)
-  
   extra = {
-    'urn'          : metadata['urn'],
-    'publish_date' : metadata['experiment']['publishedDate'],
+    'urn'          : metadata.get('urn'),
+    'publish_date' : metadata.get('experiment', {}).get('publishedDate'),
     'refseq'       : refseq,
     'pubmed'       : pubmed,
     'doi'          : doi,
     'url'          : url
   }
-  
+
   out = []
+  n_skipped_special = n_skipped_na = n_missing_map = n_urn_mismatch = n_no_post = 0
+
   for row in scores:
+    subid = row.get('accession', 'na')
 
     # Skip rows with special HGVS values (e.g. synonymous, wild-type)
-    if row['hgvs_pro'] in ('_sy', '_wt', 'p.=') or row['hgvs_nt'] in ('_sy', '_wt'):
+    if row.get('hgvs_pro') in ('_sy', '_wt', 'p.=') or row.get('hgvs_nt') in ('_sy', '_wt'):
+      n_skipped_special += 1
       continue
 
     # Skip rows with missing score values
-    if row['score'] == "NA" or row['score'] is None:
+    if row.get('score') == "NA" or row.get('score') is None:
+      n_skipped_na += 1
       continue
 
     # Retrieve the corresponding mapping entry using the pre-built mapping dictionary
-    mapping = mapping_dict.get(row['accession'])
+    mapping = mapping_dict.get(subid)
     if mapping is None:
-        warnings.warn(row['accession'] + " not in mappings file")
-        continue
+      log("accession_not_in_mappings", subid=subid)
+      n_missing_map += 1
+      continue
 
     # Check for URN mismatch between the score row and the mapping entry
-    if 'mavedb_id' in mapping.keys() and row['accession'] != mapping['mavedb_id']:
-       warnings.warn("URN mismatch: trying to match " + row['accession'] + " from scores file with " + mapping['mavedb_id'] + " from mappings file")
-       continue
+    if 'mavedb_id' in mapping and subid != mapping['mavedb_id']:
+      log("urn_mismatch_scores_vs_mappings", subid=subid, mapping_id=mapping.get('mavedb_id'))
+      n_urn_mismatch += 1
+      continue
 
     row = round_float_columns(row, round)
-    # some rows don't have post-mapped (i.e. no mapping, so only consider rows with mapping)
-    if 'post_mapped' in mapping.keys():
+
+    # Some rows don't have post-mapped (i.e. no mapping, so only consider rows with mapping)
+    if 'post_mapped' in mapping:
       mapped_info = mapping['post_mapped']
-    
+    else:
+      log("no_post_mapped_in_mapping", subid=subid)
+      n_no_post += 1
+      continue
+
     # Process phased variants if multiple members exist; otherwise, process the mapping directly
-    if mapped_info.get("members", []):
-      for member in mapped_info['members']:
+    members = mapped_info.get("members", [])
+    if members:
+      for member in members:
         out += map_variant_to_MaveDB_scores(matches, member, row, extra)
     else:
       out += map_variant_to_MaveDB_scores(matches, mapped_info, row, extra)
-  
+
+  # Summary for this URN
+  log("mapped_rows", n=len(out))
+  log("skips_summary",
+      skipped_special=n_skipped_special,
+      skipped_missing_score=n_skipped_na,
+      skipped_missing_mapping=n_missing_map,
+      skipped_urn_mismatch=n_urn_mismatch,
+      skipped_no_post_mapped=n_no_post)
+
   return out
 
 def write_variant_mapping (f, map):
   """
   Write the final mapping between variants and MaveDB scores to an output TSV file.
-  
+
   Constructs a header from the keys of the first output record (excluding unwanted fields),
   writes the header (with any 'hgvs_' prefixes removed), and then writes each record.
   """
-  
-  if map: 
+  if map:
     with open(f, 'w') as csvfile:
       header = list(map[0].keys())
       header = [h for h in header if h not in ['HGVSp', 'index']]
@@ -360,9 +398,10 @@ def write_variant_mapping (f, map):
       header = OrderedDict(zip(header, new_header))
       writer.writerow(header)
       writer.writerows(map)
+    log("write_done", out=f, rows=len(map))
     return True
   else:
-    print(f"Error: no mappings were found for the scores. Exiting.")
+    log("no_mappings_found", out=f)
     sys.exit(1)
 
 if __name__ == "__main__":
