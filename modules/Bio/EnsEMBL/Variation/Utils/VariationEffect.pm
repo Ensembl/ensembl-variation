@@ -1118,11 +1118,12 @@ sub inframe_insertion {
         # we can use start_retained to check this
         return 0 if start_retained_variant(@_) && $alt_pep =~ /\Q$ref_pep\E$/;
 
+        return 0 if $ref_pep eq "*" && $alt_pep eq "*"; # e.g. ref codon - TAG, alt codon - TAAG 
+
         # if we have a stop codon in the alt peptide
         # trim off everything after it
         # this allows us to detect inframe insertions that retain a stop
         $alt_pep =~ s/\*.+/\*/;
-
         return 1 if ($alt_pep =~ /^\Q$ref_pep\E/) || ($alt_pep =~ /\Q$ref_pep\E$/);
 
     }
@@ -1250,7 +1251,7 @@ sub stop_lost {
     #        }
             
             my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
-            if(defined($ref_pep) && defined($alt_pep)) {
+            if(defined($ref_pep) && defined($alt_pep) && $alt_pep !~ 'X') {
                 $cache->{stop_lost} = ( ($alt_pep !~ /\*/) and ($ref_pep =~ /\*/) );
             }
             else {
@@ -1304,10 +1305,10 @@ sub stop_retained {
 
         my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
 
-        if(defined($alt_pep) && $alt_pep ne '') {
+        if(defined($alt_pep) && $alt_pep ne '' && $alt_pep !~ 'X') {
          
-          ## handle inframe insertion of a stop just before the stop (no ref peptide)
-          $cache->{stop_retained} = ref_eq_alt_sequence(@_);
+            ## handle inframe insertion of a stop just before the stop (no ref peptide)
+            $cache->{stop_retained} = ref_eq_alt_sequence(@_);
         }
         else {
             $cache->{stop_retained} = ($pre->{increase_length} || $pre->{decrease_length}) && _overlaps_stop_codon(@_) && !_ins_del_stop_altered(@_);
@@ -1324,7 +1325,6 @@ sub ref_eq_alt_sequence {
    $bvfo ||= $bvfoa->base_variation_feature_overlap;
    my $ref_seq = $bvfo->_peptide;
 
-   my $mut_seq = $ref_seq;
    my $tl_start = $bvfo->translation_start;
    my $tl_end = $bvfo->translation_end;
    
@@ -1339,19 +1339,20 @@ sub ref_eq_alt_sequence {
    # this is a logic from the former logic 
    return 1 if ($bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele') && defined($ref_seq) && $tl_start > length($ref_seq) && $alt_pep =~ /^\*/);
 
+   my $mut_seq = $ref_seq;
    substr($mut_seq, $tl_start-1, $tl_end - $tl_start + 1) = $alt_pep; # creating a mutated sequence from the ref sequence. 
 
    my $mut_substring = substr($mut_seq, 0, length($ref_seq)); # getting a substring up to the length of the ref sequence for comparison from index 0 to the length of the ref seq;
-   
+        
    my $final_stop = substr($mut_seq, length($ref_seq)) if length($ref_seq) < length($mut_seq); # getting the length of the $mut_seq from the length of the ref_seq to the end 
    
-   my $final_stop_length = length($final_stop) if defined($final_stop) ne '';
-   
-   # 1 is if the ref_pep and the first letter of the alt_pep is the same and the alt_pep has * in it 
-   # 2 is the ref_seq eq $mut_substring and the final stop length is less than 3
-   # 3 is * in ref_pep and the same index position exists for both the ref and alt pep
-   return 1 if ( ($ref_pep eq substr($alt_pep, 0, 1) && $alt_pep =~ /\*/) ||
-       ($ref_seq eq $mut_substring && defined($final_stop_length) && $final_stop_length < 3) || ( $ref_pep =~ /\*/ && (index($ref_pep, "*") + 1 == index($alt_pep, "*") + 1) ));
+   # 1 is the ref_seq eq $mut_substring and the final stop is *
+   # 2 is * in ref_pep and the same index position exists for both the ref and alt pep
+#    print $final_stop, "\n";
+   return 1 if (
+        ($ref_seq eq $mut_substring && defined($final_stop) && $final_stop =~ /^\Q*\E/) ||
+        ($ref_pep =~ /\*/ && (index($ref_pep, "*") == index($alt_pep, "*")))
+    );
    return 0;
 }
 
@@ -1369,7 +1370,13 @@ sub _overlaps_stop_codon {
 
         my ($cdna_start, $cdna_end) = ($bvfo->cdna_start, $bvfo->cdna_end);
         return 0 unless $cdna_start && $cdna_end;
-        
+
+        # for insertion add inserted seq length to see overlap
+        my $vf_feature_seq = $bvfoa->feature_seq;
+        $cdna_end = (($cdna_end < $cdna_start) && $vf_feature_seq =~ /^[ACTGN]+$/) ? 
+            $cdna_start + length $vf_feature_seq : 
+            $cdna_end;
+
         $cache->{overlaps_stop_codon} = overlap(
             $cdna_start, $cdna_end,
             $feat->cdna_coding_end - 2, $feat->cdna_coding_end
