@@ -128,7 +128,7 @@ sub run {
   my $version = $self->param_required('gencc_version');
 
   # Allow excluding submitters
-  my %skip = map { $_ => 1 } @{ $self->param('filter_submitters') || [ 'G2P', 'Orphanet' ] };
+  my %skip = map { $_ => 1 } @{ $self->param('filter_submitters') || [] };
 
   # Get DB handles
   my $core_dba = $self->get_species_adaptor('core');
@@ -158,7 +158,7 @@ sub run {
   # Dump and clean pre-existing phenotype features
   $self->dump_phenotypes($source_info{source_name}, 1);
 
-  # Get phenotype data + save it (all in one method)
+  # Get phenotype data + save it
   my $results = $self->parse_input_file($file, \%skip, $gene_adaptor);
 
   # Save phenotypes
@@ -255,11 +255,15 @@ sub parse_input_file {
       push @acc, $acc;
     }
 
+    # Use HGNC CURIE as external_id for GenCC links
+    my $external_id = ($curie =~ /^HGNC:\d+$/) ? $curie : undef;
+
     # build phenotype hash for save_phenotypes()
     push @phenotypes, {
       id          => $ensg,
       type        => 'Gene',
       description => $disease,
+      external_id => $external_id,
       gencc_submitter      => $submitter,
       gencc_classification => $class,
       gencc_inherit_mode   => $moi,
