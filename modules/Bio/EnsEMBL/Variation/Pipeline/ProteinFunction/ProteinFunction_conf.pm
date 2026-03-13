@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2025] EMBL-European Bioinformatics Institute
+Copyright [2016-2026] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -114,7 +114,7 @@ sub default_options {
 
         # include RefSeq transcripts, and edit with accompanying BAM?
         include_refseq          => 0,
-        bam                     => '/nfs/production/flicek/ensembl/variation/data/dump_vep/GCF_000001405.39_GRCh38.p13_knownrefseq_alns.bam',
+        bam                     => '/nfs/production/flicek/ensembl/variation/data/dump_vep/GCF_000001405.40_GRCh38.p14_knownrefseq_alns.bam',
 
         # GRCh37 bam
         # bam                     => '/nfs/production/flicek/ensembl/variation/data/dump_vep/interim_GRCh37.p13_knownrefseq_alignments_2017-01-13.bam',
@@ -217,12 +217,12 @@ sub default_options {
         dbnsfp_max_workers      => 50,
         dbnsfp_working          => $self->o('species_dir').'/dbnsfp_working',
         dbnsfp_annotation       => { GRCh37 =>
-                                      { file => $self->o('variation_data') . '/dbNSFP/4.9a/dbNSFP4.9a_grch37.gz',
-                                        version => '4.9a',
+                                      { file => $self->o('variation_data') . '/dbNSFP/5.2a/dbNSFP5.2a_grch37.gz',
+                                        version => '5.2a',
                                       },
                                      GRCh38 =>
-                                      { file => $self->o('variation_data') . '/dbNSFP/4.9a/dbNSFP4.9a_grch38.gz',
-                                        version => '4.9a',
+                                      { file => $self->o('variation_data') . '/dbNSFP/5.2a/dbNSFP5.2a_grch38.gz',
+                                        version => '5.2a',
                                       } 
                                     },
         cadd_run_type         => NONE,

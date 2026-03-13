@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2025] EMBL-European Bioinformatics Institute
+Copyright [2016-2026] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -1083,6 +1083,38 @@ sub dbnsfp_revel_prediction {
   return $self->_prediction('dbnsfp_revel_prediction', $dbnsfp_revel_prediction);
 }
 
+=head2 dbnsfp_alphamissense_prediction
+
+  Description: Return the qualitative AlphaMissense prediction for the effect of this allele.
+               (Note that we currently only have predictions for variants that 
+               result in single amino acid substitutions in human)
+  Returntype : string (one of 'likely benign', 'benign', 'ambiguous', 'likely pathogenic', 'pathogenic').
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
+sub dbnsfp_alphamissense_prediction {
+  my ($self, $dbnsfp_alphamissense_prediction) = @_;
+  return $self->_prediction('dbnsfp_alphamissense_prediction', $dbnsfp_alphamissense_prediction);
+}
+
+=head2 dbnsfp_esm1b_prediction
+
+  Description: Return the qualitative ESM1b prediction for the effect of this allele.
+               (Note that we currently only have predictions for variants that 
+               result in single amino acid substitutions in human)
+  Returntype : string (one of 'tolerated' or 'deleterious').
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
+sub dbnsfp_esm1b_prediction {
+  my ($self, $dbnsfp_esm1b_prediction) = @_;
+  return $self->_prediction('dbnsfp_esm1b_prediction', $dbnsfp_esm1b_prediction);
+}
+
 =head2 dbnsfp_meta_lr_prediction
 
   Description: Return the qualitative MetaLR prediction for the effect of this allele.
@@ -1169,6 +1201,38 @@ sub cadd_score {
 sub dbnsfp_revel_score {
   my ($self, $dbnsfp_revel_score) = @_;
   return $self->_score('dbnsfp_revel_score');
+}
+
+=head2 dbnsfp_alphamissense_score
+
+  Description: Return the AlphaMissense score for this allele. The score is retrieved from dbNSFP. (We only
+               have predictions for variants that result in single amino acid substitutions in human)
+  Returntype : float if this is a missense change and a prediction is 
+               available, undef otherwise
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
+sub dbnsfp_alphamissense_score {
+  my ($self, $dbnsfp_alphamissense_score) = @_;
+  return $self->_score('dbnsfp_alphamissense_score', $dbnsfp_alphamissense_score);
+}
+
+=head2 dbnsfp_esm1b_score
+
+  Description: Return the ESM1b score for this allele. The score is retrieved from dbNSFP. (We only
+               have predictions for variants that result in single amino acid substitutions in human)
+  Returntype : float if this is a missense change and a prediction is 
+               available, undef otherwise
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
+sub dbnsfp_esm1b_score {
+  my ($self, $dbnsfp_esm1b_score) = @_;
+  return $self->_score('dbnsfp_esm1b_score', $dbnsfp_esm1b_score);
 }
 
 =head2 dbnsfp_meta_lr_score
@@ -2652,15 +2716,17 @@ sub _var2transcript_slice_coords{
     ($vf_start, $vf_end) = ($tr_vf->start, $tr_vf->end);
   }
 
-  # Return undef if this VariationFeature does not fall within the supplied feature.
-  return undef if (
-    $vf_start  < 1 || 
-    $vf_end    < 1 || 
-    $vf_start  > ($tr_end - $tr_start + 1) || 
-    $vf_end    > ($tr_end - $tr_start + 1)
-  ); 
-  
-  return( $vf_start , $vf_end, $self->_transcript_feature_Slice($tr));
+  # Check for overlap before clamping
+  my $tr_length = $tr_end - $tr_start + 1;
+
+  # Variant is entirely before or after transcript
+  return undef if (($vf_start < 1 && $vf_end < 1) || ($vf_start > $tr_length && $vf_end > $tr_length));
+
+  # Clamp coordinates to transcript boundaries
+  my $clamped_start = ($vf_start < 1 ? 1 : $vf_start > $tr_length ? $tr_length : $vf_start);
+  my $clamped_end   = ($vf_end   < 1 ? 1 : $vf_end   > $tr_length ? $tr_length : $vf_end);
+
+  return ($clamped_start, $clamped_end, $self->_transcript_feature_Slice($tr));
 }
 
 

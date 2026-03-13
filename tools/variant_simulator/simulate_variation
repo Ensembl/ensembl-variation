@@ -34,7 +34,7 @@ use Bio::EnsEMBL::Registry;
 use Getopt::Long qw(GetOptions);
 
 my ($help, $chromOnly, $gene, $registryFile,
-$exonOnly, $intronOnly, $codingOnly, $canonicalOnly, $onlyMane, $refseq_genes, $spliceai
+$exonOnly, $intronOnly, $codingOnly, $canonicalOnly, $onlyMane, $onlyGencodePrimary, $refseq_genes, $spliceai
 );
 my ($species, $assembly, $edges, $outFile) = ("homo_sapiens", "grch38", 0, "simulated.vcf");
 
@@ -49,6 +49,7 @@ GetOptions( "species=s" => \$species,
     "codingOnly"  => \$codingOnly,
     "canonicalOnly" => \$canonicalOnly,
     "onlyMane"    => \$onlyMane,
+    "onlyGencodePrimary"    => \$onlyGencodePrimary,
     "intronsOnly" => \$intronOnly,
     "assembly=s"  => \$assembly,
     "refseq"      => \$refseq_genes,
@@ -61,7 +62,8 @@ usage() if ($help);
 
 die "Illegal arguments -exonsOnly -intronsOnly can't be used together !" if $exonOnly && $intronOnly;
 die "Illegal arguments -intronsOnly -codingsOnly can't be used together !" if $codingOnly && $intronOnly;
-die "Illegal arguments -onlyMane can only be used alone!" if $onlyMane && ($exonOnly || $codingOnly || $intronOnly);
+die "Illegal arguments -onlyMane can only be used alone!" if $onlyMane && ($onlyGencodePrimary || $exonOnly || $codingOnly || $intronOnly);
+die "Illegal arguments -onlyGencodePrimary can only be used alone!" if $onlyGencodePrimary && ($onlyMane || $exonOnly || $codingOnly || $intronOnly);
 
 my $registry = 'Bio::EnsEMBL::Registry';
 if (defined $registryFile){
@@ -184,6 +186,14 @@ sub processGenes{
           @parts = ($transcript);
         }
       }
+    } elsif ($onlyGencodePrimary){
+      my @transc = @{ $geneID->get_all_Transcripts() };
+      while (my $transcript = shift @transc) {
+        next unless $transcript->biotype eq 'protein_coding';
+        if ($transcript->gencode_primary()) {
+          @parts = ($transcript);
+        }
+      }
     } elsif ($canonicalOnly) {
       my @transc = @{ $geneID->get_all_Transcripts() };
       while ( my $transcript = shift @transc ) {
@@ -258,25 +268,26 @@ sub usage {
 
   Options:
 
-      -species           Generate SNPs for specified species (Default: human)
-      -assembly          Assembly to use if species is human (Default: grch38)
-      -refseq            Use RefSeq genes/transcripts if species is human
-      -registry          Ensembl registry file containing database connection details
+      -species                     Generate SNPs for specified species (Default: human)
+      -assembly                    Assembly to use if species is human (Default: grch38)
+      -refseq                      Use RefSeq genes/transcripts if species is human
+      -registry                    Ensembl registry file containing database connection details
 
-      -output|o          Output file (Default: simulated.vcf)
+      -output|o                    Output file (Default: simulated.vcf)
 
-      -chrom             Generate SNPs only for specified chromosome
-      -gene              Generate all SNPs for specified gene
-      -spliceai          Generate files for SpliceAI tool
-      -codingOnly        Generate SNPs only for translatable exons of protein_coding transcripts
-      -exonsOnly         Generate SNPs only for all exons of the genes
-      -intronsOnly       Generate SNPs only for all introns of the genes
-      -onlyMane          Generate SNPs only for MANE transcripts
-      -canonicalOnly     Generate SNPs only for canonical transcripts
+      -chrom                       Generate SNPs only for specified chromosome
+      -gene                        Generate all SNPs for specified gene
+      -spliceai                    Generate files for SpliceAI tool
+      -codingOnly                  Generate SNPs only for translatable exons of protein_coding transcripts
+      -exonsOnly                   Generate SNPs only for all exons of the genes
+      -intronsOnly                 Generate SNPs only for all introns of the genes
+      -onlyMane                    Generate SNPs only for MANE transcripts
+      -onlyGencodePrimary          Generate SNPs only for GENCODE primary protein_coding transcripts
+      -canonicalOnly               Generate SNPs only for canonical transcripts
 
-      -edge              Length of flanking region in which to generate SNPs (Default: 0)
+      -edge                        Length of flanking region in which to generate SNPs (Default: 0)
 
-      -help              Print this message
+      -help                        Print this message
   } . "\n";
   exit(0);
 }

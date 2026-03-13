@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2025] EMBL-European Bioinformatics Institute
+Copyright [2016-2026] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -326,7 +326,7 @@ sub create_and_load {
 }
 
 #
-#ÊGets the create statement to create the desired table from the master_schema_variation database
+#ï¿½Gets the create statement to create the desired table from the master_schema_variation database
 #
 sub get_create_statement_from_db {
   my $dbc = shift;
@@ -346,7 +346,7 @@ sub get_create_statement_from_db {
   return $result;
 }
 
-#ÊGet the create statement for a table from e.g. the table.sql schema definition file
+#ï¿½Get the create statement for a table from e.g. the table.sql schema definition file
 sub get_create_statement {
   my $table = shift;
   my $sql_file = shift;

@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2025] EMBL-European Bioinformatics Institute
+Copyright [2016-2026] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -62,13 +62,27 @@ sub new {
     my $breakends = $vf->get_breakends;
 
     if (!@$breakends) {
-        # construct a fake 'allele'
-        $self->add_StructuralVariationOverlapAllele(
-            Bio::EnsEMBL::Variation::StructuralVariationOverlapAllele->new_fast({
-                structural_variation_overlap => $self,
-                allele_number                => 1,
-            })
-        );
+        # construct a fake 'allele(s)'
+        if ($vf->{allele_string}) {
+            my $num = 1;
+            foreach (split(/\//, $vf->{allele_string})) {
+                $self->add_StructuralVariationOverlapAllele(
+                    Bio::EnsEMBL::Variation::StructuralVariationOverlapAllele->new_fast({
+                        structural_variation_overlap => $self,
+                        -symbolic_allele              => $_,
+                        allele_number                => $num,
+                    })
+                );
+                $num++;
+            }
+        } else {
+            $self->add_StructuralVariationOverlapAllele(
+                    Bio::EnsEMBL::Variation::StructuralVariationOverlapAllele->new_fast({
+                        structural_variation_overlap => $self,
+                        allele_number                => 1,
+                    })
+                );
+        }
     } else {
         # construct alternate alleles (breakends)
         my $feature = $self->feature;

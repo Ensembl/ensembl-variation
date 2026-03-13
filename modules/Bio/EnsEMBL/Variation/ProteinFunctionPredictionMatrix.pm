@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2025] EMBL-European Bioinformatics Institute
+Copyright [2016-2026] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -126,6 +126,17 @@ my $PREDICTION_TO_VAL = {
         'likely disease causing' => 0,
         'likely benign' => 1,
     },
+    dbnsfp_alphamissense => {
+        'likely benign'  => 0,
+        'benign'   => 1,
+        'ambiguous'  => 2,
+        'likely pathogenic'   => 3,
+        'pathogenic'  => 4,
+    },
+    dbnsfp_esm1b => {
+        'tolerated'  => 0,
+        'deleterious'   => 1,
+    },
     dbnsfp_meta_lr => {
         'tolerated'  => 0,
         'damaging'   => 1,
@@ -155,15 +166,23 @@ my $BYTES_PER_PREDICTION = 2;
 
 # constants derived from the the user-defined constants
 
-# the maximum number of distinct qualitative predictions used by any tool
-
-my $MAX_NUM_PREDS = max( map { scalar keys %$_ } values %$PREDICTION_TO_VAL ); 
-
 # the number of bits used to encode the qualitative prediction
 
-my $NUM_PRED_BITS = ceil( log($MAX_NUM_PREDS) / log(2) );
+# my $NUM_PRED_BITS = ceil( log($MAX_NUM_PREDS) / log(2) );
+my $NUM_PRED_BITS = {
+	polyphen => 2,
+	sift => 2,
+	cadd => 2,
+    dbnsfp_revel => 2,
+    dbnsfp_alphamissense => 3,
+    dbnsfp_esm1b => 3,
+    dbnsfp_meta_lr => 2,
+    dbnsfp_mutation_assessor => 2
+};
 
-throw("Cannot represent more than ".(2**6-1)." predictions") if $NUM_PRED_BITS > 6;
+# the maximum number of distinct qualitative predictions used by any tool 
+my $MAX_NUM_PREDS = max( values %$NUM_PRED_BITS );
+throw("Cannot represent more than ".(2**6-1)." predictions") if $MAX_NUM_PREDS > 6;
 
 # a hash mapping back from a numerical value to a qualitative prediction
 
@@ -519,8 +538,11 @@ sub prediction_to_short {
     # this value
      
     my $val = $prob;
+    if ($self->{analysis} eq 'dbnsfp_esm1b') {
+      $val = ($val + 50) / 100; # convert to 0-1 scale
+    }
     if ($self->{analysis} ne 'cadd') {
-      $val = $prob * 1000;
+      $val = $val * 1000;
     }
 
     # we store the prediction in the top $NUM_PRED_BITS bits
@@ -535,7 +557,7 @@ sub prediction_to_short {
     throw("No value defined for prediction: '$pred'?")
         unless defined $pred_val;
 
-    $val |= ($pred_val << (16 - $NUM_PRED_BITS));
+    $val |= ($pred_val << (16 - $NUM_PRED_BITS->{$self->{analysis}}));
 
     printf("p2s: $pred ($prob) => 0x%04x\n", $val) if $DEBUG;
     
@@ -570,13 +592,16 @@ sub prediction_from_short {
 
     # shift the prediction bits down and look up the prediction string
 
-    my $pred = $VAL_TO_PREDICTION->{$self->{analysis}}->{$val >> (16 - $NUM_PRED_BITS)};
+    my $pred = $VAL_TO_PREDICTION->{$self->{analysis}}->{$val >> (16 - $NUM_PRED_BITS->{$self->{analysis}})};
 
     # mask off the top 6 bits reserved for the prediction and convert back to a 3 d.p. float
 
     my $prob = ($val & (2**10 - 1));
     if ($self->{analysis} ne 'cadd') {
       $prob = $prob / 1000;
+    }
+    if ($self->{analysis} eq 'dbnsfp_esm1b') {
+      $prob = sprintf '%.1f', ($prob * 100) - 50; # convert to (-50)-50 scale
     }
 
     printf("pfs: 0x%04x => $pred ($prob)\n", $val) if $DEBUG;

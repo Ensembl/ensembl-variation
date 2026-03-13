@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2025] EMBL-European Bioinformatics Institute
+Copyright [2016-2026] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -125,7 +125,7 @@ sub run {
 
   my $all_triplets = $self->get_triplets($translation_stable_id);
 
-  $self->load_predictions_for_triplets($all_triplets);
+  $self->load_predictions_for_triplets($all_triplets, $transcript);
 
   $self->store_protein_matrix($translation_stable_id, $translation_md5) if ($self->{'pipeline_mode'});
 
@@ -161,7 +161,7 @@ sub amino_acids {
 
 =head2 analysis
   Arg 1      : Arrayref of string analysis (optional)  
-  Example    : $self->analysis([qw/dbnsfp_revel dbnsfp_meta_lr dbnsfp_mutation_assessor/]);
+  Example    : $self->analysis([qw/dbnsfp_revel dbnsfp_alphamissense dbnsfp_esm1b/]);
   Description: Set and get available analysis. 
   Returntype : 
   Exceptions : None
@@ -340,8 +340,11 @@ sub get_stable_id_for_md5 {
   });
 
   $get_stable_id_sth->execute($md5);
-  my ($stable_id) = $get_stable_id_sth->fetchrow_array;
-  return $stable_id;
+  my $stable_ids = $get_stable_id_sth->fetchall_arrayref;
+  foreach (@{$stable_ids}) {
+    return $_->[0] if $_->[0] =~ /^ENSP/;
+  }
+  return $stable_ids->[0]->[0];
 }
 
 =head2 get_translation

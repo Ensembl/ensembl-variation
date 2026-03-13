@@ -1,5 +1,5 @@
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016-2025] EMBL-European Bioinformatics Institute
+# Copyright [2016-2026] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -648,9 +648,9 @@ sub calculate_gtype {
 
 
   
-  #ÊHash to keep subsnp_id to variation_id mappings in memory
+  #ï¿½Hash to keep subsnp_id to variation_id mappings in memory
   my %variation_ids;
-  #ÊIf the mapping file exist, we'll read mappings from it
+  #ï¿½If the mapping file exist, we'll read mappings from it
   %variation_ids = %{read_subsnp_mapping($mapping_file)} if (defined($mapping_file) && -e $mapping_file);
   print $logh Progress::location();
   # The subsnp_id = 0 is a replacement for NULL but since it's used for a key in the hash below, we need it to have an actual numerical value
@@ -658,7 +658,7 @@ sub calculate_gtype {
   # Keep track if we did any new lookups
   my $new_mappings = 0;
   
-  #ÊUse a hash having the md5sum of the row to determine whether we've already used this one 
+  #ï¿½Use a hash having the md5sum of the row to determine whether we've already used this one 
   my %row_md5s;
 
   # Open a file handle to the temp file that will be used for loading
@@ -733,7 +733,7 @@ sub calculate_gtype {
       my ($vs_subsnp_id,$variation_id,$substrand_reversed_flag);
       $vs_sth->bind_columns(\$vs_subsnp_id,\$variation_id,\$substrand_reversed_flag);
       $vs_sth->fetch();
-      #ÊIf, for some reason, we don't have a variation_id for the subsnp_id, skip this genotype
+      #ï¿½If, for some reason, we don't have a variation_id for the subsnp_id, skip this genotype
       next if (!defined($vs_subsnp_id));
       $variation_ids{$subsnp_id} = [$variation_id,$substrand_reversed_flag];
     }
@@ -749,7 +749,7 @@ sub calculate_gtype {
 
     next if !defined $allele_id_1 || !defined $allele_id_2;
 
-    #ÊShould the alleles be flipped? Set flag to specify
+    #ï¿½Should the alleles be flipped? Set flag to specify
     my $reverse = ((($rev_alleles + $sub_strand + $variation_ids{$subsnp_id}->[1])%2 != 0) ? 1 : 0);
     
     # Look up the alleles if necessary
@@ -762,7 +762,7 @@ sub calculate_gtype {
     my $allele_1 = $alleles{$allele_id_1}->[$reverse];
     my $allele_2 = $alleles{$allele_id_2}->[$reverse];
 
-    #ÊSkip this genotype if the alleles are N or first allele contains the string 'indeterminate'
+    #ï¿½Skip this genotype if the alleles are N or first allele contains the string 'indeterminate'
     next if (($allele_1 eq 'N' && $allele_2 eq 'N') || 
         $allele_1 =~ m/indeterminate/i || $allele_2 =~ m/indeterminate/i);
    
@@ -821,7 +821,7 @@ sub calculate_gtype {
       my ($vs_subsnp_id,$variation_id,$substrand_reversed_flag);
       $vs_sth->bind_columns(\$vs_subsnp_id,\$variation_id,\$substrand_reversed_flag);
       $vs_sth->fetch();
-      #ÊIf, for some reason, we don't have a variation_id for the subsnp_id, skip this genotype
+      #ï¿½If, for some reason, we don't have a variation_id for the subsnp_id, skip this genotype
       next if (!defined($vs_subsnp_id));
       $variation_ids{$subsnp_id} = [$variation_id,$substrand_reversed_flag];
     }
@@ -837,7 +837,7 @@ sub calculate_gtype {
 
     next if !defined $allele_id_1 || !defined $allele_id_2;
 
-    #ÊShould the alleles be flipped? Set flag to specify
+    #ï¿½Should the alleles be flipped? Set flag to specify
     my $reverse = ((($rev_alleles + $sub_strand + $variation_ids{$subsnp_id}->[1])%2 != 0) ? 1 : 0);
 
 
@@ -850,7 +850,7 @@ sub calculate_gtype {
     my $allele_1 = $alleles{$allele_id_1}->[$reverse];
     my $allele_2 = $alleles{$allele_id_2}->[$reverse];
 
-    #ÊSkip this genotype if the alleles are N or first allele contains the string 'indeterminate'
+    #ï¿½Skip this genotype if the alleles are N or first allele contains the string 'indeterminate'
     next if (($allele_1 eq 'N' && $allele_2 eq 'N') ||
         $allele_1 =~ m/indeterminate/i || $allele_2 =~ m/indeterminate/i);
 
@@ -923,7 +923,7 @@ sub load_data_infile {
   my $dbm = $self->{'db_manager'};
   my $dbVar = $dbm->dbVar();
 
-  #ÊDisable the keys on the destination table before loading
+  #ï¿½Disable the keys on the destination table before loading
   my $stmt = qq {
     ALTER TABLE
       $dst_table
@@ -981,7 +981,7 @@ sub write_alleles {
   # Lock the file for exclusive access
   flock(FH,LOCK_EX);
   
-  #ÊWrite each allele_id and the forward and reverse alleles
+  #ï¿½Write each allele_id and the forward and reverse alleles
   while (my ($id,$a) = each(%{$alleles})) {
       next unless defined $id;
     print FH join("\t",($id,@{$a})) . "\n";
@@ -1037,7 +1037,7 @@ sub write_samples {
   # Lock the file for exclusive access
   flock(FH,LOCK_EX);
   
-  #ÊWrite each population_id/individual_id and the corresponding sample_id
+  #ï¿½Write each population_id/individual_id and the corresponding sample_id
   while (my @row = each(%{$samples})) {
     print FH join("\t",@row) . "\n";
   }

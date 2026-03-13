@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2025] EMBL-European Bioinformatics Institute
+Copyright [2016-2026] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -104,7 +104,13 @@ sub fetch_input {
       $var_dba->dbc->do(qq/DELETE pfp.* FROM protein_function_predictions pfp, attrib a WHERE pfp.analysis_attrib_id = a.attrib_id AND a.value = 'cadd'/);
     }
     if ($dbnsfp_run_type == FULL ) {
-      $var_dba->dbc->do(qq/DELETE pfp.* FROM protein_function_predictions pfp, attrib a WHERE pfp.analysis_attrib_id = a.attrib_id AND a.value IN ('dbnsfp_cadd', 'dbnsfp_meta_lr', 'dbnsfp_mutation_assessor', 'dbnsfp_revel')/);
+      $var_dba->dbc->do(qq/DELETE pfp.* FROM protein_function_predictions pfp, attrib a WHERE pfp.analysis_attrib_id = a.attrib_id AND a.value IN (
+        'dbnsfp_cadd', 
+        'dbnsfp_meta_lr', 
+        'dbnsfp_mutation_assessor', 
+        'dbnsfp_revel', 
+        'dbnsfp_alphamissense', 
+        'dbnsfp_esm1b')/);
     }
     # Also truncate the protein_function_prediction + _attrib tables if in sift FULL mode
     if ($sift_run_type == FULL) {

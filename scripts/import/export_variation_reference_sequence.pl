@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016-2025] EMBL-European Bioinformatics Institute
+# Copyright [2016-2026] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -52,25 +52,25 @@ my @option_defs = (
 # Parse the command line
 GetOptions(\%options,@option_defs);
 
-#ÊGet the options or die/set default options
+#ï¿½Get the options or die/set default options
 my $registryfile = $options{'registry_file'} || die("A registry file must be specified");
 my $species = $options{'species'} || die("A species name must be specified");
 my $output_dir = $options{'output_dir'} || '.';
 my $joblimit = $options{'joblimit'};
 $joblimit ||= 10;
 
-#ÊThe seq_region_id can be explicitly specified, or it will correspond to the LSB_JOBINDEX variable
+#ï¿½The seq_region_id can be explicitly specified, or it will correspond to the LSB_JOBINDEX variable
 my $seq_region_id = $options{'seq_region'};
 $seq_region_id ||= $ENV{'LSB_JOBINDEX'}; 
 
-#ÊLoad the registry from the configuration file
+#ï¿½Load the registry from the configuration file
 my $registry = 'Bio::EnsEMBL::Registry';
 $registry->load_all($registryfile);
 
 my $dba = $registry->get_DBAdaptor("human","variation");
 my $stmt;
 
-#ÊIf we are asked to parallelize, submit the parallel jobs, one for each seq_region in the variation database, and then exit when they have finished
+#ï¿½If we are asked to parallelize, submit the parallel jobs, one for each seq_region in the variation database, and then exit when they have finished
 if ($options{'parallelize'}) {
     
     # Unset the parallelize option so we won't pass it to the subjobs
@@ -92,7 +92,7 @@ if ($options{'parallelize'}) {
     
     # The bsub command
     my $bsub_cmd = "bsub -J ref_seq_export[$jobarray]\%$joblimit -o $output_dir/ref_seq_export.\%J.\%I.out -e $output_dir/ref_seq_export.\%J.\%I.err perl $Bin/export_variation_reference_sequence.pl";
-    #ÊAdd the parameters
+    #ï¿½Add the parameters
     while (my ($key,$value) = each(%options)) {
         $bsub_cmd .= " -$key $value";
     }
@@ -175,7 +175,7 @@ $sth->execute($seq_region_id);
 my ($vf_id,$start,$end,$strand,$seq,$id);
 $sth->bind_columns(\$vf_id,\$start,\$end,\$strand);
 
-#ÊLoop over the rows, print the data to the tempfile
+#ï¿½Loop over the rows, print the data to the tempfile
 while ($sth->fetch()) {
     
     # If an insertion, the allele should be '-'
@@ -188,7 +188,7 @@ while ($sth->fetch()) {
     
     # Get the allele id for the sequence
     $id = $allele_id{$seq};
-    #ÊIf not defined, look it up (or insert) in the database
+    #ï¿½If not defined, look it up (or insert) in the database
     unless (defined($id)) {
         $id = lookup_id($seq,$fetch_sth,$insert_sth,$dba);
         $allele_id{$seq} = $id;

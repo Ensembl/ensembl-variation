@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2025] EMBL-European Bioinformatics Institute
+Copyright [2016-2026] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -68,7 +68,7 @@ sub checkpoint {
     push(@{$self->{'checkpoints'}},$cp);
 }
 
-#ÊGet the time between two checkpoints. If only the first is specified, gets the time from that checkpoint to the current time. If none is specified, gets the time from the last checkpoint up until now
+#ï¿½Get the time between two checkpoints. If only the first is specified, gets the time from that checkpoint to the current time. If none is specified, gets the time from the last checkpoint up until now
 sub duration {
     my $self = shift;
     my $start_checkpoint = shift;
@@ -175,7 +175,7 @@ sub time_format {
     return \%formatted;
 }
 
-#ÊPretty-print the checkpoints or a specific checkpoint
+#ï¿½Pretty-print the checkpoints or a specific checkpoint
 sub to_string {
     my $self = shift;
     my $label = shift;

@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2025] EMBL-European Bioinformatics Institute
+Copyright [2016-2026] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -274,7 +274,7 @@ sub get_input_file {
 
     # Phenotype fetching and parsing from the Ontology db
     my $phenotype;
-    if ($phenotype_id =~ /^EFO/) {
+    if ($phenotype_id =~ /^EFO/ || $phenotype_id =~ /^MONDO/) {
       $phenotype = ($efos{$phenotype_id}) ? $efos{$phenotype_id} : get_phenotype_desc($phenotype_id, $ota);
     }
 
@@ -345,7 +345,7 @@ sub get_phenotype_desc {
   my $ota = shift;
 
   $id =~ s/ //g;
-  $id =~ s/_/:/g; #OpenTargets uses EFO_0000389 not EFO:0000389
+  $id =~ s/_/:/g; #OpenTargets uses EFO_0000389 not EFO:0000389 or MONDO_
 
   my $phenotype;
   my $term = $ota->fetch_by_accession($id);
