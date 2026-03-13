@@ -31,7 +31,7 @@ process merge_previous_output {
   # Decompress previous output once
   gzip -dc "${prev_output}" > prev.tsv
 
-  # Extract only rows belonging to skipped URNs (if any)
+  # Extract only data rows belonging to skipped URNs (if any)
   if [[ -s "${skipped_urns}" ]]; then
     awk -F'\\t' -v OFS='\\t' -v col="\${urn_col}" 'NR==FNR {u[\$0]=1; next} NR==1 {print; next} (\$col in u)' "${skipped_urns}" prev.tsv > prev_subset.tsv
   else
@@ -43,7 +43,7 @@ process merge_previous_output {
     head -n1 "${current_combined}"
     tail -n +2 "${current_combined}"
     if [[ -s prev_subset.tsv ]]; then
-      tail -n +2 prev_subset.tsv
+      cat prev_subset.tsv
     fi
   } | awk 'NR==1 {print; next} !seen[\$0]++' > merged_combined.tsv
   """

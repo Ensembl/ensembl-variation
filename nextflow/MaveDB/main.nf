@@ -2,6 +2,7 @@
 
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
+import java.util.zip.GZIPInputStream
 
 /*
  * Nextflow pipeline to create MaveDB plugin data for VEP
@@ -67,6 +68,36 @@ def read_urn_file(path) {
                     .findAll { it }
 }
 
+def read_output_urns(path) {
+  def output_file = file(path)
+  if (!output_file.exists()) {
+    exit 1, "ERROR: output file not found: ${output_file}"
+  }
+
+  def urns = [] as Set
+  def urn_col = -1
+  new GZIPInputStream(output_file.newInputStream()).withCloseable { stream ->
+    stream.newReader().withCloseable { reader ->
+      reader.eachLine { line, line_number ->
+        def fields = line.split('\t', -1)
+        if (line_number == 1) {
+          urn_col = fields.findIndexOf { it == 'urn' || it == '#urn' }
+          if (urn_col < 0) {
+            exit 1, "ERROR: urn column not found in output header: ${output_file}"
+          }
+          return
+        }
+
+        if (urn_col < fields.size() && fields[urn_col]) {
+          urns << fields[urn_col]
+        }
+      }
+    }
+  }
+
+  return urns
+}
+
 // Module imports
 include { filter_by_licence } from './subworkflows/filter.nf'
 include { download_MaveDB_data } from './nf_modules/fetch.nf'
@@ -104,12 +135,26 @@ workflow {
 
   if (!filtered_urns) {
     if (params.previous_output) {
-      log.info "No new URNs to process; reusing ${params.previous_output} as final output"
-      Files.copy(file(params.previous_output).toPath(), file(params.output).toPath(), StandardCopyOption.REPLACE_EXISTING)
-      def prevIndex = file(params.previous_output + ".tbi")
-      if (prevIndex.exists()) {
-        Files.copy(prevIndex.toPath(), file(params.output + ".tbi").toPath(), StandardCopyOption.REPLACE_EXISTING)
+      def requested_urns = urn_list.toSet()
+      def previous_output_urns = read_output_urns(params.previous_output)
+      def missing_urns = requested_urns - previous_output_urns
+      if (missing_urns) {
+        exit 1, "ERROR: previous output is missing ${missing_urns.size()} requested URNs: ${missing_urns.take(10).join(', ')}"
       }
+
+      log.info "No new URNs to process; reusing ${params.previous_output} as final output"
+      def prevIndex = file(params.previous_output + ".tbi")
+      if (!prevIndex.exists()) {
+        exit 1, "ERROR: previous output index not found: ${prevIndex}"
+      }
+
+      def outputPath = file(params.output).toPath()
+      if (outputPath.parent != null) {
+        Files.createDirectories(outputPath.parent)
+      }
+
+      Files.copy(file(params.previous_output).toPath(), outputPath, StandardCopyOption.REPLACE_EXISTING)
+      Files.copy(prevIndex.toPath(), file(params.output + ".tbi").toPath(), StandardCopyOption.REPLACE_EXISTING)
       exit 0
     } else {
       exit 0, "No URNs to process after applying --previous_urn filter"
