@@ -1,9 +1,5 @@
 #!/usr/bin/env nextflow
 
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
-import java.util.zip.GZIPInputStream
-
 /*
  * Nextflow pipeline to create MaveDB plugin data for VEP
  */
@@ -57,47 +53,6 @@ if (params.help) {
   exit 1
 }
 
-def read_urn_file(path) {
-  def urn_file = new File(path.toString())
-  if (!urn_file.exists()) {
-    exit 1, "ERROR: URN file not found: ${urn_file}"
-  }
-
-  return urn_file.readLines()
-                    .collect { it.trim() }
-                    .findAll { it }
-}
-
-def read_output_urns(path) {
-  def output_file = file(path)
-  if (!output_file.exists()) {
-    exit 1, "ERROR: output file not found: ${output_file}"
-  }
-
-  def urns = [] as Set
-  def urn_col = -1
-  new GZIPInputStream(output_file.newInputStream()).withCloseable { stream ->
-    stream.newReader().withCloseable { reader ->
-      reader.eachLine { line, line_number ->
-        def fields = line.split('\t', -1)
-        if (line_number == 1) {
-          urn_col = fields.findIndexOf { it == 'urn' || it == '#urn' }
-          if (urn_col < 0) {
-            exit 1, "ERROR: urn column not found in output header: ${output_file}"
-          }
-          return
-        }
-
-        if (urn_col < fields.size() && fields[urn_col]) {
-          urns << fields[urn_col]
-        }
-      }
-    }
-  }
-
-  return urns
-}
-
 // Module imports
 include { filter_by_licence } from './subworkflows/filter.nf'
 include { download_MaveDB_data } from './nf_modules/fetch.nf'
@@ -113,6 +68,7 @@ include { extract_metadata } from './nf_modules/extract_metadata.nf'
 include { collate_logs } from './nf_modules/collate_logs.nf'
 include { datacheck_urns } from './nf_modules/datacheck.nf'
 include { merge_previous_output } from './nf_modules/merge_previous_output.nf'
+include { build_run_plan; reuse_previous_output } from './nf_modules/planning.nf'
 
 // Main workflow
 print_params('Create MaveDB plugin data for VEP', nullable=['registry', 'previous_urn', 'previous_output'])
@@ -120,63 +76,21 @@ check_JVM_mem(min=50.4)
 print_summary()
 
 workflow {
-  def urn_list = read_urn_file(params.urn)
-  if (params.previous_output && !file(params.previous_output).exists()) {
-    exit 1, "ERROR: previous output not found: ${params.previous_output}"
-  }
-  def previous_urns = params.previous_urn ? read_urn_file(params.previous_urn).toSet() : [] as Set
-  def filtered_urns = previous_urns ? urn_list.findAll { !previous_urns.contains(it) } : urn_list
-  def skipped_urns = urn_list - filtered_urns
+  def plan = build_run_plan(params, workflow.workDir)
 
-  if (params.previous_urn) {
-    def skipped = urn_list.size() - filtered_urns.size()
-    log.info "Loaded ${previous_urns.size()} URNs from ${params.previous_urn}; skipping ${skipped} already processed URNs; ${filtered_urns.size()} remaining."
+  if (plan.empty_request) {
+    exit 0, "No URNs requested"
   }
 
-  if (!filtered_urns) {
-    if (params.previous_output) {
-      def requested_urns = urn_list.toSet()
-      def previous_output_urns = read_output_urns(params.previous_output)
-      def missing_urns = requested_urns - previous_output_urns
-      if (missing_urns) {
-        exit 1, "ERROR: previous output is missing ${missing_urns.size()} requested URNs: ${missing_urns.take(10).join(', ')}"
-      }
-
-      log.info "No new URNs to process; reusing ${params.previous_output} as final output"
-      def prevIndex = file(params.previous_output + ".tbi")
-      if (!prevIndex.exists()) {
-        exit 1, "ERROR: previous output index not found: ${prevIndex}"
-      }
-
-      def outputPath = file(params.output).toPath()
-      if (outputPath.parent != null) {
-        Files.createDirectories(outputPath.parent)
-      }
-
-      Files.copy(file(params.previous_output).toPath(), outputPath, StandardCopyOption.REPLACE_EXISTING)
-      Files.copy(prevIndex.toPath(), file(params.output + ".tbi").toPath(), StandardCopyOption.REPLACE_EXISTING)
+  if (plan.reuse_only) {
+    if (plan.previous_output) {
+      reuse_previous_output(plan, params.output)
       exit 0
-    } else {
-      exit 0, "No URNs to process after applying --previous_urn filter"
     }
+    exit 0, "No URNs to process after applying --previous_urn filter"
   }
 
-  def skipped_urns_file = workflow.workDir.resolve('skipped_urns.txt')
-  skipped_urns_file.toFile().parentFile.mkdirs()
-  skipped_urns_file.toFile().text = skipped_urns ? skipped_urns.join(System.lineSeparator()) + System.lineSeparator() : ""
-
-  def urn_file_for_datacheck
-  if (params.previous_output) {
-    urn_file_for_datacheck = file(params.urn) // expect final merged output to contain all URNs
-  } else if (params.previous_urn) {
-    urn_file_for_datacheck = workflow.workDir.resolve('urns_to_process.txt')
-    urn_file_for_datacheck.toFile().parentFile.mkdirs()
-    urn_file_for_datacheck.toFile().text = filtered_urns.join(System.lineSeparator()) + System.lineSeparator()
-  } else {
-    urn_file_for_datacheck = file(params.urn)
-  }
-
-  urn = Channel.from(filtered_urns)
+  urn = Channel.from(plan.filtered_urns)
 
   // If --from_files is true, use local files instead of downloading via the MaveDB API
   if (params.from_files) {
@@ -240,7 +154,7 @@ workflow {
 
   def tabix_input = concatenate_files.out
   if (params.previous_output) {
-    tabix_input = merge_previous_output(tabix_input.map { combined -> tuple(combined, file(params.previous_output), file(skipped_urns_file)) })
+    tabix_input = merge_previous_output(tabix_input.map { combined -> tuple(combined, file(params.previous_output), file(plan.skipped_urns_file)) })
   }
 
   def tabix_out = tabix(tabix_input)
@@ -250,6 +164,6 @@ workflow {
   collate_logs(log_collation_input)
 
   // datacheck: compare final URNs against input list and pull logs for any missing URNs
-  datacheck_input = collate_logs.out.map { logs -> tuple(file(params.output), urn_file_for_datacheck, logs) }
+  datacheck_input = collate_logs.out.map { logs -> tuple(file(params.output), plan.urn_file_for_datacheck, logs) }
   datacheck_urns(datacheck_input)
 }
