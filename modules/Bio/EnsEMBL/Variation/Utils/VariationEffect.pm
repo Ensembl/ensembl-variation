@@ -1450,6 +1450,9 @@ sub frameshift {
         return 0 if stop_retained(@_);
     
         return 0 unless defined $bvfo->cds_start && defined $bvfo->cds_end;
+
+        my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
+        return 0 if defined $ref_pep && $ref_pep =~ /^\*/; # if the first base affected is the stop codon then it does no affect the reading frame
         
         my $var_len = $bvfo->cds_end - $bvfo->cds_start + 1;
     
