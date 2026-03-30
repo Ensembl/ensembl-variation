@@ -688,7 +688,7 @@ $transcript_tests->{$tf->stable_id}->{tests} = [
         alleles => '-',
         start   => $cds_end-2,
         end     => $cds_end,
-        effects => [qw(stop_lost inframe_deletion)],
+        effects => [qw(stop_lost)],
     }, {
         alleles => 'TAA',
         start   => $cds_end-2,
