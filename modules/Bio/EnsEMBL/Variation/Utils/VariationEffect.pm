@@ -1171,7 +1171,9 @@ sub inframe_deletion {
         my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
         return 0 unless defined $ref_codon;
         return 0 unless length($alt_codon) < length ($ref_codon);
-        
+
+        return 0 if $ref_pep eq "*"; # e.g. ref codon - TAG, alt codon - G
+
         # simple string match
         return 1 if ($ref_codon =~ /^\Q$alt_codon\E/) || ($ref_codon =~ /\Q$alt_codon\E$/);
 
