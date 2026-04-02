@@ -1235,6 +1235,8 @@ sub stop_lost {
 
     # use cache for this method as it gets called a lot
     my $cache = $bvfoa->{_predicate_cache} ||= {};
+
+    return 0 if partial_codon(@_);
     
     unless(exists($cache->{stop_lost})) {
         $cache->{stop_lost} = 0;
