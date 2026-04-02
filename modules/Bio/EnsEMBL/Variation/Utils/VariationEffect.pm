@@ -1214,11 +1214,12 @@ sub stop_gained {
     # use cache for this method as it gets called a lot
     my $cache = $bvfoa->{_predicate_cache} ||= {};
 
+
     unless(exists($cache->{stop_gained})) {
         $cache->{stop_gained} = 0;
         
-        ## check for inframe insertion before stop 
         return 0 if stop_retained(@_);
+        return 0 if stop_lost(@_);
 
         my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
         
