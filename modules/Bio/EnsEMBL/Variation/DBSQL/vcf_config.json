@@ -1487,12 +1487,12 @@
             "species": "Drosophila_melanogaster",
             "assembly": "BDGP6.54",
             "type": "remote",
-            "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_7/by_species/drosophila_melanogaster/GCA_000001215.4/7227_GCA_000001215.4_current_ids.vcf.gz",
+            "filename_template": "https://ftp.ebi.ac.uk/pub/databases/eva/rs_releases/release_8/by_species/drosophila_melanogaster/GCA_000001215.4/7227_GCA_000001215.4_current_ids.vcf.gz",
             "use_as_source": 1,
             "use_seq_region_synonyms": 0,
             "strict_name_match": 0,
             "source_name": "EVA",
-            "source_version": 7
+            "source_version": 8
         },
         {
             "id": "eva_microcebus_murinus_gca000165445v3",
