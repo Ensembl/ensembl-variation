@@ -1315,7 +1315,7 @@ sub stop_retained {
             $cache->{stop_retained} = ref_eq_alt_sequence(@_);
         }
         else {
-            $cache->{stop_retained} = ($pre->{increase_length} || $pre->{decrease_length}) && _ins_overlaps_stop_codon(@_, 1) && !_ins_del_stop_altered(@_);
+            $cache->{stop_retained} = ($pre->{increase_length} || $pre->{decrease_length}) && _ins_overlaps_stop_codon(@_) && !_ins_del_stop_altered(@_);
         }
 
     }
@@ -1391,6 +1391,7 @@ sub _ins_overlaps_stop_codon {
     my $cache = $bvfoa->{_predicate_cache} ||= {};
 
     # same as overlaps_stop_codon but for insertion add inserted seq length to see overlap
+    # because of intron we need to check overlap based on genomic coords when adding inserted seq length
     unless(exists($cache->{ins_overlaps_stop_codon})) {
         $cache->{ins_overlaps_stop_codon} = 0;
 
@@ -1398,17 +1399,27 @@ sub _ins_overlaps_stop_codon {
         $feat ||= $bvfo->feature;
         return 0 if grep {$_->code eq 'cds_end_NF'} @{$feat->get_all_Attributes()};
 
-        my ($cdna_start, $cdna_end) = ($bvfo->cdna_start, $bvfo->cdna_end);
-        return 0 unless $cdna_start && $cdna_end;
+        my ($v_start, $v_end) = ($bvf->seq_region_start, $bvf->seq_region_end);
+        return 0 unless $v_start && $v_end;
 
+        # direction of adding inserted seq length depends on transcript strand
         my $vf_feature_seq = $bvfoa->feature_seq;
-        $cdna_end = (($cdna_end < $cdna_start) && $vf_feature_seq =~ /^[ACTGN]+$/) ? 
-            $cdna_start + length $vf_feature_seq : 
-            $cdna_end;
+        if (($v_end < $v_start) && $vf_feature_seq =~ /^[ACTGN]+$/) {
+            if ($feat->strand == 1) {
+                $v_start =  $v_start + length $vf_feature_seq; 
+            }
+            else {
+                $v_start =  $v_start - length $vf_feature_seq; 
+            }
+        }
+
+        # from doxygen always coding_region_start < coding_region_end, so need to swap for reverse strand
+        my ($t_start, $t_end) = ($feat->coding_region_start, $feat->coding_region_end);
+        ($t_start, $t_end) = ($t_end, $t_start) if $feat->strand == -1;
 
         $cache->{ins_overlaps_stop_codon} = overlap(
-            $cdna_start, $cdna_end,
-            $feat->cdna_coding_end - 2, $feat->cdna_coding_end
+            $v_start, $v_end,
+            $t_end - 2, $t_end
         );
     }
 
