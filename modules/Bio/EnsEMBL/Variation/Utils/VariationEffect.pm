@@ -1311,12 +1311,11 @@ sub stop_retained {
         my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
 
         if(defined($alt_pep) && $alt_pep ne '' && $alt_pep !~ 'X') {
-         
             ## handle inframe insertion of a stop just before the stop (no ref peptide)
             $cache->{stop_retained} = ref_eq_alt_sequence(@_);
         }
         else {
-            $cache->{stop_retained} = ($pre->{increase_length} || $pre->{decrease_length}) && _overlaps_stop_codon(@_) && !_ins_del_stop_altered(@_);
+            $cache->{stop_retained} = ($pre->{increase_length} || $pre->{decrease_length}) && _ins_overlaps_stop_codon(@_, 1) && !_ins_del_stop_altered(@_);
         }
 
     }
@@ -1376,12 +1375,6 @@ sub _overlaps_stop_codon {
         my ($cdna_start, $cdna_end) = ($bvfo->cdna_start, $bvfo->cdna_end);
         return 0 unless $cdna_start && $cdna_end;
 
-        # for insertion add inserted seq length to see overlap
-        my $vf_feature_seq = $bvfoa->feature_seq;
-        $cdna_end = (($cdna_end < $cdna_start) && $vf_feature_seq =~ /^[ACTGN]+$/) ? 
-            $cdna_start + length $vf_feature_seq : 
-            $cdna_end;
-
         $cache->{overlaps_stop_codon} = overlap(
             $cdna_start, $cdna_end,
             $feat->cdna_coding_end - 2, $feat->cdna_coding_end
@@ -1389,6 +1382,37 @@ sub _overlaps_stop_codon {
     }
 
     return $cache->{overlaps_stop_codon};
+}
+
+
+sub _ins_overlaps_stop_codon {
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+
+    my $cache = $bvfoa->{_predicate_cache} ||= {};
+
+    # same as overlaps_stop_codon but for insertion add inserted seq length to see overlap
+    unless(exists($cache->{ins_overlaps_stop_codon})) {
+        $cache->{ins_overlaps_stop_codon} = 0;
+
+        $bvfo ||= $bvfoa->base_variation_feature_overlap;
+        $feat ||= $bvfo->feature;
+        return 0 if grep {$_->code eq 'cds_end_NF'} @{$feat->get_all_Attributes()};
+
+        my ($cdna_start, $cdna_end) = ($bvfo->cdna_start, $bvfo->cdna_end);
+        return 0 unless $cdna_start && $cdna_end;
+
+        my $vf_feature_seq = $bvfoa->feature_seq;
+        $cdna_end = (($cdna_end < $cdna_start) && $vf_feature_seq =~ /^[ACTGN]+$/) ? 
+            $cdna_start + length $vf_feature_seq : 
+            $cdna_end;
+
+        $cache->{ins_overlaps_stop_codon} = overlap(
+            $cdna_start, $cdna_end,
+            $feat->cdna_coding_end - 2, $feat->cdna_coding_end
+        );
+    }
+
+    return $cache->{ins_overlaps_stop_codon};
 }
 
 sub _ins_del_stop_altered {
