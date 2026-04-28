@@ -798,8 +798,8 @@ sub get_3prime_seq_offset{
 
   return ($seq_to_check, $offset)  unless defined  $post_seq;
 
-  ## get length of pattern to check 
-  my $check_length = length($post_seq) - length($seq_to_check);
+  ## get length of pattern to check
+  my $check_length = length($post_seq);
 
   ## move along sequence after deletion looking for match to start of deletion
   for (my $n = 0; $n<= $check_length; $n++ ){
