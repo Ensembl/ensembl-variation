@@ -1118,11 +1118,12 @@ sub inframe_insertion {
         # we can use start_retained to check this
         return 0 if start_retained_variant(@_) && $alt_pep =~ /\Q$ref_pep\E$/;
 
+        return 0 if $ref_pep eq "*" && $alt_pep eq "*"; # e.g. ref codon - TAG, alt codon - TAAG 
+
         # if we have a stop codon in the alt peptide
         # trim off everything after it
         # this allows us to detect inframe insertions that retain a stop
         $alt_pep =~ s/\*.+/\*/;
-
         return 1 if ($alt_pep =~ /^\Q$ref_pep\E/) || ($alt_pep =~ /\Q$ref_pep\E$/);
 
     }
@@ -1170,7 +1171,9 @@ sub inframe_deletion {
         my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
         return 0 unless defined $ref_codon;
         return 0 unless length($alt_codon) < length ($ref_codon);
-        
+
+        return 0 if $ref_pep eq "*"; # e.g. ref codon - TAG, alt codon - G
+
         # simple string match
         return 1 if ($ref_codon =~ /^\Q$alt_codon\E/) || ($ref_codon =~ /\Q$alt_codon\E$/);
 
@@ -1211,11 +1214,12 @@ sub stop_gained {
     # use cache for this method as it gets called a lot
     my $cache = $bvfoa->{_predicate_cache} ||= {};
 
+
     unless(exists($cache->{stop_gained})) {
         $cache->{stop_gained} = 0;
         
-        ## check for inframe insertion before stop 
         return 0 if stop_retained(@_);
+        return 0 if stop_lost(@_);
 
         my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
         
@@ -1232,6 +1236,8 @@ sub stop_lost {
 
     # use cache for this method as it gets called a lot
     my $cache = $bvfoa->{_predicate_cache} ||= {};
+
+    return 0 if partial_codon(@_);
     
     unless(exists($cache->{stop_lost})) {
         $cache->{stop_lost} = 0;
@@ -1250,7 +1256,7 @@ sub stop_lost {
     #        }
             
             my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
-            if(defined($ref_pep) && defined($alt_pep)) {
+            if(defined($ref_pep) && defined($alt_pep) && $alt_pep !~ 'X') {
                 $cache->{stop_lost} = ( ($alt_pep !~ /\*/) and ($ref_pep =~ /\*/) );
             }
             else {
@@ -1304,13 +1310,12 @@ sub stop_retained {
 
         my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
 
-        if(defined($alt_pep) && $alt_pep ne '') {
-         
-          ## handle inframe insertion of a stop just before the stop (no ref peptide)
-          $cache->{stop_retained} = ref_eq_alt_sequence(@_);
+        if(defined($alt_pep) && $alt_pep ne '' && $alt_pep !~ 'X') {
+            ## handle inframe insertion of a stop just before the stop (no ref peptide)
+            $cache->{stop_retained} = ref_eq_alt_sequence(@_);
         }
         else {
-            $cache->{stop_retained} = ($pre->{increase_length} || $pre->{decrease_length}) && _overlaps_stop_codon(@_) && !_ins_del_stop_altered(@_);
+            $cache->{stop_retained} = ($pre->{increase_length} || $pre->{decrease_length}) && _overlaps_stop_codon_cil(@_) && !_ins_del_stop_altered_cil(@_);
         }
 
     }
@@ -1324,7 +1329,6 @@ sub ref_eq_alt_sequence {
    $bvfo ||= $bvfoa->base_variation_feature_overlap;
    my $ref_seq = $bvfo->_peptide;
 
-   my $mut_seq = $ref_seq;
    my $tl_start = $bvfo->translation_start;
    my $tl_end = $bvfo->translation_end;
    
@@ -1339,19 +1343,20 @@ sub ref_eq_alt_sequence {
    # this is a logic from the former logic 
    return 1 if ($bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptVariationAllele') && defined($ref_seq) && $tl_start > length($ref_seq) && $alt_pep =~ /^\*/);
 
+   my $mut_seq = $ref_seq;
    substr($mut_seq, $tl_start-1, $tl_end - $tl_start + 1) = $alt_pep; # creating a mutated sequence from the ref sequence. 
 
    my $mut_substring = substr($mut_seq, 0, length($ref_seq)); # getting a substring up to the length of the ref sequence for comparison from index 0 to the length of the ref seq;
-   
+        
    my $final_stop = substr($mut_seq, length($ref_seq)) if length($ref_seq) < length($mut_seq); # getting the length of the $mut_seq from the length of the ref_seq to the end 
    
-   my $final_stop_length = length($final_stop) if defined($final_stop) ne '';
-   
-   # 1 is if the ref_pep and the first letter of the alt_pep is the same and the alt_pep has * in it 
-   # 2 is the ref_seq eq $mut_substring and the final stop length is less than 3
-   # 3 is * in ref_pep and the same index position exists for both the ref and alt pep
-   return 1 if ( ($ref_pep eq substr($alt_pep, 0, 1) && $alt_pep =~ /\*/) ||
-       ($ref_seq eq $mut_substring && defined($final_stop_length) && $final_stop_length < 3) || ( $ref_pep =~ /\*/ && (index($ref_pep, "*") + 1 == index($alt_pep, "*") + 1) ));
+   # 1 is the ref_seq eq $mut_substring and the final stop is *
+   # 2 is * in ref_pep and the same index position exists for both the ref and alt pep
+#    print $final_stop, "\n";
+   return 1 if (
+        ($ref_seq eq $mut_substring && defined($final_stop) && $final_stop =~ /^\Q*\E/) ||
+        ($ref_pep =~ /\*/ && (index($ref_pep, "*") == index($alt_pep, "*")))
+    );
    return 0;
 }
 
@@ -1369,7 +1374,7 @@ sub _overlaps_stop_codon {
 
         my ($cdna_start, $cdna_end) = ($bvfo->cdna_start, $bvfo->cdna_end);
         return 0 unless $cdna_start && $cdna_end;
-        
+
         $cache->{overlaps_stop_codon} = overlap(
             $cdna_start, $cdna_end,
             $feat->cdna_coding_end - 2, $feat->cdna_coding_end
@@ -1379,8 +1384,51 @@ sub _overlaps_stop_codon {
     return $cache->{overlaps_stop_codon};
 }
 
-sub _ins_del_stop_altered {
+
+# same as overlaps_stop_codon but "consider insertion length" to see overlap
+sub _overlaps_stop_codon_cil {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+
+    my $cache = $bvfoa->{_predicate_cache} ||= {};
+
+    unless(exists($cache->{ins_overlaps_stop_codon})) {
+        $cache->{ins_overlaps_stop_codon} = 0;
+
+        return 0 unless $bvf;
+        $bvfo ||= $bvfoa->base_variation_feature_overlap;
+        $feat ||= $bvfo->feature;
+        return 0 if grep {$_->code eq 'cds_end_NF'} @{$feat->get_all_Attributes()};
+
+        # because of intron we need to check overlap based on genomic coords when adding inserted seq length
+        my ($v_start, $v_end) = ($bvf->seq_region_start, $bvf->seq_region_end);
+        return 0 unless $v_start && $v_end;
+
+        # direction of adding inserted seq length depends on transcript strand
+        my $vf_feature_seq = $bvfoa->feature_seq;
+        if (($v_end < $v_start) && $vf_feature_seq =~ /^[ACTGN]+$/) {
+            if ($feat->strand == 1) {
+                $v_start =  $v_start + length $vf_feature_seq; 
+            }
+            else {
+                $v_start =  $v_start - length $vf_feature_seq; 
+            }
+        }
+
+        # from doxygen always coding_region_start < coding_region_end, so need to swap for reverse strand
+        my ($t_start, $t_end) = ($feat->coding_region_start, $feat->coding_region_end);
+        ($t_start, $t_end) = ($t_end, $t_start) if $feat->strand == -1;
+
+        $cache->{ins_overlaps_stop_codon} = overlap(
+            $v_start, $v_end,
+            $t_end - 2, $t_end
+        );
+    }
+
+    return $cache->{ins_overlaps_stop_codon};
+}
+
+sub _ins_del_stop_altered {
+    my ($bvfoa, $feat, $bvfo, $bvf, $consider_ins_len) = @_;
 
     # use cache for this method as it gets called a lot
     my $cache = $bvfoa->{_predicate_cache} ||= {};
@@ -1390,7 +1438,7 @@ sub _ins_del_stop_altered {
 
         return 0 if $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptStructuralVariationAllele');
         return 0 unless $bvfoa->seq_is_unambiguous_dna();
-        return 0 unless _overlaps_stop_codon(@_);
+        return 0 unless _overlaps_stop_codon(@_, $consider_ins_len);
 
         my $pre = $bvfoa->_pre_consequence_predicates;
         return 0 unless $pre->{increase_length} || $pre->{decrease_length};
@@ -1432,6 +1480,61 @@ sub _ins_del_stop_altered {
     return $cache->{ins_del_stop_altered};
 }
 
+
+# same as _ins_del_stop_altered but "consider insertion length" to see stop codon overlap
+sub _ins_del_stop_altered_cil {
+    my ($bvfoa, $feat, $bvfo, $bvf) = @_;
+
+    # use cache for this method as it gets called a lot
+    my $cache = $bvfoa->{_predicate_cache} ||= {};
+
+    unless(exists($cache->{ins_del_stop_altered_cil})) {
+        $cache->{ins_del_stop_altered_cil} = 0;
+
+        return 0 if $bvfoa->isa('Bio::EnsEMBL::Variation::TranscriptStructuralVariationAllele');
+        return 0 unless $bvfoa->seq_is_unambiguous_dna();
+        return 0 unless _overlaps_stop_codon_cil(@_);
+
+        my $pre = $bvfoa->_pre_consequence_predicates;
+        return 0 unless $pre->{increase_length} || $pre->{decrease_length};
+
+        $bvfo ||= $bvfoa->base_variation_feature_overlap;
+
+        # get cDNA coords and CDS start
+        my ($cdna_start, $cdna_end, $cds_start) = ($bvfo->cdna_start, $bvfo->cdna_end, $bvfo->cds_start);
+        return 0 unless $cdna_start && $cdna_end && $cds_start;
+
+        # make and edit UTR + translateable seq
+        my $translateable = $bvfo->_translateable_seq();
+        my $utr = $bvfo->_three_prime_utr();
+
+        my $utr_and_translateable = $translateable.($utr ? $utr->seq : '');
+
+        my $vf_feature_seq = $bvfoa->feature_seq;
+        $vf_feature_seq = '' if $vf_feature_seq eq '-';
+
+        # use CDS start to anchor the edit
+        # and cDNA coords to get the length (could use VF, but have already retrieved cDNA coords)
+        substr($utr_and_translateable, $cds_start - 1, ($cdna_end - $cdna_start) + 1) = $vf_feature_seq;
+
+        # new sequence shorter, we know it has been altered
+        return $cache->{ins_del_stop_altered_cil} = 1 if length($utr_and_translateable) < length($translateable);
+
+        # now we need the codon from the new seq at the equivalent end pos from translateable
+        # and to translate it to check if it is still a stop
+        my $pep = Bio::Seq->new(
+            -seq        => substr($utr_and_translateable, length($translateable) - 3, 3),
+            -moltype    => 'dna',
+            -alphabet   => 'dna',
+        )->translate(
+            undef, undef, undef, $bvfo->_codon_table
+        )->seq;
+        $cache->{ins_del_stop_altered_cil} = !($pep && $pep eq '*');
+    }
+
+    return $cache->{ins_del_stop_altered_cil};
+}
+
 sub frameshift {
     my ($bvfoa, $feat, $bvfo, $bvf) = @_;
     $bvfo ||= $bvfoa->base_variation_feature_overlap;
@@ -1443,7 +1546,10 @@ sub frameshift {
         return 0 if stop_retained(@_);
     
         return 0 unless defined $bvfo->cds_start && defined $bvfo->cds_end;
-        
+
+        my ($ref_pep, $alt_pep) = _get_peptide_alleles(@_);
+        return 0 if defined $ref_pep && $ref_pep =~ /^\*/; # if the first base affected is the stop codon then it does no affect the reading frame
+
         my $var_len = $bvfo->cds_end - $bvfo->cds_start + 1;
     
         my $allele_len = $bvfoa->seq_length;
