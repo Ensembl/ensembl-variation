@@ -1394,6 +1394,7 @@ sub _overlaps_stop_codon_cil {
     unless(exists($cache->{ins_overlaps_stop_codon})) {
         $cache->{ins_overlaps_stop_codon} = 0;
 
+        return 0 unless $bvf;
         $bvfo ||= $bvfoa->base_variation_feature_overlap;
         $feat ||= $bvfo->feature;
         return 0 if grep {$_->code eq 'cds_end_NF'} @{$feat->get_all_Attributes()};
