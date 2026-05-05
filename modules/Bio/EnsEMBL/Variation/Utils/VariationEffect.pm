@@ -1418,9 +1418,12 @@ sub _overlaps_stop_codon_cil {
         my ($t_start, $t_end) = ($feat->coding_region_start, $feat->coding_region_end);
         ($t_start, $t_end) = ($t_end, $t_start) if $feat->strand == -1;
 
+        my ($t_end_s, $t_end_e) = ($t_end - 2, $t_end);
+        ($t_end_s, $t_end_e) = ($t_end, $t_end + 2) if $feat->strand == -1;
+
         $cache->{ins_overlaps_stop_codon} = overlap(
             $v_start, $v_end,
-            $t_end - 2, $t_end
+            $t_end_s, $t_end_e
         );
     }
 
