@@ -527,7 +527,7 @@ int main(int argc, char *argv[]) {
     /* getopt_long stores the option index here. */
     int option_index = 0;
 
-    c = getopt_long (argc, argv, "f:l:r:s:w:v:n:p:", long_options, &option_index);
+    c = getopt_long (argc, argv, "f:l:r:s:w:v:n:p:h", long_options, &option_index);
 
     /* Detect the end of the options. */
     if (c == -1)
@@ -567,18 +567,26 @@ int main(int argc, char *argv[]) {
         variants_file = optarg;
         break;
 
+      case 'h':
+        fprintf(stderr, "Valid options are [flrswvnp]\n");
+        exit (1);
+
       case '?':
         /* getopt_long already printed an error message. */
         break;
 
       default:
-        abort ();
+        exit (1);
     }
   }
 
   if (numregions > MAX_REGIONS) {
     fprintf(stderr, "Number of maximum allowed regions exceeded: %d.\n", numregions);
     return EXIT_FAILURE;
+  }
+  if (filestr == NULL) {
+        fprintf(stderr, "<-f file> must be specified\n");
+        exit (1);
   }
 
   char *files[MAX_REGIONS];
