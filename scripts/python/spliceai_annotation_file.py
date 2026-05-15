@@ -267,9 +267,10 @@ def write_output(transcripts_list, output_file):
             name = data.get("name", gene)
             chr = data["chr"]
             strand = data["strand"]
-            start = data["start"]
+            # SpliceAI annotation files store starts as 0-based and ends as 1-based
+            start = int(data["start"]) - 1
             end = data["end"]
-            exons_start = ",".join(data["exons_start"])
+            exons_start = ",".join(str(int(exon_start) - 1) for exon_start in data["exons_start"])
             exons_end = ",".join(data["exons_end"])
 
             f.write(f"{name}\t{chr}\t{strand}\t{start}\t{end}\t{exons_start},\t{exons_end},\n")
