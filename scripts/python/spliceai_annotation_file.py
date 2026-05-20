@@ -276,8 +276,8 @@ def main():
                         help="GFF3 file path (required)")
     parser.add_argument("--gencode_primary", action="store_true",
                         help="Filter GFF3 transcripts to tag=gencode_primary instead of MANE_Select")
-    parser.add_argument("--name_format", default="gene", choices=["gene", "transcript", "gene_transcript"],
-                        help="Annotation NAME field format (default: gene)")
+    parser.add_argument("--name_format", choices=["gene", "transcript", "gene_transcript"],
+                        help="Annotation NAME field format (default: gene_transcript with --gencode_primary, otherwise gene)")
     args = parser.parse_args()
 
     output_file = args.output_file
@@ -286,9 +286,10 @@ def main():
     release = args.release
     if species.lower() not in ["homo_sapiens", "human"]:
         parser.error("Only human is currently supported")
+    name_format = args.name_format or ("gene_transcript" if args.gencode_primary else "gene")
     filter_label = "gencode_primary" if args.gencode_primary else "MANE_Select"
-    print(f"[spliceai_annotation_file] file={args.gff3} | filter={filter_label} | name_format={args.name_format}", file=sys.stderr)
-    transcripts_list = fetch_transcripts_gff3(args.gff3, args.gencode_primary, args.name_format)
+    print(f"[spliceai_annotation_file] file={args.gff3} | filter={filter_label} | name_format={name_format}", file=sys.stderr)
+    transcripts_list = fetch_transcripts_gff3(args.gff3, args.gencode_primary, name_format)
 
     ok, fail = sanity_checks(transcripts_list)
     sorted_list = dict(sorted(ok.items(), key=lambda kv: kv[0]))
