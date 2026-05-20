@@ -7,7 +7,7 @@
     
     By passing --gff3, the supplied GFF3 is read in and transcript rows are retained. By default
     this keeps MANE_Select transcripts; with --gencode_primary it keeps gencode_primary
-    protein-coding transcripts.
+    protein-coding transcripts on main chromosomes.
 
     Each retained transcript is written as a separate SpliceAI annotation row. Exons are never
     merged across transcripts because that removes splice boundaries used by SpliceAI.
