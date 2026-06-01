@@ -593,7 +593,7 @@ int main(int argc, char *argv[]) {
         break;
 
       default:
-        exit (1);
+        return EXIT_FAILURE;
     }
   }
 
