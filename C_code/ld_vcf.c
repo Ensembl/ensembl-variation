@@ -423,7 +423,23 @@ void process_window(Locus_list *locus_list, int windowsize, FILE *fh, int positi
 }
 
 void usage(char *prog) {
-  fprintf(stderr, "Usage: %s -f [input.vcf.gz] -r [chr:start-end] -l [optional_sample_list] (-g [input_two.vcf.gz] -s [chr:start-end]) > output.txt\n", prog);
+  fprintf(stderr,
+    "Usage: %s -f <input.vcf.gz> -r <chr:start-end> [options] > output.txt\n"
+    "\n"
+    "Required:\n"
+    "  -f, --file <file>                Input VCF/BCF file\n"
+    "  -r, --region <region>            Region to query, e.g. 1:1000-2000\n"
+    "\n"
+    "Optional:\n"
+    "  -l, --samples <file>             File with samples to include\n"
+    "  -n, --include_variants <file>    File listing variant IDs to include\n"
+    "  -v, --variant <id>               Focal variant ID\n"
+    "  -p, --var_position <int>         Focal variant position\n"
+    "  -s, --numregions <int>           Number of file/region pairs to process\n"
+    "  -w, --window <int>               Window size in base pairs\n"
+    "  -h, --help                       Show this help and exit\n",
+    prog
+  );
 }
 
 char** read_variants_file(char *variants_file) {
@@ -521,6 +537,7 @@ int main(int argc, char *argv[]) {
       {"variant", required_argument, 0, 'v'},
       {"var_position", required_argument, 0, 'p'},
       {"include_variants", required_argument, 0, 'n'},
+      {"help", no_argument, 0, 'h'},
       {0, 0, 0, 0}
     };
 
@@ -568,8 +585,8 @@ int main(int argc, char *argv[]) {
         break;
 
       case 'h':
-        fprintf(stderr, "Valid options are [flrswvnp]\n");
-        exit (1);
+        usage(argv[0]);
+        return EXIT_SUCCESS;
 
       case '?':
         /* getopt_long already printed an error message. */
