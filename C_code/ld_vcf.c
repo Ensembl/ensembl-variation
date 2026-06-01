@@ -423,7 +423,23 @@ void process_window(Locus_list *locus_list, int windowsize, FILE *fh, int positi
 }
 
 void usage(char *prog) {
-  fprintf(stderr, "Usage: %s -f [input.vcf.gz] -r [chr:start-end] -l [optional_sample_list] (-g [input_two.vcf.gz] -s [chr:start-end]) > output.txt\n", prog);
+  fprintf(stderr,
+    "Usage: %s -f <input.vcf.gz> -r <chr:start-end> [options] > output.txt\n"
+    "\n"
+    "Required:\n"
+    "  -f, --file <file>                Input VCF/BCF file\n"
+    "  -r, --region <region>            Region to query, e.g. 1:1000-2000\n"
+    "\n"
+    "Optional:\n"
+    "  -l, --samples <file>             File with samples to include\n"
+    "  -n, --include_variants <file>    File listing variant IDs to include\n"
+    "  -v, --variant <id>               Focal variant ID\n"
+    "  -p, --var_position <int>         Focal variant position\n"
+    "  -s, --numregions <int>           Number of file/region pairs to process\n"
+    "  -w, --window <int>               Window size in base pairs\n"
+    "  -h, --help                       Show this help and exit\n",
+    prog
+  );
 }
 
 char** read_variants_file(char *variants_file) {
@@ -521,13 +537,14 @@ int main(int argc, char *argv[]) {
       {"variant", required_argument, 0, 'v'},
       {"var_position", required_argument, 0, 'p'},
       {"include_variants", required_argument, 0, 'n'},
+      {"help", no_argument, 0, 'h'},
       {0, 0, 0, 0}
     };
 
     /* getopt_long stores the option index here. */
     int option_index = 0;
 
-    c = getopt_long (argc, argv, "f:l:r:s:w:v:n:p:", long_options, &option_index);
+    c = getopt_long (argc, argv, "f:l:r:s:w:v:n:p:h", long_options, &option_index);
 
     /* Detect the end of the options. */
     if (c == -1)
@@ -567,18 +584,26 @@ int main(int argc, char *argv[]) {
         variants_file = optarg;
         break;
 
+      case 'h':
+        usage(argv[0]);
+        return EXIT_SUCCESS;
+
       case '?':
         /* getopt_long already printed an error message. */
         break;
 
       default:
-        abort ();
+        return EXIT_FAILURE;
     }
   }
 
   if (numregions > MAX_REGIONS) {
     fprintf(stderr, "Number of maximum allowed regions exceeded: %d.\n", numregions);
     return EXIT_FAILURE;
+  }
+  if (filestr == NULL) {
+        fprintf(stderr, "<-f file> must be specified\n");
+        exit (1);
   }
 
   char *files[MAX_REGIONS];
