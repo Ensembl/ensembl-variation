@@ -7,16 +7,17 @@
     
     By passing --gff3, the supplied GFF3 is read in and transcript rows are retained. By default
     this keeps MANE_Select transcripts; with --gencode_primary it keeps gencode_primary
-    protein-coding transcripts on main chromosomes.
+    protein-coding transcripts on main chromosomes (only chromosomes 1-22, X, and Y are retained, 
+    all other contigs, including MT, are excluded).
 
     Each retained transcript is written as a separate SpliceAI annotation row. Exons are never
     merged across transcripts because that removes splice boundaries used by SpliceAI.
 
     Template provided by SpliceAI: https://github.com/Illumina/SpliceAI/blob/master/spliceai/annotations/grch38.txt
 
-    Gene annotation file format:
+    Gene annotation file format (TX_START and EXON_START are 0-based; TX_END and EXON_END are 1-based):
         #NAME   CHROM   STRAND  TX_START    TX_END  EXON_START  EXON_END
-        KRTAP27-1   21  -   30337013    30337694    30337013,   30337694,
+        KRTAP27-1   21  -   30337012    30337694    30337012,   30337694,
 
     Options:
             --output_file   gene annotation output file (Optional. Default: gene_annotation.txt)
