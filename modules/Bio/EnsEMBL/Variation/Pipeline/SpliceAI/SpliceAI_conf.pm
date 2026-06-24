@@ -68,7 +68,7 @@ sub default_options {
         registry                   => undef, # database where new MANE transcripts are going to be checked; only used if check_transcripts = 1
         output_file_name           => 'spliceai_final_scores_' . $self->o('ensembl_release') . '_',
 
-        pipeline_wide_analysis_capacity => 80,
+        pipeline_wide_analysis_capacity => 15,
 
         pipeline_db => {
             -host   => $self->o('hive_db_host'),
@@ -86,7 +86,7 @@ sub resource_classes {
     return {
         %{$self->SUPER::resource_classes},
         'gpu'      => {
-                        'SLURM' => '--time=24:00:00 --gres=gpu:1 --mem=32G'
+                        'SLURM' => '--time=96:00:00 --gres=gpu:1 --mem=32G'
                       },
         '4Gb_job'  => {
                         'SLURM' => "--partition=standard --time=4:00:00 --mem=8G"

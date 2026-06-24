@@ -5,17 +5,19 @@
     This file contains data about the transcript that is being used for each gene.
     SpliceAI only annotates variants overlapping these transcripts.
     
-    By passing --gff3, the supplied GFF3 is read in, all transcripts tagged MANE_Select are retained
-    (any feature type), or protein-coding transcripts tagged gencode_primary when flagged, exons per gene
-    are aggregated, and the SpliceAI annotation formatted file is written out.
+    By passing --gff3, the supplied GFF3 is read in and transcript rows are retained. By default
+    this keeps MANE_Select transcripts; with --gencode_primary it keeps gencode_primary
+    protein-coding transcripts on main chromosomes (only chromosomes 1-22, X, and Y are retained, 
+    all other contigs, including MT, are excluded).
 
-    Overlapping or nested exons are merged to the outermost span so the final exon list is non-overlapping.
+    Each retained transcript is written as a separate SpliceAI annotation row. Exons are never
+    merged across transcripts because that removes splice boundaries used by SpliceAI.
 
     Template provided by SpliceAI: https://github.com/Illumina/SpliceAI/blob/master/spliceai/annotations/grch38.txt
 
-    Gene annotation file format:
+    Gene annotation file format (TX_START and EXON_START are 0-based; TX_END and EXON_END are 1-based):
         #NAME   CHROM   STRAND  TX_START    TX_END  EXON_START  EXON_END
-        KRTAP27-1   21  -   30337013    30337694    30337013,   30337694,
+        KRTAP27-1   21  -   30337012    30337694    30337012,   30337694,
 
     Options:
             --output_file   gene annotation output file (Optional. Default: gene_annotation.txt)
@@ -23,17 +25,19 @@
             --assembly      assembly version            (Optional. Default: 38)
             --gff3          GFF3 file path              (Mandatory)
             --gencode_primary   switch to filter for GENCODE primary instead of MANE Select
+            --name_format       gene, transcript, or gene_transcript for the SpliceAI NAME field
 """
 
 import argparse
 import sys
 import gzip
 
-def fetch_transcripts_gff3(gff3_path, use_gencode_primary):
-    gene_annotation = {}
+def fetch_transcripts_gff3(gff3_path, use_gencode_primary, name_format):
+    annotations = {}
     open_func = gzip.open if gff3_path.endswith(".gz") else open
     tag_to_keep = "gencode_primary" if use_gencode_primary else "mane_select"
     transcript_features = {"transcript", "mRNA"}
+    main_chromosomes = {str(chrom) for chrom in range(1, 23)} | {"X", "Y"}
 
     def detect_transcript_features(path, tag):
         features = set()
@@ -56,6 +60,16 @@ def fetch_transcripts_gff3(gff3_path, use_gencode_primary):
         val = value.split(",")[0]
         return val.split(":", 1)[1] if ":" in val else val
 
+    def clean_chrom(chrom):
+        return chrom[3:] if chrom.startswith("chr") else chrom
+
+    def annotation_name(gene_name, transcript_id):
+        if name_format == "gene":
+            return gene_name
+        if name_format == "transcript":
+            return transcript_id
+        return f"{gene_name}:{transcript_id}"
+
     # For mane_select, make the allowed transcript feature list to whatever appears tagged in the GFF to capture all
     if not use_gencode_primary:
         detected_features = detect_transcript_features(gff3_path, tag_to_keep)
@@ -72,7 +86,9 @@ def fetch_transcripts_gff3(gff3_path, use_gencode_primary):
             if len(fields) < 9:
                 continue
             chrom, _source, feature, start, end, _score, strand, _phase, attrs = fields
-            chrom = chrom.replace("chr", "")
+            chrom = clean_chrom(chrom)
+            if chrom not in main_chromosomes:
+                continue
 
             attr_dict = {}
             for entry in attrs.split(";"):
@@ -85,10 +101,12 @@ def fetch_transcripts_gff3(gff3_path, use_gencode_primary):
                 gene_name = attr_dict.get("Name") or attr_dict.get("gene_name") or gene_id
                 if gene_id:
                     gene_meta[gene_id] = {"name": gene_name, "chr": chrom, "strand": strand}
-                    if gene_id in gene_annotation:
-                        gene_annotation[gene_id]["name"] = gene_name
-                        gene_annotation[gene_id]["chr"] = chrom
-                        gene_annotation[gene_id]["strand"] = strand
+                    for transcript_id, transcript_gene_id in transcripts_keep.items():
+                        if transcript_gene_id != gene_id:
+                            continue
+                        annotations[transcript_id]["name"] = annotation_name(gene_name, transcript_id)
+                        annotations[transcript_id]["chr"] = chrom
+                        annotations[transcript_id]["strand"] = strand
                 continue
 
             # In gencode_primary mode, ignore everything except transcript and exon rows.
@@ -107,73 +125,44 @@ def fetch_transcripts_gff3(gff3_path, use_gencode_primary):
                 if not (transcript_id and gene_id):
                     continue
                 transcripts_keep[transcript_id] = gene_id
-                if gene_id not in gene_annotation:
-                    gene_info = gene_meta.get(gene_id, {})
-                    gene_annotation[gene_id] = {
-                        "name": gene_info.get("name", gene_id),
-                        "chr": gene_info.get("chr", chrom),
-                        "strand": gene_info.get("strand", strand),
-                        "exons": set()
-                    }
+                gene_info = gene_meta.get(gene_id, {})
+                gene_name = gene_info.get("name", gene_id)
+                annotations[transcript_id] = {
+                    "name": annotation_name(gene_name, transcript_id),
+                    "chr": gene_info.get("chr", chrom),
+                    "strand": gene_info.get("strand", strand),
+                    "start": int(start),
+                    "end": int(end),
+                    "exons": set()
+                }
                 continue
 
             if feature == "exon":
                 parents_raw = attr_dict.get("Parent", "")
                 for parent in parents_raw.split(","):
                     transcript_id = strip_prefix(parent)
-                    gene_id = transcripts_keep.get(transcript_id)
-                    if not gene_id:
+                    if transcript_id not in transcripts_keep:
                         continue
-                    if gene_id not in gene_annotation:
-                        gene_info = gene_meta.get(gene_id, {})
-                        gene_annotation[gene_id] = {
-                            "name": gene_info.get("name", gene_id),
-                            "chr": gene_info.get("chr", chrom),
-                            "strand": gene_info.get("strand", strand),
-                            "exons": set()
-                        }
-                    gene_annotation[gene_id]["exons"].add((int(start), int(end)))
+                    annotations[transcript_id]["exons"].add((int(start), int(end)))
 
-    # convert exon sets to sorted lists and set start/end spans
+    # convert exon sets to sorted lists
     formatted = {}
-    for gene_id, data in gene_annotation.items():
+    for transcript_id, data in annotations.items():
         exons_sorted = sorted(data["exons"], key=lambda p: (p[0], p[1]))
         if not exons_sorted:
             continue
         exons_start = [str(p[0]) for p in exons_sorted]
         exons_end = [str(p[1]) for p in exons_sorted]
-        formatted[gene_id] = {
+        formatted[transcript_id] = {
             "name": data["name"],
             "chr": data["chr"],
             "strand": data["strand"],
-            "start": exons_sorted[0][0],
-            "end": exons_sorted[-1][1],
+            "start": data["start"],
+            "end": data["end"],
             "exons_start": exons_start,
             "exons_end": exons_end
         }
     return formatted
-
-def merge_overlapping_exons(pairs):
-    """
-    Collapse overlapping exon pairs, keeping the outermost span.
-    Input pairs are tuples of ints sorted by start.
-    Returns merged pairs (as strings) and a flag indicating if any merges happened.
-    """
-    merged = []
-    merged_flag = False
-    for start, end in pairs:
-        if not merged:
-            merged.append([start, end])
-            continue
-        _prev_start, prev_end = merged[-1]
-        if start <= prev_end:
-            merged_flag = True
-            if end > prev_end:
-                merged[-1][1] = end
-            # if the new exon is contained within the previous one, drop it
-            continue
-        merged.append([start, end])
-    return [(str(p[0]), str(p[1])) for p in merged], merged_flag
 
 def sanity_checks(transcripts_list):
     ok = {}
@@ -185,17 +174,12 @@ def sanity_checks(transcripts_list):
         original_pairs = [(int(s), int(e)) for s, e in zip(data["exons_start"], data["exons_end"])]
         # sort exons by start to keep output ordered before validation
         pairs = sorted(original_pairs, key=lambda p: (p[0], p[1]))
-        merged_pairs, had_merges = merge_overlapping_exons(pairs)
-        data["exons_start"] = [p[0] for p in merged_pairs]
-        data["exons_end"] = [p[1] for p in merged_pairs]
+        data["exons_start"] = [str(p[0]) for p in pairs]
+        data["exons_end"] = [str(p[1]) for p in pairs]
         reasons = []
         warnings = []
         if not pairs:
             reasons.append("no_exons")
-        else:
-            # span from first to last exon
-            data["start"] = int(data["exons_start"][0])
-            data["end"] = int(data["exons_end"][-1])
 
         check = 1
 
@@ -215,12 +199,14 @@ def sanity_checks(transcripts_list):
         prev_end = None
         for exon_start, exon_end in zip(data["exons_start"], data["exons_end"]):
             if prev_end is not None and int(exon_start) <= int(prev_end):
-                warnings.append("overlap")
+                check = 0
+                reasons.append("overlap")
                 break
             prev_end = exon_end
 
-        if had_merges:
-            warnings.append("overlap_merged")
+        if pairs and (int(data["start"]) > pairs[0][0] or int(data["end"]) < pairs[-1][1]):
+            check = 0
+            reasons.append("transcript_span_does_not_cover_exons")
 
         # detect original out-of-order (before sorting, start decreases)
         prev_start_orig = None
@@ -247,7 +233,6 @@ def sanity_checks(transcripts_list):
     if warning_counts:
         warning_labels = {
             "overlap": "exons overlap after sorting (check input ordering)",
-            "overlap_merged": "overlapping/nested exons merged to outer span",
             "out_of_order": "exons not in ascending order in source"
         }
         parts = []
@@ -267,9 +252,10 @@ def write_output(transcripts_list, output_file):
             name = data.get("name", gene)
             chr = data["chr"]
             strand = data["strand"]
-            start = data["start"]
+            # SpliceAI annotation files store starts as 0-based and ends as 1-based
+            start = int(data["start"]) - 1
             end = data["end"]
-            exons_start = ",".join(data["exons_start"])
+            exons_start = ",".join(str(int(exon_start) - 1) for exon_start in data["exons_start"])
             exons_end = ",".join(data["exons_end"])
 
             f.write(f"{name}\t{chr}\t{strand}\t{start}\t{end}\t{exons_start},\t{exons_end},\n")
@@ -291,6 +277,8 @@ def main():
                         help="GFF3 file path (required)")
     parser.add_argument("--gencode_primary", action="store_true",
                         help="Filter GFF3 transcripts to tag=gencode_primary instead of MANE_Select")
+    parser.add_argument("--name_format", choices=["gene", "transcript", "gene_transcript"],
+                        help="Annotation NAME field format (default: gene_transcript with --gencode_primary, otherwise gene)")
     args = parser.parse_args()
 
     output_file = args.output_file
@@ -299,9 +287,10 @@ def main():
     release = args.release
     if species.lower() not in ["homo_sapiens", "human"]:
         parser.error("Only human is currently supported")
+    name_format = args.name_format or ("gene_transcript" if args.gencode_primary else "gene")
     filter_label = "gencode_primary" if args.gencode_primary else "MANE_Select"
-    print(f"[spliceai_annotation_file] file={args.gff3} | filter={filter_label}", file=sys.stderr)
-    transcripts_list = fetch_transcripts_gff3(args.gff3, args.gencode_primary)
+    print(f"[spliceai_annotation_file] file={args.gff3} | filter={filter_label} | name_format={name_format}", file=sys.stderr)
+    transcripts_list = fetch_transcripts_gff3(args.gff3, args.gencode_primary, name_format)
 
     ok, fail = sanity_checks(transcripts_list)
     sorted_list = dict(sorted(ok.items(), key=lambda kv: kv[0]))

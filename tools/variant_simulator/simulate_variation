@@ -191,7 +191,7 @@ sub processGenes{
       while (my $transcript = shift @transc) {
         next unless $transcript->biotype eq 'protein_coding';
         if ($transcript->gencode_primary()) {
-          @parts = ($transcript);
+          push @parts, $transcript;
         }
       }
     } elsif ($canonicalOnly) {
