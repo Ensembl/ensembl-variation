@@ -2004,8 +2004,14 @@ sub _get_hgvs_protein_format {
 
       ### use ? to show new stop not predicted
       $aa_til_stop = "?" unless defined $aa_til_stop; 
-
-      $hgvs_notation->{'hgvs'} .= $hgvs_notation->{ref} . $hgvs_notation->{start} . $hgvs_notation->{alt} ."fsTer$aa_til_stop";     
+        if (defined $hgvs_notation->{ref} && $hgvs_notation->{ref} eq "Ter"){ ## extTer
+          # extension length does not include the stop codon itself, so subtract 1 from the count
+          $aa_til_stop = $aa_til_stop - 1;
+          $hgvs_notation->{'hgvs'} .= $hgvs_notation->{ref} . $hgvs_notation->{start}  .  $hgvs_notation->{alt}."extTer$aa_til_stop" ;
+        }
+        else{ ## fsTer
+          $hgvs_notation->{'hgvs'} .= $hgvs_notation->{ref} . $hgvs_notation->{start}  .  $hgvs_notation->{alt}."fsTer$aa_til_stop" ;
+        } 
     }
   }
 
@@ -2496,7 +2502,7 @@ sub _stop_loss_extra_AA{
   #### Find the number of residues that are translated until a termination codon is encountered
   if ($alt_trans->seq() =~ m/\*/) {
     if($DEBUG==1){print "Got $+[0] aa before stop, var event at $ref_var_pos \n";}
-  
+
     if(defined $test && $test eq "fs" ){
       ### frame shift - count from first AA effected by variant to stop
       $extra_aa = $+[0] - $ref_var_pos;
