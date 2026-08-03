@@ -2006,7 +2006,7 @@ sub _get_hgvs_protein_format {
       $aa_til_stop = "?" unless defined $aa_til_stop; 
         if (defined $hgvs_notation->{ref} && $hgvs_notation->{ref} eq "Ter"){ ## extTer
           # extension length does not include the stop codon itself, so subtract 1 from the count
-          $aa_til_stop = $aa_til_stop - 1;
+          $aa_til_stop = $aa_til_stop eq '?' ? $aa_til_stop : $aa_til_stop - 1;
           $hgvs_notation->{'hgvs'} .= $hgvs_notation->{ref} . $hgvs_notation->{start}  .  $hgvs_notation->{alt}."extTer$aa_til_stop" ;
         }
         else{ ## fsTer
