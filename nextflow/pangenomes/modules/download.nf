@@ -6,22 +6,25 @@ process fetch_gene_symbol_lookup {
 
   """
   # Download HGNC gene symbol table
-  wget https://ftp.ebi.ac.uk/pub/databases/genenames/hgnc/tsv/hgnc_complete_set.txt
+  wget https://storage.googleapis.com/public-download-files/hgnc/tsv/tsv/hgnc_complete_set.txt
   awk -F"\t" '{if (\$20) print \$2"\t"\$20}' hgnc_complete_set.txt | awk 'NR > 1' > gene_symbol_table.txt
   """
 }
 
 process list_assemblies {
-  // List available assemblies from URL (requires FTP protocol)
+  // List available assemblies from URL
   input:
     val url
   output:
-    stdout
+    path 'assemblies.txt'
 
   script:
-    def link = url + "/"
+    def link = url.replaceAll('/+$', '') + '/'
   """
-  curl -l ${link}
+  curl --fail --silent --show-error --location ${link} \
+    | sed -n 's#.*href="\\(GCA_[0-9][0-9]*\\.[0-9][0-9]*\\)/".*#\\1#p' \
+    | sort -u > assemblies.txt
+  test -s assemblies.txt
   """
 }
 
@@ -33,16 +36,18 @@ process download_pangenomes_data {
     val url
     val assembly
   output:
-    tuple path('*.gtf.gz'), path('*.fa.gz')
+    tuple val(assembly), path('genes.gff3.gz'), path('unmasked.fa.gz')
 
   script:
-    def link = url + "/" + assembly + "/"
+    def link = url.replaceAll('/+$', '') + '/' + assembly
   """
-  wget -A "*genes.gtf.gz" --no-parent -r -nd ${link}
-  wget -A "*unmasked.fa.gz" --no-parent -r -nd ${link}
-
-  # remove older GTF files
-  ls -t *.gtf.gz | tail -n +2 | xargs -r rm --
+  release=\$(curl --fail --silent --show-error --location ${link}/ensembl/geneset/ \
+    | sed -n 's#.*href="\\([0-9][0-9][0-9][0-9]_[0-9][0-9]\\)/".*#\\1#p' \
+    | sort -V | tail -n 1)
+  test -n "\${release}"
+  wget -O genes.gff3.gz ${link}/ensembl/geneset/\${release}/genes.gff3.gz
+  wget -O unmasked.fa.gz ${link}/genome/unmasked.fa.gz
+  gzip -t genes.gff3.gz
+  gzip -t unmasked.fa.gz
   """
 }
-
