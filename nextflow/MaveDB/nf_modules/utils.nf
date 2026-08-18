@@ -7,9 +7,6 @@ process get_hgvsp {
   output: tuple val(urn), path(mappings), path(scores), path(metadata), path('hgvsp.txt')
 
   """
-  sed 's/"/\\n/g' $mappings |\\
-    grep -Eo '.*:p\\..*' |\\
-    sort -t":" -V -k2.6 |\\
-    uniq > hgvsp.txt
+  mapping_hgvs.py extract --syntax hgvs.p "${mappings}" > hgvsp.txt
   """
 }

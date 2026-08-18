@@ -12,6 +12,7 @@ params.urn      = null
 params.ensembl  = "${ENSEMBL_ROOT_DIR}"
 params.output   = "output/MaveDB_variants.tsv.gz"
 params.registry = null
+params.vr_memory_hints = "${projectDir}/resources/vr_memory_hints.tsv"
 
 params.licences = "CC0" // Open-access only
 params.round    = 4
@@ -39,6 +40,8 @@ if (params.help) {
     --ensembl       Path to Ensembl root directory (default: ${ENSEMBL_ROOT_DIR})
     --output        Path to output file (default: output/MaveDB_variants.tsv.gz)
     --registry      Path to Ensembl registry
+    --vr_memory_hints
+                    Historical Variant Recoder memory profile (default: bundled profile)
     --from_files    Use local files instead of downloading via the MaveDB API (default: true, this is advised)
     --mappings_path Path to MaveDB mappings files (one JSON file per URN)
     --scores_path   Path to MaveDB scores files (one CSV file per URN)
@@ -64,12 +67,43 @@ include { extract_metadata } from './nf_modules/extract_metadata.nf'
 include { collate_logs } from './nf_modules/collate_logs.nf'
 include { datacheck_urns } from './nf_modules/datacheck.nf'
 
+def load_vr_memory_hints(path) {
+  if (!path) {
+    return [:]
+  }
+
+  def hints = [:]
+  file(path, checkIfExists: true).eachLine { line, lineNumber ->
+    def value = line.trim()
+    if (!value || value.startsWith('#') || value.startsWith('urn\t')) {
+      return
+    }
+
+    def fields = value.split('\t', -1)
+    if (fields.size() != 3) {
+      throw new IllegalArgumentException("Invalid Variant Recoder memory hint at ${path}:${lineNumber}")
+    }
+
+    def hintLines = fields[1] as long
+    def peakRssGb = fields[2] as double
+    if (hintLines <= 0 || peakRssGb <= 0) {
+      throw new IllegalArgumentException("Non-positive Variant Recoder memory hint at ${path}:${lineNumber}")
+    }
+
+    hints[fields[0]] = [lines: hintLines, peakRssGb: peakRssGb]
+  }
+  log.info "Loaded ${hints.size()} Variant Recoder memory hints from ${path}"
+  return hints
+}
+
 // Main workflow
 print_params('Create MaveDB plugin data for VEP', nullable=['registry'])
 check_JVM_mem(min=50.4)
 print_summary()
 
 workflow {
+  vrMemoryHints = load_vr_memory_hints(params.vr_memory_hints)
+
   urn = Channel
       .fromPath(params.urn, checkIfExists: true)
       .splitText()
@@ -125,7 +159,20 @@ workflow {
 
   // prepare HGVSp mappings
   get_hgvsp(files.hgvs_pro)
-  hgvsp = get_hgvsp.out.filter { it.last().size() > 0 }
+  hgvsp = get_hgvsp.out
+      .filter { it.last().size() > 0 }
+      .map { urn, mappings, scores, metadata, hgvs ->
+        def hint = vrMemoryHints[urn]
+        tuple(
+          urn,
+          mappings,
+          scores,
+          metadata,
+          hgvs,
+          hint?.lines ?: 0L,
+          hint?.peakRssGb ?: 0.0
+        )
+      }
   run_variant_recoder(hgvsp)
   map_scores_to_HGVSp_variants(run_variant_recoder.out)
 

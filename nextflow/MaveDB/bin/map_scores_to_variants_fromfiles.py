@@ -69,15 +69,11 @@ def main():
   with open(args.metadata) as f:
     metadata = json.load(f)
 
-  # Extract MaveDB IDs from each mapping entry (robust access)
-  mapped_scores = mappings.get("mapped_scores", [])
-  mavedb_ids = [i.get("mavedb_id") for i in mapped_scores if "mavedb_id" in i]
+  # Public dump mapping files are top-level arrays of mapped variant records.
+  mapped_variants, mapping_dict = load_mapped_variants(mappings)
+  mavedb_ids = list(mapping_dict.keys())
 
-  # Pre-build a dictionary mapping accession IDs to mapping records
-  # This makes lookups robust and order-independent
-  mapping_dict = {m["mavedb_id"]: m for m in mapped_scores if "mavedb_id" in m}
-
-  log("mappings_loaded", n=len(mapped_scores), unique_ids=len(mapping_dict))
+  log("mappings_loaded", n=len(mapped_variants), unique_ids=len(mapping_dict))
 
   # If a Variant Recoder output file is provided, load it; otherwise, set matches to None
   if args.vr is not None:
@@ -155,11 +151,48 @@ def load_scores (f):
     # Strip whitespace from each header name -- I think only necessary due to the csv viewer adding spacing and then this was cached in a nf run. Consider removing.
     reader.fieldnames = [field.strip() for field in reader.fieldnames]
     for row in reader:
-      # Strip whitespace from each value if it is a string -- same note as above
-      clean_row = { key: value.strip() if isinstance(value, str) else value for key, value in row.items() }
+      clean_row = {}
+      for key, value in row.items():
+        clean_key = key.strip()
+        if clean_key.startswith('scores.'):
+          clean_key = clean_key[len('scores.'):]
+        clean_row[clean_key] = value.strip() if isinstance(value, str) else value
       scores.append(clean_row)
   log("scores_loaded", n=len(scores))
   return scores
+
+def load_mapped_variants(mappings):
+  """Load mapped variant records.
+
+  Public dump mapping files are top-level arrays whose records use
+  variantUrn/postMapped. The mapper keeps mavedb_id/post_mapped internally
+  so the rest of the mapping code can stay focused on coordinate handling.
+  """
+  if not isinstance(mappings, list):
+    raise ValueError("Mappings JSON must be a top-level array of mapped variant records")
+
+  mapped_variants = []
+  mapping_dict = {}
+  for record in mappings:
+    if not isinstance(record, dict):
+      continue
+    if record.get("current") is False:
+      continue
+
+    variant_urn = record.get("variantUrn")
+    if not variant_urn:
+      log("mapping_without_variant_urn")
+      continue
+
+    mapping = dict(record)
+    mapping["mavedb_id"] = variant_urn
+    mapping["post_mapped"] = record.get("postMapped")
+    mapping["pre_mapped"] = record.get("preMapped")
+
+    mapped_variants.append(mapping)
+    mapping_dict[variant_urn] = mapping
+
+  return mapped_variants, mapping_dict
 
 # Global variable for caching chromosome name
 chrom = None
@@ -354,10 +387,9 @@ def map_scores_to_variants(scores, mappings, metadata, map_ids, matches=None, ro
 
     row = round_float_columns(row, round)
 
-    # Some rows don't have post-mapped (i.e. no mapping, so only consider rows with mapping)
-    if 'post_mapped' in mapping:
-      mapped_info = mapping['post_mapped']
-    else:
+    # Some rows don't have post-mapped data, so only consider rows with a successful mapping.
+    mapped_info = mapping.get('post_mapped')
+    if not mapped_info:
       log("no_post_mapped_in_mapping", subid=subid)
       n_no_post += 1
       continue
