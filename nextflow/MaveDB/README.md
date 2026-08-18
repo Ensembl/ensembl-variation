@@ -68,6 +68,7 @@ nextflow run [path_to]/ensembl-variation/nextflow/MaveDB/main.nf \
 | `--ensembl`       | Path to Ensembl root directory (default: `${ENSEMBL_ROOT_DIR}`)                            |
 | `--output`        | Path to output file with a `.gz` extension (default: `output/MaveDB_variants.tsv.gz`)                             |
 | `--registry`      | Path to Ensembl registry file used for [Variant Recoder][] (default: none)                 |
+| `--vr_memory_hints` | Historical per-URN Variant Recoder memory profile (default: bundled profile)             |
 | `--licences`      | Comma-separated list of accepted licences (default: `CC0`)                                 |
 | `--round`         | Decimal places to round floats in MaveDB data (default: `4`)                               |
 | `--from_files`    | Use local files instead of downloading via the MaveDB API (default: true, this is advised) |
@@ -99,6 +100,13 @@ Notes:
 
 - If running in API mode, the MaveDB API may return `502: Proxy error` when under stress, resulting in failed jobs.
 - [Variant Recoder][] uses an online connection to Ensembl database that can refuse if we ask for too many connections.
+- Variant Recoder memory requests use the bundled historical profile when a URN is present and fall back to HGVS line-count tiers for new URNs. Generate an updated profile after a successful run with:
+
+  ```bash
+  scripts/build_vr_memory_hints.sh /path/to/completed/run
+  ```
+
+  This writes `/path/to/completed/run/vr_memory_hints.tsv` by default. An alternative output path can be supplied as the second argument.
 
 ## Pipeline diagram
 
