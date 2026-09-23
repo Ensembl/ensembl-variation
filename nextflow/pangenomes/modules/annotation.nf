@@ -42,23 +42,23 @@ process filter_Phenotypes_gene_annotation {
 
 process create_pangenomes_annotation {
   container 'docker://biocontainers/pandas:1.5.1_cv1'
-  tag "${gtf.baseName}"
+  tag "${gff3.baseName}"
 
   input:
     val plugin
     val version
-    tuple path(gtf), path(fasta)
+    tuple val(accession), path(gff3), path(fasta)
     path annotation
     path gene_symbols
 
   output:
-    tuple path(gtf), path(fasta), path('*.g*f')
+    tuple val(accession), path(gff3), path(fasta), path('*.g*f')
 
   script:
     def opts = (plugin == 'GO' ? '--go' : '--pheno') + " ${annotation}"
     def lookup = (gene_symbols.name == 'null') ? '' : "--gene_symbols ${gene_symbols}"
   """
-  create_pangenomes_annotation.py --version ${version} --gtf ${gtf} ${opts} ${lookup}
+  create_pangenomes_annotation.py --version ${version} --accession ${accession} --gff3 ${gff3} ${opts} ${lookup}
   """
 }
 
@@ -67,9 +67,9 @@ process tabix_plugin_annotation {
   publishDir "${params.outdir}", mode: 'copy', pattern: '*plugin*.gz*'
 
   input:
-    tuple path(gtf), path(fasta), path(annotation)
+    tuple val(accession), path(gff3), path(fasta), path(annotation)
   output:
-    tuple path(gtf), path(fasta), path('*.gz'), path('*.gz.tbi')
+    tuple val(accession), path(gff3), path(fasta), path('*.gz'), path('*.gz.tbi')
 
   """
   bgzip ${annotation}
