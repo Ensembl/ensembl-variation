@@ -30,8 +30,8 @@ process import_from_files {
   fi
 
   if [ ! -s mappings.json ]; then
-    echo "{}" > mappings.json
-    log "missing_mappings_after_staging; wrote empty JSON"
+    echo "[]" > mappings.json
+    log "missing_mappings_after_staging; wrote empty mapping array"
   fi
 
   if [ ! -s scores.csv ]; then

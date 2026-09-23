@@ -2,3 +2,4 @@
 reports/
 work/
 .nextflow/
+__pycache__

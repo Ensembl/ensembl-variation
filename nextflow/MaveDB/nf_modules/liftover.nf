@@ -10,7 +10,7 @@ process download_chain_files {
   log "stage_start" "reference=${reference}"
 
   for genome in hg16 hg17 hg18 hg19; do
-    url="https://hgdownload.cse.ucsc.edu/goldenpath/${genome}/liftOver/"
+    url="http://hgdownload.soe.ucsc.edu/goldenPath/${genome}/liftOver"
     name="${genome}To${reference}.over.chain.gz"
     log "fetch_chain" "name=${name} url=${url}/${name}"
     wget ${url}/${name}

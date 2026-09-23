@@ -20,33 +20,33 @@ scores_path=$3
 export MAVEDB_URN="${MAVEDB_URN:-$urn}"
 export STEP="${STEP:-import_from_files}"
 
-# Locate the mapping file using the original urn (with colons)
-pattern="${urn}_mapping_*.json"
+# Replace colons with hyphens to match data dump filenames.
+score_urn=$(echo "${urn}" | sed 's/:/-/g')
 mapping_file="$(
-  find "$mappings_path" -type f -name "$pattern" -printf '%T@ %p\n' \
+  find "$mappings_path" -type f ! -name '._*' -iname "*${score_urn}.mapped-variants.json" -printf '%T@ %p\n' \
+  | sort -nr | head -1 | cut -d' ' -f2-
+)"
+score_file="$(
+  find "$scores_path" -type f ! -name '._*' -iname "*${score_urn}.scores.csv" -printf '%T@ %p\n' \
   | sort -nr | head -1 | cut -d' ' -f2-
 )"
 
-# Replace colons with hyphens for searching the scores directory
-score_urn=$(echo "${urn}" | sed 's/:/-/g')
-score_file=$(find ${scores_path} -type f -iname "*${score_urn}.scores.csv" | head -n 1)
-
-# Check if the mapping and scores files exist in the user-provided directories
-if [ ! -f "${mapping_file}" ]; then
-  log "mapping_missing" "na" "searched=${mappings_path} pattern=*${urn}*.json"
-  exit 1
+# Score files are required. Mapping files are optional in the public dump:
+# many score sets have scores but no mapped-variants JSON.
+if [ -f "${mapping_file}" ]; then
+  log "mapping_found" "na" "src=${mapping_file}"
+  cp "${mapping_file}" mappings.json
+else
+  log "mapping_missing" "na" "searched=${mappings_path} pattern=*${score_urn}.mapped-variants.json"
+  echo "[]" > mappings.json
+  log "missing_mappings_after_staging; wrote empty mapping array"
 fi
+
 if [ ! -f "${score_file}" ]; then
   log "scores_missing" "na" "searched=${scores_path} pattern=*${score_urn}.scores.csv"
   exit 1
 fi
-
-# If the files exist, report this
-log "mapping_found" "na" "src=${mapping_file}"
 log "scores_found" "na" "src=${score_file} sanitized=${score_urn}"
-
-# Copy mappings file to the working dir
-cp "${mapping_file}" mappings.json
 
 # Check if the file contains any lines starting with "tmp:"
 if grep -q '^tmp:' ${score_file}; then

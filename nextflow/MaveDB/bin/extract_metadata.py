@@ -65,7 +65,8 @@ def main(metadata_file, urn):
                                 (selected_experiment or {}).get("doiIdentifiers"),
                                 default=[])
 
-        lic_short = selected_entry.get("license", {}).get("shortName", "")
+        license_info = selected_entry.get("license") or {}
+        lic_short = license_info.get("shortName", "")
         log("metadata_found",
             title=selected_entry.get("title", ""),
             shortName=lic_short if lic_short else "")
@@ -80,7 +81,7 @@ def main(metadata_file, urn):
                 "recordType": "User"
             },
             "creationDate": selected_entry.get("creationDate", ""),
-            "datasetColumns": selected_entry.get("datasetColumns", {}),
+            "datasetColumns": selected_entry.get("datasetColumns") or {},
             "doiIdentifiers": doi_ids,
             "experiment": {
                 "abstractText": selected_entry.get("abstractText", ""),
@@ -94,7 +95,7 @@ def main(metadata_file, urn):
                 "creationDate": selected_entry.get("creationDate", ""),
                 "doiIdentifiers": doi_ids,
                 "experimentSetUrn": selected_set_urn,
-                "extraMetadata": selected_entry.get("extraMetadata", {}),
+                "extraMetadata": selected_entry.get("extraMetadata") or {},
                 "keywords": [],
                 "methodText": selected_entry.get("methodText", ""),
                 "modificationDate": selected_entry.get("modificationDate", ""),
@@ -106,7 +107,7 @@ def main(metadata_file, urn):
                 },
                 "primaryPublicationIdentifiers": primary_pubs,
                 "publishedDate": selected_entry.get("publishedDate", ""),
-                "rawReadIdentifiers": selected_entry.get("rawReadIdentifiers", []),
+                "rawReadIdentifiers": selected_entry.get("rawReadIdentifiers") or [],
                 "recordType": "Experiment",
                 "scoreSetUrns": [selected_entry.get("urn")],
                 "secondaryPublicationIdentifiers": [],
@@ -115,15 +116,15 @@ def main(metadata_file, urn):
                 "urn": selected_entry.get("urn"),
             },
             "externalLinks": {},
-            "extraMetadata": selected_entry.get("extraMetadata", {}),
+            "extraMetadata": selected_entry.get("extraMetadata") or {},
             "license": {
                 "active": True,
-                "id": selected_entry.get("license", {}).get("id", 1),
-                "link": selected_entry.get("license", {}).get("link", ""),
-                "longName": selected_entry.get("license", {}).get("longName", ""),
+                "id": license_info.get("id", 1),
+                "link": license_info.get("link", ""),
+                "longName": license_info.get("longName", ""),
                 "recordType": "ShortLicense",
                 "shortName": lic_short,
-                "version": selected_entry.get("license", {}).get("version", ""),
+                "version": license_info.get("version", ""),
             },
             "mappingState": "complete",
             "metaAnalyzedByScoreSetUrns": [],
@@ -144,7 +145,7 @@ def main(metadata_file, urn):
             "recordType": "ScoreSet",
             "secondaryPublicationIdentifiers": [],
             "shortDescription": selected_entry.get("shortDescription", ""),
-            "targetGenes": selected_entry.get("targetGenes", []),
+            "targetGenes": selected_entry.get("targetGenes") or [],
             "title": selected_entry.get("title", ""),
             "urn": selected_entry.get("urn"),
         }

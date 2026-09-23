@@ -12,6 +12,7 @@ params.urn      = null
 params.ensembl  = "${ENSEMBL_ROOT_DIR}"
 params.output   = "output/MaveDB_variants.tsv.gz"
 params.registry = null
+params.vr_memory_hints = "${projectDir}/resources/vr_memory_hints.tsv"
 
 params.licences = "CC0" // Open-access only
 params.round    = 4
@@ -39,6 +40,8 @@ if (params.help) {
     --ensembl       Path to Ensembl root directory (default: ${ENSEMBL_ROOT_DIR})
     --output        Path to output file (default: output/MaveDB_variants.tsv.gz)
     --registry      Path to Ensembl registry
+    --vr_memory_hints
+                    Historical Variant Recoder memory profile (default: bundled profile)
     --from_files    Use local files instead of downloading via the MaveDB API (default: true, this is advised)
     --mappings_path Path to MaveDB mappings files (one JSON file per URN)
     --scores_path   Path to MaveDB scores files (one CSV file per URN)
@@ -54,7 +57,6 @@ include { filter_by_licence } from './subworkflows/filter.nf'
 include { download_MaveDB_data } from './nf_modules/fetch.nf'
 include { split_by_mapping_type } from './subworkflows/split.nf'
 include { run_variant_recoder } from './nf_modules/variant_recoder.nf'
-include { get_hgvsp } from './nf_modules/utils.nf'
 include { map_scores_to_HGVSp_variants; map_scores_to_HGVSg_variants } from './nf_modules/mapping.nf'
 include { download_chain_files; liftover_to_hg38 } from './nf_modules/liftover.nf'
 include { concatenate_files; tabix } from './nf_modules/output.nf'
@@ -124,8 +126,8 @@ workflow {
   liftover_to_hg38(map_scores_to_HGVSg_variants.out, download_chain_files.out)
 
   // prepare HGVSp mappings
-  get_hgvsp(files.hgvs_pro)
-  hgvsp = get_hgvsp.out.filter { it.last().size() > 0 }
+  hgvsp = files.hgvs_pro
+      .filter { it.last().size() > 0 }
   run_variant_recoder(hgvsp)
   map_scores_to_HGVSp_variants(run_variant_recoder.out)
 
