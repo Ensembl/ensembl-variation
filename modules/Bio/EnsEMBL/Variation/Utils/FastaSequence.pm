@@ -365,10 +365,22 @@ sub _new_slice_seq {
   return sub {
     my ($self, $start, $end, $strand, $preserve_masking) = @_;
     my ($seq, $length) = ('', 0);
-
-    $start = $start ? ($self->start + $start) - 1 : $self->start;
-    $end   = $end   ? ($self->start + $end) - 1   : $self->end;
+    
+    my $orig_start = $start;
+    my $orig_end = $end;
+    
     $strand = defined($strand) ? $strand * $self->strand : $self->strand;
+    
+    if($self->strand == 1) {  
+      $start = $start ? ($self->start + $start) - 1 : $self->start;
+      $end   = $end   ? ($self->start + $end) - 1   : $self->end;
+    }
+    else{
+      my $input_end = $end;
+      $end = $end ? ($self->end - $start) + 1 : $self->end;
+      $start   = $start   ? ($self->end - $input_end) + 1   : $self->start;
+    }
+    
     my $sr_name = $self->seq_region_name;
 
     # indels
@@ -401,7 +413,7 @@ sub _new_slice_seq {
         print STDERR "USING DATABASE\n" if $DEBUG;
         return
           scalar(@_) > 1 ?
-          $self->_fasta_old_db_subseq($start, $end, $strand) :
+          $self->_fasta_old_db_subseq($orig_start, $orig_end, $strand) :
           $self->_fasta_old_db_seq();
       }
     }
