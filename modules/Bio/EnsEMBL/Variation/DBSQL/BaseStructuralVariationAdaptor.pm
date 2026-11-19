@@ -144,7 +144,7 @@ sub list_dbIDs {
     Args[1]     : string $name
     Example     : my $structural_variation = $sv_adaptor->fetch_by_name('esv263');
     Description : returns the structural variation with the given variation name (or undef if one isn't found).
-                  If the name argument is undef this will be converted to NULL in the SQL statement generated.
+                  Returns undef if the name argument is undef.
     ReturnType  : Bio::EnsEMBL::Variation::StructuralVariation or Bio::EnsEMBL::Variation::SupportingStructuralVariation object
     Exceptions  : thrown if there are multiple objects found with the same variation name
     Caller      : general
@@ -155,14 +155,17 @@ sub list_dbIDs {
 sub fetch_by_name {
   my ($self, $name) = @_;
 
+  return unless defined $name;
+
   # hack fix for phencode names with '+' in getting encoded/decoded by the webcode 
   $name =~ s/\s/\+/ if $self->db->species =~ /homo_sapiens/i; 
     
-  my $constraint = $self->_internal_exclude_failed_constraint("sv.variation_name='$name'");
+  my $constraint = $self->_internal_exclude_failed_constraint('sv.variation_name = ?');
+  $self->bind_param_generic_fetch($name, SQL_VARCHAR);
   
   my $objs = $self->generic_fetch($constraint);
   throw("Multiple structural variations found with the same name: '$name'") if @$objs > 1;
-  return $objs->[0] if @$objs == 1;
+  return $objs->[0];
 }
 
 # alias for fetch_by_name
