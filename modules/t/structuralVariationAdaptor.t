@@ -17,6 +17,7 @@
 use strict;
 use warnings;
 use Test::More;
+use Test::Exception;
 
 
 use Bio::EnsEMBL::Variation::DBSQL::SupportingStructuralVariationAdaptor;
@@ -157,6 +158,74 @@ print "\n# Test - get_all_failed_descriptions\n";
 my $failed_sv = $sva->fetch_by_name('esv902225');
 my $sv13= $sva->get_all_failed_descriptions($failed_sv);
 ok($sv13->[0] eq 'Variant can not be re-mapped to the current assembly', "failed descriptions");
+
+subtest 'structural variation names are treated as data' => sub {
+  $multi->save('variation', 'structural_variation', 'failed_structural_variation');
+
+  my $original_species = $vdb->species;
+  my $include_failed = $vdb->include_failed_variations;
+  my $original_alias = Bio::EnsEMBL::Registry->get_alias('bos_taurus', 1);
+  # Reuse the fixture as a non-human species, without human name normalisation.
+  Bio::EnsEMBL::Registry->add_alias($original_species, 'bos_taurus');
+  $vdb->species('bos_taurus');
+  $vdb->include_failed_variations(0);
+
+  my @names = ("test'quoted", 'test\\backslash', "test' OR '1'='1", 'test+phencode');
+  my $insert = $vdb->dbc->prepare(
+    'INSERT INTO structural_variation (variation_name, source_id, is_evidence) VALUES (?, ?, ?)'
+  );
+  $insert->execute($_, 11, 0) for @names;
+  $insert->execute("supporting'quoted", 11, 1);
+  $insert->finish;
+
+  foreach my $name (@names) {
+    my $result;
+    lives_ok { $result = $sva->fetch_by_name($name) } 'literal name can be queried';
+    is($result && $result->variation_name, $name, 'only the exact name is returned');
+  }
+
+  foreach my $name (
+    "esv2421345' AND 1=1 AND 'x'='x",
+    "esv2421345' AND 1=0 AND 'x'='x",
+    "' OR 1=1 #",
+    "'",
+    '',
+    undef,
+  ) {
+    my $result;
+    lives_ok { $result = $sva->fetch_by_name($name) } 'unmatched input does not cause a SQL error';
+    ok(!defined $result, 'SQL syntax cannot change the lookup');
+  }
+
+  is($sva->fetch_by_name('esv2421345')->dbID, 16158654, 'bindings do not leak into the next query');
+  is($sva->fetch_by_stable_id($names[0])->variation_name, $names[0], 'stable ID alias handles quotes');
+  is($ssva->fetch_by_name("supporting'quoted")->variation_name, "supporting'quoted", 'supporting variants use the same safe lookup');
+  ok(!defined $sva->fetch_by_name("supporting'quoted"), 'evidence filter is preserved');
+
+  ok(!defined $sva->fetch_by_name('esv902225'), 'failed variants are still excluded');
+  $vdb->include_failed_variations(1);
+  is($sva->fetch_by_name('esv902225')->variation_name, 'esv902225', 'failed variants can still be included');
+
+  my $results;
+  lives_ok { $results = $sva->fetch_all_by_name_list(["esv2421345') OR 1=1 #"]) } 'batch lookup treats SQL syntax literally';
+  is_deeply($results, [], 'batch SQL input cannot retrieve other names');
+
+  my @batch = ((map { "missing_sqlinj_$_" } 1..199), @names[0, 1]);
+  my @original_batch = @batch;
+  lives_ok { $results = $sva->fetch_all_by_name_list(\@batch) } 'quoted names work across the 200-name batch boundary';
+  is_deeply([sort map { $_->variation_name } @$results], [sort @names[0, 1]], 'batch returns only matching literal names');
+  is_deeply(\@batch, \@original_batch, 'batch input is not modified');
+
+  $vdb->species($original_species);
+  if (defined $original_alias) {
+    Bio::EnsEMBL::Registry->add_alias($original_alias, 'bos_taurus');
+  } else {
+    Bio::EnsEMBL::Registry->remove_alias($original_species, 'bos_taurus');
+  }
+  is($sva->fetch_by_name('test phencode')->variation_name, 'test+phencode', 'human phencode normalisation is preserved');
+  $vdb->include_failed_variations($include_failed);
+  $multi->restore('variation', 'structural_variation', 'failed_structural_variation');
+};
 
 
 done_testing();
