@@ -369,5 +369,36 @@ sub run {
     return {};
 }
 
+=head2 per_variant_cached
+
+  Arg[1]     : A Bio::EnsEMBL::Variation::BaseVariationFeature (usually $bvfoa->base_variation_feature)
+  Arg[2]     : A key string for results that differ between alleles or features of the same variant
+               (for example $bvfoa->allele_number), or undef when one result serves the whole variant
+  Arg[3]     : A coderef computing the result
+  Description: Runs the coderef once per variant and key and stores the result on the variation feature
+               itself, so it lives exactly as long as the variant does (the input buffer) and no
+               separate eviction is needed.
+
+               run() is called once per overlapping feature allele (one per transcript for a coding
+               variant), but the expensive part of most plugins, fetching data for the variant's
+               position and matching it to the variant's alleles, depends only on the variant. Wrap
+               that part in this helper and keep whatever depends on the transcript outside it:
+
+                 my $matched = $self->per_variant_cached($vf, undef, sub { $self->_matched_records($vf) });
+
+  Returntype : whatever the coderef returns (the same reference on every call for the same variant
+               and key, so callers must not modify it)
+  Status     : Experimental
+
+=cut
+
+sub per_variant_cached {
+    my ($self, $vf, $key, $compute) = @_;
+    my $cache = $vf->{_plugin_cache}->{ref($self)} ||= {};
+    $key = '' unless defined $key;
+    return $cache->{$key} if exists $cache->{$key};
+    return $cache->{$key} = $compute->();
+}
+
 1;
 
