@@ -1453,20 +1453,29 @@ sub _seek_by_VariationFeature {
   return unless $vcf;
   
   my $strict = $self->strict_name_match;
-  my @names = ($vf->variation_name);
-  push @names, @{$vf->variation->get_all_synonyms} if ($vf->variation);
-  
+  my @names;
+
+  if ($strict) {
+    push @names, $vf->variation_name;
+    my $variation = $vf->variation;
+    push @names, @{$variation->get_all_synonyms} if $variation;
+  }
+
   while($vcf->next()) {
     last if !$vcf->{record};
     
-    my $name_match = 0;
-    foreach my $id(@{$vcf->get_IDs}) {
-      $name_match = 1 if grep {($_ eq $id && $id ne '.') || $_ eq 'ss'.$id} @names;
-    }
-    
     # Requires an allele match and in strict mode it also requires a name/synonym match
     my $matched = $self->_get_matched_alleles_VF_VCF($vf, $vcf);
-    return 1 if @$matched && (!$strict || $name_match);
+
+    if (@$matched) {
+      return 1 unless $strict;
+
+      foreach my $id (@{$vcf->get_IDs}) {
+        return 1 if grep {
+          ($_ eq $id && $id ne '.') || $_ eq 'ss'.$id
+        } @names;
+      }
+    }
     
     # if we've gone too far, quit out
     return 0 if $vcf->get_start > $vf->seq_region_end + 1;
