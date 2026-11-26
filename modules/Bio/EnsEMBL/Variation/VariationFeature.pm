@@ -2346,6 +2346,36 @@ sub to_VCF_record {
   # shortcut out if created from VCF record
   return [@{$self->{vcf_record}->{record}}[0..4]] if exists($self->{vcf_record});
 
+  # plugins call this per data line per transcript, and the indel branch fetches the anchor base from
+  # the genome each time, so compute it once per feature and hand out copies.
+  # The key covers every field the record is built from, so a feature changed after the first call
+  # (strand, allele_string, coordinates, slice, class...) is recomputed rather than served stale.
+  # Only the latest key is kept, so repeatedly mutating one object does not grow the cache.
+  my $cache = $self->{_to_VCF_record_cache};
+  unless($cache && $cache->{key} eq $self->_to_VCF_record_cache_key($no_trim)) {
+    my $record = $self->_to_VCF_record_uncached($no_trim);
+    # key taken after computing, as the builder may lazily set class_SO_term
+    $cache = $self->{_to_VCF_record_cache} = { key => $self->_to_VCF_record_cache_key($no_trim), record => $record };
+  }
+
+  return [@{$cache->{record}}];
+}
+
+sub _to_VCF_record_cache_key {
+  my $self = shift;
+  my $no_trim = shift;
+
+  return join("\0",
+    map { defined($_) ? $_ : '' }
+    $no_trim, $self->{allele_string}, $self->{strand}, $self->{start}, $self->{end},
+    $self->{slice}, $self->{chr}, $self->{variation_name}, $self->{class_SO_term}
+  );
+}
+
+sub _to_VCF_record_uncached {
+  my $self = shift;
+  my $no_trim = shift;
+
   my %allele_lengths;
 
   # deal with HGMD_MUTATION and COSMIC_MUTATION
