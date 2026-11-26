@@ -15,8 +15,14 @@ fi
 rt=$?
 if [ $rt -eq 0 ]; then
   if [ "$COVERALLS" = 'true' ]; then
-    echo "Running Devel::Cover coveralls report"
-    cover --nosummary -report coveralls
+    # Devel::Cover::Report::Coveralls 1.1.0+ needs the token on Travis too, and Travis does not
+    # give secure variables to pull requests from forks, so those builds skip the upload
+    if [ -n "$COVERALLS_REPO_TOKEN" ]; then
+      echo "Running Devel::Cover coveralls report"
+      cover --nosummary -report coveralls
+    else
+      echo "COVERALLS_REPO_TOKEN is not set (pull request from a fork?), skipping the coveralls upload"
+    fi
   fi
   exit $?
 else
