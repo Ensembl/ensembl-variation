@@ -106,12 +106,18 @@ our $CONFIG_FILE;
 
 =head2 new
 
-  Arg [-CONFIG]: string - path to JSON configuration file
-  Example    : my $vca = Bio::EnsEMBL::Variation::VCFCollectionAdaptor->new(
-                 -config => '/path/to/vcf_config.json'
+  Arg [1]    : DBAdaptor, or undef to load collections without a database
+  Arg [-CONFIG_FILE]: string - path to JSON configuration file
+  Arg [-SPECIES]: string - restrict collections to this species
+  Arg [-ASSEMBLY]: string - restrict collections to this assembly
+  Arg [-COLLECTION_IDS]: arrayref - restrict collections to these literal IDs
+  Example    : my $vca = Bio::EnsEMBL::Variation::DBSQL::VCFCollectionAdaptor->new(
+                 undef, -species => 'homo_sapiens', -assembly => 'GRCh38'
                );
 
-  Description: Constructor.  Instantiates a new VCFCollectionAdaptor object.
+  Description: Constructor. Applies optional case-insensitive filters before
+               checking files for matching collections. Without a DBAdaptor
+               or any filters, checks all VCF collections in the configuration.
   Returntype : Bio::EnsEMBL::Variation::DBSQL::VCFCollectionAdaptor
   Exceptions : none
   Caller     : general
@@ -122,17 +128,24 @@ our $CONFIG_FILE;
 sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
+  my $db = shift;
+  my (undef, $species_filter, $assembly_filter, $collection_ids) =
+    rearrange([qw(CONFIG_FILE SPECIES ASSEMBLY COLLECTION_IDS)], @_);
+  $species_filter = lc($species_filter) if defined $species_filter;
+  $assembly_filter = lc($assembly_filter) if defined $assembly_filter;
+  my %selected_ids = map { lc($_) => 1 } @{$collection_ids || []};
 
   $Bio::EnsEMBL::Variation::DBSQL::BaseAnnotationAdaptor::CONFIG_FILE = $CONFIG_FILE if ($CONFIG_FILE); 
 
-  my $self = $class->SUPER::new(@_); 
+  my $self = $class->SUPER::new($db, @_);
 
   my $config = $self->config; 
-  my $root_dir = $self->root_dir;
   my $tmpdir = $self->tmpdir;
   foreach my $hash(@{$config->{collections}}) {
-#    next unless (defined $hash->{annotation_type} && lc $hash->{annotation_type} eq 'vcf');
     next if (defined $hash->{annotation_type});
+    next if defined $species_filter && lc($hash->{species} // '') ne $species_filter;
+    next if defined $assembly_filter && lc($hash->{assembly} // '') ne $assembly_filter;
+    next if defined $collection_ids && !$selected_ids{lc($hash->{id} // '')};
 
     # check the species and assembly if we can
     if($self->db) {

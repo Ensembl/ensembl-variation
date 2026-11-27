@@ -58,6 +58,7 @@ package Bio::EnsEMBL::Variation::DBSQL::BaseAnnotationAdaptor;
 
 use JSON;
 use Cwd;
+use HTTP::Tiny;
 use Net::FTP;
 use URI;
 
@@ -245,19 +246,49 @@ sub _get_filename_template {
   my $hash = shift;
   my $root_dir = $self->root_dir;
 
-  my $filename_template = $hash->{filename_template} =~ /(http|nfs|ftp:)/ ? $hash->{filename_template} : $root_dir.$hash->{filename_template};
+  my $filename_template = $hash->{filename_template} =~ /(http|nfs|ftp:)/i ? $hash->{filename_template} : $root_dir.$hash->{filename_template};
 
   if ($filename_template !~ /[#]+[^#]+[#]+/) {
-    my $file_exists = ($hash->{type} eq 'remote') ? $self->_ftp_file_exists($filename_template) : (-e $filename_template);
+    my $file_exists = ($hash->{type} eq 'remote')
+      ? $self->_remote_file_exists($filename_template, $hash->{id})
+      : (-e $filename_template);
     if (!$file_exists) {
-      warn("WARNING: Cannot read from file $filename_template for species " . $hash->{species} );
+      warn("WARNING: Cannot read from file $filename_template for collection $hash->{id} (species $hash->{species})\n");
     }
   }
 
   return $filename_template;
 }
 
-# Internal method checking if a remote VCF file exists
+# Internal methods for checking if a remote VCF file exists
+sub _remote_file_exists {
+  my ($self, $filename, $collection_id) = @_;
+  my $scheme = lc(URI->new($filename)->scheme // '');
+
+  if( $scheme eq 'ftp' ){
+    return $self->_ftp_file_exists($filename);
+  }
+  elsif( $scheme eq 'http' || $scheme eq 'https' ){
+    return $self->_http_file_exists($filename, $collection_id);
+  }
+  else {
+    die "Unsupported remote URL for collection $collection_id ($filename)\n";
+  }
+}
+
+sub _http_file_exists {
+  my ($self, $filename, $collection_id) = @_;
+
+  my $response = HTTP::Tiny->new(timeout => 30, verify_SSL => 1)->head($filename);
+  return 1 if $response->{success};
+  return 0 if $response->{status} == 404 || $response->{status} == 410;
+
+  my $error = $response->{status} == 599
+    ? $response->{content}
+    : "$response->{status} $response->{reason}";
+  die "Cannot check remote file for collection $collection_id ($filename): $error\n";
+}
+
 sub _ftp_file_exists {
   my $self = shift;
   my $uri = URI->new(shift);
