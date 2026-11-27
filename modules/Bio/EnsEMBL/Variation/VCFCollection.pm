@@ -1452,28 +1452,36 @@ sub _seek_by_VariationFeature {
 
   return unless $vcf;
   
-  # compare IDs
-  my $count = 0;
   my $strict = $self->strict_name_match;
-  my @names = ($vf->variation_name);
-  push @names, @{$vf->variation->get_all_synonyms} if ($vf->variation);
-  
-  RECORD: while($count++ < 10 && $vcf->next()) {
+  my @names;
+
+  if ($strict) {
+    push @names, $vf->variation_name;
+    my $variation = $vf->variation;
+    push @names, @{$variation->get_all_synonyms} if $variation;
+  }
+
+  while($vcf->next()) {
     last if !$vcf->{record};
     
-    # if it has an ID, we can use that
-    foreach my $id(@{$vcf->get_IDs}) {
-      last RECORD if grep {($_ eq $id && $id ne '.') || $_ eq 'ss'.$id} @names;
+    # Requires an allele match and in strict mode it also requires a name/synonym match
+    my $matched = $self->_get_matched_alleles_VF_VCF($vf, $vcf);
+
+    if (@$matched) {
+      return 1 unless $strict;
+
+      foreach my $id (@{$vcf->get_IDs}) {
+        return 1 if grep {
+          ($_ eq $id && $id ne '.') || $_ eq 'ss'.$id
+        } @names;
+      }
     }
-    
-    # otherwise compare coords
-    last if !$strict && @{$self->_get_matched_alleles_VF_VCF($vf, $vcf)};
     
     # if we've gone too far, quit out
     return 0 if $vcf->get_start > $vf->seq_region_end + 1;
   }
   
-  return defined($vcf->{record});
+  return 0;
 }
 
 sub _get_matched_alleles_VF_VCF {
