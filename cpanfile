@@ -1,5 +1,7 @@
 requires 'Bio::DB::BigFile';
 requires 'Bio::DB::HTS';
+requires 'HTTP::Tiny';
+requires 'IO::Socket::SSL';
 requires 'JSON';
 requires 'Sereal';
 requires 'Set::IntervalTree';
